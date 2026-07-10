@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MASKD</title>
+<!-- ホーム画面に追加した際、アプリらしく全画面表示にするための設定 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MASKD">
+<meta name="theme-color" content="#0d0b12">
+<!-- ホーム画面アイコン(仮面をモチーフにしたシンプルなSVGアイコン) -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230d0b12'/%3E%3Ccircle cx='50' cy='50' r='38' fill='none' stroke='%23c9a24a' stroke-width='3'/%3E%3Ctext x='50' y='62' font-family='Georgia,serif' font-size='42' font-style='italic' font-weight='700' fill='%23c9a24a' text-anchor='middle'%3E%E2%97%88%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230d0b12'/%3E%3Ccircle cx='50' cy='50' r='38' fill='none' stroke='%23c9a24a' stroke-width='3'/%3E%3Ctext x='50' y='62' font-family='Georgia,serif' font-size='42' font-style='italic' font-weight='700' fill='%23c9a24a' text-anchor='middle'%3E%E2%97%88%3C/text%3E%3C/svg%3E">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap');
+  :root{
+    --bg-void:#0d0c14; --bg-panel:#17151f;
+    --gold:#c9a24a; --gold-bright:#e8c877; --gold-dim:#8a7238;
+    --ink:#ece6d8; --ink-dim:#a49d95; --line:rgba(201,162,74,0.2);
+    --moon:#8fa9c9; --sun:#e0a23d; --dark:#8a5cae; --kaos:#c14b52; --air:#6fbfa0;
+    --win:#7ec98a; --lose:#c96b6b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:radial-gradient(ellipse at 50% -10%, #1a1725 0%, #08070c 70%);
+    font-family:'Zen Kaku Gothic New',sans-serif; color:var(--ink);
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px;
+  }
+  .app{
+    width:100%; max-width:440px; height:min(920px,97vh);
+    background:var(--bg-void); border-radius:28px; border:1px solid var(--line);
+    box-shadow:0 40px 90px -25px rgba(0,0,0,0.8);
+    display:flex; flex-direction:column; overflow:hidden; position:relative;
+  }
+  .hd{ padding:8px 18px 6px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); flex-shrink:0; }
+  .brand{ font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:600; font-size:19px; letter-spacing:0.1em; color:var(--gold); }
+  .top-right{ display:flex; align-items:center; gap:6px; }
+  .round-badge{ font-size:10px; letter-spacing:0.1em; color:var(--ink-dim); }
+  .round-badge b{ color:var(--gold-bright); font-family:'Cormorant Garamond',serif; font-size:14px; }
+  .grid-btn{ font-size:9px; color:var(--gold); border:1px solid rgba(201,162,74,0.4); border-radius:14px; padding:3px 7px; cursor:pointer; white-space:nowrap; }
+
+  .history-modal{
+    position:absolute; inset:0; z-index:25; background:rgba(8,7,12,0.97);
+    display:none; flex-direction:column; padding:22px 18px; gap:12px;
+  }
+  .history-modal.show{ display:flex; }
+  .history-modal h3{ font-family:'Cormorant Garamond',serif; font-style:italic; color:var(--gold); font-size:22px; text-align:center; }
+  .hist-scroll{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
+  .hist-empty{ text-align:center; color:var(--ink-dim); font-size:12px; margin-top:30px; }
+  .hist-row{
+    border:1px solid var(--line); border-radius:10px; padding:8px 10px; font-size:11px;
+    background:var(--bg-panel); display:flex; flex-direction:column; gap:3px;
+  }
+  .hist-row .hr-top{ display:flex; justify-content:space-between; color:var(--ink-dim); font-size:9px; }
+  .hist-row .hr-cards{ display:flex; align-items:center; gap:6px; }
+  .hist-tag{ font-size:9px; padding:1px 6px; border-radius:6px; border:1px solid; }
+  .hist-tag.moon{ color:var(--moon); border-color:var(--moon); }
+  .hist-tag.sun{ color:var(--sun); border-color:var(--sun); }
+  .hist-tag.dark{ color:var(--dark); border-color:var(--dark); }
+  .hist-tag.kaos{ color:var(--kaos); border-color:var(--kaos); }
+  .hist-tag.air{ color:var(--air); border-color:var(--air); }
+  .hist-result{ margin-left:auto; font-size:11px; }
+  .hist-result.win{ color:var(--win); } .hist-result.lose{ color:var(--lose); } .hist-result.draw{ color:var(--ink-dim); }
+
+  .tracker-grid{ display:grid; grid-template-columns:44px repeat(6,1fr); gap:3px; }
+  .tg-head{ font-size:10px; color:var(--ink-dim); text-align:center; padding:4px 0; }
+  .tg-row-label{ font-size:10px; color:var(--gold-dim); display:flex; align-items:center; padding-left:2px; }
+  .tg-cell{
+    border-radius:6px; padding:5px 2px; text-align:center; font-size:9px;
+    border:1px solid var(--line); min-height:32px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+  }
+  .tg-cell.mine{ background:rgba(232,200,119,0.12); border-color:var(--gold-bright); color:var(--gold-bright); }
+  .tg-cell.opp-alive{ background:rgba(193,75,82,0.08); border-color:rgba(193,75,82,0.4); color:var(--ink-dim); }
+  .tg-cell.used{ background:#161420; border-color:#2c2836; color:#4a4556; }
+  .tg-cell.unknown{ background:#161420; border-color:#2c2836; color:#4a4556; }
+  .tg-cell .tg-sub{ font-size:7px; }
+  .tracker-legend{ display:flex; gap:10px; justify-content:center; font-size:9px; color:var(--ink-dim); margin-top:8px; flex-wrap:wrap; }
+  .tracker-legend .sw{ width:10px; height:10px; border-radius:3px; display:inline-block; margin-right:3px; vertical-align:middle; }
+
+  .hand-popup-overlay{
+    position:absolute; inset:0; z-index:25;
+    background:rgba(8,7,12,0.75);
+    display:none; align-items:center; justify-content:center; padding:20px;
+  }
+  .hand-popup-overlay.show{ display:flex; }
+  .hand-popup-box{
+    width:100%; max-width:340px; max-height:80%; overflow-y:auto;
+    background:var(--bg-panel); border:1px solid var(--gold-bright); border-radius:18px;
+    padding:18px 16px; box-shadow:0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(232,200,119,0.15);
+    animation:popIn .25s ease;
+  }
+  @keyframes popIn{ from{ transform:scale(0.9); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  .hand-popup-box h3{
+    font-family:'Cormorant Garamond',serif; font-style:italic; color:var(--gold); font-size:20px;
+    text-align:center; margin-bottom:10px;
+  }
+  .hand-modal-grid{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; padding:6px 0; }
+
+  .hmc-context{
+    display:flex; flex-direction:column; gap:6px; margin-bottom:10px;
+    padding:8px 10px; border:1px solid var(--line); border-radius:10px; background:rgba(0,0,0,0.2);
+  }
+  .hmc-row{ display:flex; align-items:center; gap:5px; flex-wrap:wrap; font-size:9px; color:var(--ink-dim); }
+  .hmc-row .hmc-label{ letter-spacing:0.03em; white-space:nowrap; color:var(--gold-dim); }
+  .hmc-mini{
+    width:19px; height:23px; border-radius:4px; flex-shrink:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:9px; font-family:'Cormorant Garamond',serif; font-weight:700; border:1px solid;
+  }
+  .hmc-mini .hmc-a{ font-size:5px; font-weight:400; }
+  .hmc-mini.moon{ border-color:var(--moon); color:var(--moon); }
+  .hmc-mini.sun{ border-color:var(--sun); color:var(--sun); }
+  .hmc-mini.dark{ border-color:var(--dark); color:var(--dark); }
+  .hmc-mini.kaos{ border-color:var(--kaos); color:var(--kaos); }
+  .hmc-mini.air{ border-color:var(--air); color:var(--air); }
+  .hmc-mini.unknown{ border-color:var(--line); color:var(--ink-dim); background:rgba(255,255,255,0.02); }
+  .hmc-none{ font-size:9px; color:#4a4556; }
+
+  .opp-card{
+    width:32px; height:42px; border-radius:6px; flex-shrink:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+    padding:3px 2px; border:1px solid var(--line); background:rgba(255,255,255,0.02);
+  }
+  .opp-card .opp-num{ font-family:'Cormorant Garamond',serif; font-size:15px; font-weight:600; color:var(--ink); }
+  .opp-card .opp-poss{ display:flex; gap:1px; flex-wrap:wrap; justify-content:center; }
+  .hmg-card{
+    width:64px; height:88px; border-radius:9px; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:7px 4px;
+    background:linear-gradient(160deg,#221e2c,#171420); border:1.5px solid var(--line);
+    transition:transform .15s, border-color .15s;
+  }
+  .hmg-card:active{ transform:scale(0.94); }
+  .hmg-card .ha{ font-size:8px; letter-spacing:0.05em; }
+  .hmg-card .hg{ width:20px; height:20px; border-radius:50%; }
+  .hmg-card .hn{ font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:600; }
+  .hmg-card.moon{ border-color:var(--moon); } .hmg-card.moon .ha,.hmg-card.moon .hn{color:var(--moon);} .hmg-card.moon .hg{background:var(--moon);}
+  .hmg-card.sun{ border-color:var(--sun); } .hmg-card.sun .ha,.hmg-card.sun .hn{color:var(--sun);} .hmg-card.sun .hg{background:var(--sun);}
+  .hmg-card.dark{ border-color:var(--dark); } .hmg-card.dark .ha,.hmg-card.dark .hn{color:var(--dark);} .hmg-card.dark .hg{background:var(--dark);}
+  .hmg-card.kaos{ border-color:var(--kaos); } .hmg-card.kaos .ha,.hmg-card.kaos .hn{color:var(--kaos);} .hmg-card.kaos .hg{background:var(--kaos);}
+  .hmg-card.air{ border-color:var(--air); } .hmg-card.air .ha,.hmg-card.air .hn{color:var(--air);} .hmg-card.air .hg{background:var(--air);}
+
+  .pd-row{
+    display:flex; justify-content:space-between; align-items:center;
+    border:1px solid var(--line); border-radius:8px; padding:8px 12px; font-size:12px;
+  }
+  .pd-row .pd-round{ color:var(--ink-dim); font-size:10px; }
+  .pd-row .pd-card{ font-family:'Cormorant Garamond',serif; font-weight:600; }
+
+  .scoreboard{ display:flex; align-items:stretch; padding:5px 14px 2px; gap:8px; flex-shrink:0; }
+  .score-cell{ flex:1; text-align:center; padding:4px 4px 3px; border-radius:9px; border:1px solid var(--line); background:var(--bg-panel); position:relative; }
+  .score-cell.you{ border-color:rgba(201,162,74,0.45); }
+  .score-cell .who{ font-size:9px; letter-spacing:0.12em; color:var(--ink-dim); }
+  .score-cell.you .who{ color:var(--gold-bright); }
+  .score-cell .val{ font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:600; color:var(--gold); line-height:1.15; }
+  .dealer-tag{
+    position:absolute; top:-8px; right:6px; font-size:8px; letter-spacing:0.05em;
+    background:var(--gold-bright); color:#1a1608; padding:1px 7px; border-radius:8px; font-weight:700;
+  }
+  .score-mid{ display:flex; align-items:center; font-size:10px; color:var(--ink-dim); }
+  .lp-bar-wrap{
+    margin-top:4px; height:7px; display:flex; gap:2px;
+  }
+  .lp-seg{
+    flex:1; height:100%; border-radius:2px; background:#1c1a24;
+    border:1px solid rgba(201,162,74,0.15); transition:background .3s;
+  }
+  .lp-seg.filled{
+    background:linear-gradient(90deg,var(--gold-dim),var(--gold-bright));
+    border-color:var(--gold-bright);
+  }
+  .token-line{ font-size:8px; color:var(--air); margin-top:1px; min-height:0; line-height:1.3; }
+
+  .field{
+    flex:1; margin:5px 14px; border:1px solid var(--line); border-radius:16px;
+    background:linear-gradient(180deg,rgba(255,255,255,.015),transparent 40%),var(--bg-panel);
+    display:grid; grid-template-rows:auto 1fr auto 1fr auto;
+    align-items:center; justify-items:center;
+    position:relative; overflow:hidden; min-height:0; padding:4px 0;
+  }
+  .zone-label{ font-size:9px; letter-spacing:0.2em; color:var(--ink-dim); display:flex; align-items:center; justify-content:center; gap:6px; }
+  .zone-label.you{ color:var(--gold-dim); }
+  .zone-wrap{ display:flex; flex-direction:column; align-items:center; gap:1px; padding:0 6px; }
+  .zone-hint{ font-size:8px; color:var(--ink-dim); text-align:center; min-height:0; line-height:1.2; }
+  .zone-hint:not(:empty){
+    background:rgba(111,191,160,0.08); border:1px solid rgba(111,191,160,0.3);
+    border-radius:5px; padding:1px 6px;
+  }
+  .zone-hint .hint-icon-row{ justify-content:center; }
+  .zone-hint .hint-icon{ width:12px; height:12px; }
+  .mask-badge{
+    width:26px; height:26px; border-radius:50%; position:relative; flex-shrink:0;
+    background:radial-gradient(circle at 35% 30%, #26222f, #100e16 70%);
+    border:1px solid rgba(201,162,74,0.5);
+    box-shadow:0 0 8px rgba(201,162,74,0.35);
+  }
+  .mask-badge::after{
+    content:'◈'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:12px; color:var(--gold); text-shadow:0 0 6px rgba(201,162,74,0.6);
+  }
+  .mask-badge.you{ border-color:var(--gold-bright); }
+  .mask-badge.you::after{ color:var(--gold-bright); }
+  .slot-row{ display:flex; align-items:center; justify-content:center; }
+  .mid-divider{ display:flex; align-items:center; gap:10px; width:66%; }
+  .mid-divider .ln{ flex:1; height:1px; background:var(--line); }
+  .mid-divider .vs{ font-family:'Cormorant Garamond',serif; font-style:italic; color:var(--ink-dim); font-size:12px; }
+
+  .card{
+    width:64px; height:88px; border-radius:9px;
+    display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+    padding:6px 4px; position:relative; box-shadow:0 8px 16px -6px rgba(0,0,0,.6);
+    transition:transform .35s, box-shadow .35s, opacity .35s;
+  }
+  .card .attr{ font-size:7px; letter-spacing:0.08em; text-transform:uppercase; }
+  .card .glyph{ width:24px;height:24px; display:flex;align-items:center;justify-content:center; font-size:11px; position:relative; }
+  .card .num{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:600; }
+  .card.faceup{
+    background:linear-gradient(160deg,#20222c,#14151b); border:1.5px solid;
+    outline:1px solid rgba(201,162,74,0.3); outline-offset:2px;
+  }
+  .card.faceup::before, .card.faceup::after{
+    content:''; position:absolute; width:4px; height:4px; border-radius:50%;
+    background:var(--gold-dim); opacity:0.8;
+  }
+  .card.faceup::before{ top:3px; left:3px; }
+  .card.faceup::after{ bottom:3px; right:3px; }
+
+  /* Moon: 三日月(円+オフセットした欠け円で成形) */
+  .card.moon{border-color:var(--moon);} .card.moon .attr,.card.moon .num{color:var(--moon);}
+  .card.moon .glyph{
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#b9cbe6,var(--moon));
+    box-shadow:0 0 10px rgba(143,169,201,.5);
+    overflow:visible;
+  }
+  .card.moon .glyph::after{
+    content:''; position:absolute; top:-15%; left:32%; width:92%; height:92%; border-radius:50%;
+    background:#181a22;
+  }
+
+  /* Sun: 放射状の光条 */
+  .card.sun{border-color:var(--sun);} .card.sun .attr,.card.sun .num{color:var(--sun);}
+  .card.sun .glyph{
+    border-radius:50%;
+    background:
+      radial-gradient(circle at center, #f9e0a8 30%, var(--sun) 55%, transparent 56%),
+      repeating-conic-gradient(from 0deg, var(--sun) 0deg 7deg, transparent 7deg 22.5deg);
+    box-shadow:0 0 10px rgba(224,162,61,.6);
+  }
+
+  /* Dark: 尖った王冠状 */
+  .card.dark{border-color:var(--dark);} .card.dark .attr,.card.dark .num{color:var(--dark);}
+  .card.dark .glyph{
+    background:radial-gradient(circle at 35% 30%,#b98fd8,var(--dark));
+    box-shadow:0 0 10px rgba(138,92,174,.5);
+    clip-path:polygon(50% 2%,60% 22%,78% 8%,74% 32%,96% 30%,80% 50%,94% 68%,70% 64%,72% 90%,50% 74%,28% 90%,30% 64%,6% 68%,20% 50%,4% 30%,26% 32%,22% 8%,40% 22%);
+  }
+
+  /* Kaos: 不規則な破片状 */
+  .card.kaos{border-color:var(--kaos);} .card.kaos .attr,.card.kaos .num{color:var(--kaos);}
+  .card.kaos .glyph{
+    background:radial-gradient(circle at 35% 30%,#dd7a80,var(--kaos));
+    box-shadow:0 0 10px rgba(193,75,82,.5);
+    clip-path:polygon(48% 0%,68% 18%,100% 12%,74% 42%,98% 55%,62% 60%,72% 100%,38% 70%,14% 96%,26% 58%,0% 45%,32% 30%,8% 6%,42% 24%);
+  }
+
+  /* Air: 流れる風の筋 */
+  .card.air{border-color:var(--air);} .card.air .attr,.card.air .num{color:var(--air);}
+  .card.air .glyph{
+    border-radius:50%; overflow:hidden;
+    background:radial-gradient(circle at 35% 30%,#9bd8c2,var(--air));
+    box-shadow:0 0 10px rgba(111,191,160,.5);
+  }
+  .card.air .glyph::after{
+    content:''; position:absolute; inset:0; border-radius:50%;
+    background:repeating-linear-gradient(115deg, transparent 0 3px, rgba(255,255,255,0.3) 3px 4px, transparent 4px 6px);
+  }
+
+  .card.facedown{
+    background:repeating-linear-gradient(45deg,#1c1626,#1c1626 6px,#201a2c 6px,#201a2c 12px);
+    border:1.5px solid rgba(201,162,74,.4); justify-content:space-between;
+    outline:1px solid rgba(201,162,74,0.18); outline-offset:2px;
+  }
+  .card.facedown .fd-top{ font-size:6px; letter-spacing:0.08em; color:var(--gold-dim); }
+  .card.facedown .mask-emblem{ font-size:14px; color:var(--gold-dim); }
+  .card.facedown .num{ color:var(--gold); }
+  .card.win-glow{ box-shadow:0 0 22px 3px rgba(126,201,138,.65); transform:translateY(-3px) scale(1.04); }
+  .card.lose-dim{ opacity:0.5; }
+  .card.air-neutral{ box-shadow:0 0 16px 2px rgba(111,191,160,.4); }
+  .empty-slot{ width:64px;height:88px;border-radius:9px;border:1px dashed rgba(201,162,74,.18); display:flex;align-items:center;justify-content:center; font-size:8px; color:var(--ink-dim); }
+  .flip-in{ animation:flipIn .45s ease; }
+  @keyframes flipIn{ from{transform:rotateY(90deg);opacity:0;} to{transform:rotateY(0);opacity:1;} }
+
+  .action-banner{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:6px; z-index:8; opacity:0; pointer-events:none; background:rgba(8,7,12,0.55);
+  }
+  .action-banner.show{ opacity:1; animation:bannerPop .55s ease; }
+  .action-banner .ab-icon{ font-size:38px; line-height:1; filter:drop-shadow(0 0 10px currentColor); }
+  .action-banner .ab-text{
+    font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:600; font-size:26px;
+    letter-spacing:0.08em; text-shadow:0 0 14px currentColor;
+  }
+  .action-banner.kessen{ color:var(--lose); }
+  .action-banner.tettai{ color:var(--ink-dim); }
+  .action-banner.kishuu{ color:var(--kaos); animation:bannerShake .5s ease; }
+  @keyframes bannerPop{ 0%{ transform:scale(0.6); opacity:0; } 60%{ transform:scale(1.08); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
+  @keyframes bannerShake{
+    0%,100%{ transform:translateX(0); } 15%{ transform:translateX(-6px) scale(1.05); } 30%{ transform:translateX(6px); }
+    45%{ transform:translateX(-4px); } 60%{ transform:translateX(4px); } 75%{ transform:translateX(-2px); }
+  }
+
+  .result-overlay{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(13,12,20,0.72); opacity:0; pointer-events:none; transition:opacity .3s; z-index:5;
+  }
+  .result-overlay.show{ opacity:1; }
+  .result-card{ width:82%; text-align:center; padding:15px 14px; border-radius:14px; border:1px solid var(--line); background:rgba(23,21,31,0.96); box-shadow:0 12px 30px rgba(0,0,0,0.5); }
+  .result-card .rtitle{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:24px; margin-bottom:5px; }
+  .result-card.win .rtitle{ color:var(--win); }
+  .result-card.lose .rtitle{ color:var(--lose); }
+  .result-card.draw .rtitle{ color:var(--ink-dim); }
+  .result-card.pass .rtitle{ color:var(--ink-dim); }
+  .result-card .rdetail{ font-size:12px; color:var(--ink); line-height:1.55; }
+  .result-card .rdetail .em{ color:var(--gold-bright); }
+  .btn-next-round{
+    margin-top:12px; padding:9px 26px; border-radius:10px; display:inline-block;
+    background:linear-gradient(160deg,var(--gold-bright),var(--gold-dim)); color:#1a1608;
+    font-weight:700; font-size:12px; letter-spacing:0.05em; cursor:pointer;
+    opacity:0; pointer-events:none; transition:opacity .3s;
+  }
+  .btn-next-round.show{ opacity:1; pointer-events:auto; }
+
+  .peek{
+    text-align:center; font-size:12px; padding:6px 14px; flex-shrink:0; min-height:15px;
+    color:var(--ink); margin:2px 14px; border-radius:8px;
+  }
+  .peek:not(:empty){
+    background:rgba(111,191,160,0.1); border:1px solid rgba(111,191,160,0.35);
+  }
+  .peek b{ color:var(--gold-bright); }
+
+  .hint-icon-row{ display:inline-flex; align-items:center; gap:5px; vertical-align:middle; }
+  .hint-icon{ width:18px; height:18px; position:relative; flex-shrink:0; }
+  .hint-icon.tiny{ width:10px; height:10px; }
+  .hint-icon.confirmed{ box-shadow:0 0 0 2px var(--gold-bright); border-radius:50%; }
+  .hint-icon.moon{ border-radius:50%; background:radial-gradient(circle at 35% 30%,#b9cbe6,var(--moon)); box-shadow:0 0 6px rgba(143,169,201,.5); }
+  .hint-icon.moon::after{ content:''; position:absolute; top:-15%; left:32%; width:92%; height:92%; border-radius:50%; background:#14151b; }
+  .hint-icon.sun{
+    border-radius:50%;
+    background:radial-gradient(circle at center,#f9e0a8 30%,var(--sun) 55%,transparent 56%),
+      repeating-conic-gradient(from 0deg,var(--sun) 0deg 7deg,transparent 7deg 22.5deg);
+    box-shadow:0 0 6px rgba(224,162,61,.6);
+  }
+  .hint-icon.dark{
+    background:radial-gradient(circle at 35% 30%,#b98fd8,var(--dark));
+    clip-path:polygon(50% 2%,60% 22%,78% 8%,74% 32%,96% 30%,80% 50%,94% 68%,70% 64%,72% 90%,50% 74%,28% 90%,30% 64%,6% 68%,20% 50%,4% 30%,26% 32%,22% 8%,40% 22%);
+  }
+  .hint-icon.kaos{
+    background:radial-gradient(circle at 35% 30%,#dd7a80,var(--kaos));
+    clip-path:polygon(48% 0%,68% 18%,100% 12%,74% 42%,98% 55%,62% 60%,72% 100%,38% 70%,14% 96%,26% 58%,0% 45%,32% 30%,8% 6%,42% 24%);
+  }
+  .hint-icon.air{
+    border-radius:50%; overflow:hidden;
+    background:radial-gradient(circle at 35% 30%,#9bd8c2,var(--air));
+    box-shadow:0 0 6px rgba(111,191,160,.5);
+  }
+  .hint-icon.air::after{
+    content:''; position:absolute; inset:0; border-radius:50%;
+    background:repeating-linear-gradient(115deg,transparent 0 3px,rgba(255,255,255,.3) 3px 4px,transparent 4px 6px);
+  }
+  .role-banner{
+    text-align:center; font-size:11px; padding:2px 14px; flex-shrink:0; letter-spacing:0.04em;
+  }
+  .role-banner.dealer{ color:var(--gold-bright); }
+  .role-banner.child{ color:var(--ink-dim); }
+
+  .opp-hand-row{
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    padding:2px 12px; flex-shrink:0;
+  }
+  .opp-hand-label{ font-size:8px; color:var(--gold-dim); letter-spacing:0.02em; }
+  .opp-deduce-line{ display:flex; gap:5px; flex-wrap:wrap; justify-content:center; align-items:center; }
+  .odc-item{ display:flex; align-items:center; gap:1px; font-size:8px; color:var(--ink-dim); }
+  .odc-item b{ font-family:'Cormorant Garamond',serif; color:var(--ink-dim); font-weight:600; margin-right:1px; }
+  .odc-tag{ font-size:7px; padding:0 3px; border-radius:4px; border:1px solid; line-height:1.5; margin-right:1px; }
+  .odc-tag.moon{ color:var(--moon); border-color:var(--moon); }
+  .odc-tag.sun{ color:var(--sun); border-color:var(--sun); }
+  .odc-tag.dark{ color:var(--dark); border-color:var(--dark); }
+  .odc-tag.kaos{ color:var(--kaos); border-color:var(--kaos); }
+  .odc-tag.air{ color:var(--air); border-color:var(--air); }
+  .odc-tag.confirmed{ font-weight:700; }
+  .odc-cnt{ font-size:7px; color:var(--gold-dim); }
+
+  .you-played-row{
+    display:flex; align-items:center; justify-content:center; gap:5px;
+    padding:3px 14px 4px; flex-shrink:0; flex-wrap:wrap;
+  }
+  .you-played-label{ font-size:9px; color:var(--gold-dim); letter-spacing:0.03em; margin-right:2px; white-space:nowrap; }
+  .you-played-icons{ display:flex; gap:3px; flex-wrap:wrap; justify-content:center; }
+  .you-mini-card{
+    width:22px; height:26px; border-radius:5px; flex-shrink:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0;
+    font-size:11px; font-family:'Cormorant Garamond',serif; font-weight:700;
+    border:1.5px solid; background:rgba(255,255,255,0.03);
+  }
+  .you-mini-card .ymc-a{ font-size:6px; font-weight:400; letter-spacing:0.02em; }
+  .you-mini-card.moon{ border-color:var(--moon); color:var(--moon); }
+  .you-mini-card.sun{ border-color:var(--sun); color:var(--sun); }
+  .you-mini-card.dark{ border-color:var(--dark); color:var(--dark); }
+  .you-mini-card.kaos{ border-color:var(--kaos); color:var(--kaos); }
+  .you-mini-card.air{ border-color:var(--air); color:var(--air); }
+
+  .hand-wrap{ padding:2px 12px 2px; flex-shrink:0; border-radius:10px; transition:background .2s; }
+  .hand-wrap.tappable{ cursor:pointer; background:rgba(232,200,119,0.06); }
+  .hand-wrap.tappable .hand-title{ color:var(--gold-bright); }
+  .hand-wrap.tappable .hand-title::after{ content:' (タップして選択)'; font-size:8px; color:var(--ink-dim); }
+  .hand-title{ font-size:8px; letter-spacing:0.08em; color:var(--gold-dim); text-align:center; margin-bottom:2px; }
+  .hand{ display:flex; justify-content:center; gap:3px; flex-wrap:wrap; max-height:84px; overflow-y:auto; }
+  .hcard{
+    width:31px; height:44px; border-radius:6px;
+    display:flex;flex-direction:column;align-items:center;justify-content:space-between; padding:3px 2px;
+    background:linear-gradient(160deg,#221e2c,#171420); border:1px solid var(--line);
+    cursor:pointer; transition:transform .15s, border-color .15s, opacity .3s; position:relative;
+  }
+  .hcard:hover{ transform:translateY(-5px); }
+  .hcard.selected{ transform:translateY(-8px); border-color:var(--gold-bright); box-shadow:0 0 16px rgba(201,162,74,.4); }
+  .hcard .ha{ font-size:5px; letter-spacing:0.02em; } .hcard .hg{ width:7px;height:7px;border-radius:50%; }
+  .hcard .hn{ font-family:'Cormorant Garamond',serif; font-size:11px; font-weight:600; }
+  .hcard.moon .ha,.hcard.moon .hn{color:var(--moon);} .hcard.moon .hg{background:var(--moon);}
+  .hcard.sun .ha,.hcard.sun .hn{color:var(--sun);} .hcard.sun .hg{background:var(--sun);}
+  .hcard.dark .ha,.hcard.dark .hn{color:var(--dark);} .hcard.dark .hg{background:var(--dark);}
+  .hcard.kaos .ha,.hcard.kaos .hn{color:var(--kaos);} .hcard.kaos .hg{background:var(--kaos);}
+  .hcard.air .ha,.hcard.air .hn{color:var(--air);} .hcard.air .hg{background:var(--air);}
+
+  .actions{ padding:4px 16px 10px; display:flex; gap:8px; flex-shrink:0; }
+  .btn{
+    flex:1; padding:10px 0; border-radius:10px; text-align:center;
+    font-size:11px; letter-spacing:0.06em; cursor:pointer;
+    background:linear-gradient(160deg,var(--gold-bright),var(--gold-dim)); color:#1a1608; font-weight:700; border:none;
+    transition:all .15s; user-select:none;
+  }
+  .btn:active{ transform:scale(0.98); }
+  .btn.disabled{ opacity:0.3; pointer-events:none; }
+  .btn.ghost{ background:transparent; color:var(--gold); border:1px solid rgba(201,162,74,0.4); }
+  .btn.danger{ background:linear-gradient(160deg,#d88,#a55); color:#2a0d0d; }
+  .hint-line{ text-align:center; font-size:10px; color:var(--ink-dim); padding:0 18px 1px; min-height:12px; flex-shrink:0; }
+
+  .overlay,.instructions{
+    position:absolute; inset:0; z-index:20; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; padding:26px; gap:12px;
+    overflow-y:auto;
+  }
+  .overlay{ background:rgba(8,7,12,0.94); display:none; }
+  .overlay.show{ display:flex; }
+  .overlay .big{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:42px; }
+  .overlay .big.win{ color:var(--gold-bright); text-shadow:0 0 24px rgba(232,200,119,.5); }
+  .overlay .big.lose{ color:#9891a6; } .overlay .big.draw{ color:var(--ink-dim); }
+  .overlay .score-final{ font-size:15px; } .overlay .score-final b{ color:var(--gold); font-family:'Cormorant Garamond',serif; font-size:21px; }
+  .match-summary{
+    margin-top:12px; width:100%; max-width:280px; border:1px solid var(--line); border-radius:10px;
+    padding:8px 12px; display:flex; flex-direction:column; gap:5px;
+  }
+  .ms-row{ display:flex; justify-content:space-between; font-size:11px; color:var(--ink-dim); gap:8px; }
+  .ms-row span:first-child{ color:var(--gold-dim); white-space:nowrap; }
+  .ms-row span:last-child{ text-align:right; }
+  .btn-close-modal{
+    align-self:center; padding:8px 28px; border-radius:10px; font-size:11px;
+    color:var(--gold); border:1px solid rgba(201,162,74,0.4); cursor:pointer; letter-spacing:0.05em;
+  }
+
+  .instructions{ background:rgba(8,7,12,0.97); justify-content:flex-start; overflow-y:auto; align-items:stretch; }
+  .instructions h2{ font-family:'Cormorant Garamond',serif; font-style:italic; color:var(--gold); font-size:26px; text-align:center; }
+  .instructions .lead{ font-size:12px; color:var(--ink-dim); line-height:1.7; text-align:center; }
+  .instructions h3{ font-size:12px; color:var(--gold-bright); letter-spacing:0.1em; margin-top:10px; }
+  .instructions ul{ padding-left:18px; } .instructions li{ font-size:12px; color:var(--ink-dim); line-height:1.65; }
+  .instructions .chain{ text-align:center; color:var(--ink); font-size:14px; margin:4px 0; }
+  .cpu-setting-row{ margin:8px 0; }
+  .cpu-setting-label{ font-size:11px; color:var(--gold-dim); margin-bottom:5px; text-align:center; }
+  .cpu-setting-opts{ display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
+  .cpu-opt{
+    font-size:11px; padding:6px 12px; border-radius:16px; border:1px solid rgba(201,162,74,0.35);
+    color:var(--ink-dim); cursor:pointer; transition:all .15s;
+  }
+  .cpu-opt.selected{ background:var(--gold-bright); color:#1a1608; border-color:var(--gold-bright); font-weight:700; }
+  .trust-table{ width:100%; border-collapse:collapse; font-size:11px; margin:4px 0; }
+  .trust-table th{ color:var(--gold-dim); font-weight:600; text-align:left; padding:4px 6px; border-bottom:1px solid var(--line); font-size:10px; }
+  .trust-table td{ padding:5px 6px; border-bottom:1px solid rgba(201,162,74,0.12); color:var(--ink-dim); }
+  .trust-table td.lose{ color:var(--lose); font-weight:700; text-align:right; }
+  .trust-table td.win{ color:var(--win); font-weight:700; text-align:right; font-size:10px; }
+  .btn-wrap{ margin-top:12px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="instructions" id="instructions">
+    <h2>MASKD</h2>
+    <p class="lead">全12ラウンド、<b>毎ラウンド親が交代</b>。親は先に置き、子は後から置く。親だけが「決戦か撤退か」を決められる。</p>
+    <h3>手札の構成</h3>
+    <ul>
+      <li>Air（0〜5）も含めた全30枚（5属性×6数字）を2人で分配（同じ数字を2枚ずつ、Airも3枚ずつで破棄なし）</li>
+      <li>初期の実働手札6枚は<b>数字0〜5が必ず1枚ずつ</b>揃うように選ばれる（数字の偏りなし）</li>
+      <li>1枚使うたびに、ラウンド開始時に山札から1枚補充される</li>
+    </ul>
+    <h3>勝敗ルール</h3>
+    <ul>
+      <li><b style="color:var(--air)">Air</b>が絡む → 属性・数字問わず<b>必ず引き分け</b>（得点増減なし）。ただし<b>Kaosは数字問わずAirに勝利</b>する</li>
+      <li>Airを決戦に使うと、結果（勝ち・負け・引分）に関わらず<b>戦略カウンターが+1</b>される</li>
+      <li><b style="color:var(--kaos)">Kaos</b>が絡む（Airなし） → 属性問わず数字が大きい方の勝ち。同値は<b>Kaos側が敗北</b></li>
+      <li><b>特殊ルール</b>：Kaos<b>1</b>は全属性の<b>5に勝つ</b>／Kaos<b>5</b>は全属性の<b>1に負ける</b></li>
+      <li>同じ属性同士 → 数字が大きい方の勝ち</li>
+      <li>異なる属性同士（Sun/Dark/Moon） → Moon→Dark→Sun→Moon の3すくみ</li>
+    </ul>
+    <h3>得点</h3>
+    <ul>
+      <li>初期値0。<b>勝った側は、相手が出した仮面の数字ぶん得点を獲得</b>する（負けた側の得点は減らない）</li>
+      <li>12ラウンド後、<b>得点＋残り戦略カウンター＋残り手札ボーナス</b>の合計が多い方の勝ち</li>
+      <li><b>残り手札ボーナス</b>：使わずに残ったカードの数字を加算（<b style="color:var(--air)">Airは数字を2倍</b>にして計算）</li>
+    </ul>
+    <h3>戦略カウンター（初期値5、各自個別）</h3>
+    <table class="trust-table">
+      <tr><th>契機</th><th>増減</th></tr>
+      <tr><td>撤退（親）</td><td class="lose">-1</td></tr>
+      <tr><td>奇襲（子）</td><td class="lose">-2</td></tr>
+      <tr><td>入替（親、子の数字を見てから）</td><td class="lose">-2</td></tr>
+      <tr><td>決戦に勝利</td><td class="win">+1（上限5）</td></tr>
+      <tr><td>ゲーム終了時、残った分がそのまま得点に加算</td><td class="win">残量そのまま</td></tr>
+    </table>
+    <ul>
+      <li>戦略カウンターが足りなくなると、その行動は選べなくなる</li>
+      <li>撤退したカードは<b>双方とも開示してから破棄</b>される</li>
+      <li><b>入替</b>：親だけの特権。子の数字を見た後、自分が場に出したカードを手札の別の1枚と交換できる（1ラウンド1回まで）</li>
+    </ul>
+    <h3>対戦相手の設定</h3>
+    <div class="cpu-setting-row">
+      <div class="cpu-setting-label">CPUの種類</div>
+      <div class="cpu-setting-opts" id="cpuTypeOpts">
+        <div class="cpu-opt" data-val="random">おまかせ</div>
+        <div class="cpu-opt" data-val="aggressive">積極的</div>
+        <div class="cpu-opt" data-val="cautious">慎重</div>
+        <div class="cpu-opt" data-val="tricky">トリッキー</div>
+      </div>
+    </div>
+    <div class="cpu-setting-row">
+      <div class="cpu-setting-label">CPUの強さ</div>
+      <div class="cpu-setting-opts" id="cpuDiffOpts">
+        <div class="cpu-opt" data-val="weak">弱い</div>
+        <div class="cpu-opt" data-val="normal">普通</div>
+        <div class="cpu-opt" data-val="strong">強い</div>
+      </div>
+    </div>
+    <div class="btn-wrap"><div class="btn" onclick="beginMatchSetup()">対戦を始める</div></div>
+  </div>
+
+  <div class="overlay" id="dealerDrawOverlay">
+    <div class="big" style="font-size:26px;">親決め</div>
+    <p style="font-size:12px;color:var(--ink-dim);">お互い1枚引いて、数字が大きい方が第1ラウンドの親になる</p>
+    <div style="display:flex; gap:20px; align-items:center; justify-content:center; margin:14px 0;">
+      <div style="text-align:center;">
+        <div style="font-size:10px;color:var(--ink-dim);margin-bottom:4px;">あなた</div>
+        <div class="card facedown" id="youDrawCard" style="width:64px;height:88px;"><div class="fd-top">？</div><div class="mask-emblem">◈</div><div class="num" id="youDrawNum">?</div></div>
+      </div>
+      <div style="font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--ink-dim);">VS</div>
+      <div style="text-align:center;">
+        <div style="font-size:10px;color:var(--ink-dim);margin-bottom:4px;">相手</div>
+        <div class="card facedown" id="cpuDrawCard" style="width:64px;height:88px;"><div class="fd-top">？</div><div class="mask-emblem">◈</div><div class="num" id="cpuDrawNum">?</div></div>
+      </div>
+    </div>
+    <div id="dealerDrawResult" style="font-size:13px;color:var(--gold-bright);min-height:18px;"></div>
+    <div class="btn" style="flex:none;padding:12px 32px;" id="dealerDrawBtn" onclick="doDealerDraw()">引く</div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="big" id="ovTitle">VICTORY</div>
+    <div class="score-final" id="ovScore"></div>
+    <div class="btn" style="flex:none;padding:12px 32px;" onclick="beginMatchSetup()">もう一度</div>
+  </div>
+
+  <div class="history-modal" id="historyModal">
+    <h3>対戦履歴</h3>
+    <div class="hist-scroll" id="histScroll"></div>
+    <div class="btn-close-modal" onclick="closeHistory()">閉じる</div>
+  </div>
+
+  <div class="history-modal" id="statsModal">
+    <h3>通算統計</h3>
+    <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">この端末に保存された全対戦の集計（直近100戦まで）</p>
+    <div class="match-summary" id="statsBody" style="margin:10px 0;"></div>
+    <div style="display:flex;gap:6px;">
+      <div class="btn ghost" style="flex:1;font-size:12px;" onclick="exportStatsJSON()">JSONをコピー</div>
+      <div class="btn ghost" style="flex:1;font-size:12px;color:var(--lose);" onclick="clearGameHistory()">記録を削除</div>
+    </div>
+    <div class="btn-close-modal" onclick="closeStats()">閉じる</div>
+  </div>
+
+  <div class="history-modal" id="trackerModal">
+    <h3>手札一覧表</h3>
+    <div class="hist-scroll" id="trackerScroll"></div>
+    <div class="btn-close-modal" onclick="closeTracker()">閉じる</div>
+  </div>
+
+  <div class="hand-popup-overlay" id="handModal">
+    <div class="hand-popup-box">
+      <h3 id="handModalTitle">手札から選ぼう</h3>
+      <div class="hmc-context" id="handModalContext"></div>
+      <div class="hand-modal-grid" id="handModalGrid"></div>
+      <div class="btn-close-modal" style="margin-top:12px;" onclick="closeHandModal()">閉じる</div>
+    </div>
+  </div>
+
+  <div class="history-modal" id="playedDetailModal">
+    <h3>場に出した札の詳細</h3>
+    <div class="hist-scroll" id="playedDetailScroll"></div>
+    <div class="btn-close-modal" onclick="closePlayedDetail()">閉じる</div>
+  </div>
+
+  <div class="hd">
+    <div class="brand">MASKD</div>
+    <div class="top-right">
+      <div class="grid-btn" onclick="openTracker()">一覧表</div>
+      <div class="grid-btn" onclick="openHistory()">履歴 ↺</div>
+      <div class="round-badge">ラウンド <b id="roundN">1</b> / 12</div>
+    </div>
+  </div>
+
+  <div class="scoreboard">
+    <div class="score-cell you" id="youCell">
+      <div class="dealer-tag" id="youDealerTag" style="display:none;">親</div>
+      <div class="who">あなた</div><div class="val" id="youLP">13</div>
+      <div class="lp-bar-wrap" id="youBarWrap"></div>
+      <div class="token-line" id="youToken"></div>
+    </div>
+    <div class="score-mid">pt</div>
+    <div class="score-cell" id="cpuCell">
+      <div class="dealer-tag" id="cpuDealerTag" style="display:none;">親</div>
+      <div class="who">相手</div><div class="val" id="cpuLP">13</div>
+      <div class="lp-bar-wrap" id="cpuBarWrap"></div>
+      <div class="token-line" id="cpuToken"></div>
+    </div>
+  </div>
+
+  <div class="role-banner" id="roleBanner"></div>
+  <div class="opp-hand-row" id="oppHandRow"></div>
+
+  <div class="field">
+    <div class="zone-wrap">
+      <div class="zone-label"><div class="mask-badge cpu"></div>相手</div>
+      <div class="zone-hint" id="oppCardHint"></div>
+    </div>
+    <div class="slot-row" id="cpuSlot"><div class="empty-slot">待機</div></div>
+    <div class="mid-divider"><div class="ln"></div><div class="vs">VS</div><div class="ln"></div></div>
+    <div class="slot-row" id="youSlot"><div class="empty-slot">あなた</div></div>
+    <div class="zone-wrap">
+      <div class="zone-hint" id="youCardHint"></div>
+      <div class="zone-label you"><div class="mask-badge you"></div>あなた</div>
+    </div>
+    <div class="action-banner" id="actionBanner"><div class="ab-icon"></div><div class="ab-text"></div></div>
+    <div class="result-overlay" id="resultOv">
+      <div class="result-card" id="resultCard">
+        <div class="rtitle"></div><div class="rdetail"></div>
+        <div class="btn-next-round" id="btnNextRound" onclick="proceedToNextRound()">次へ ›</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="peek" id="peek"></div>
+  <div class="you-played-row" id="youPlayedRow"></div>
+
+  <div class="hand-wrap" id="handWrap" onclick="openHandModalIfReady()">
+    <div class="hand-title" id="handTitle">あなたの手札</div>
+    <div class="hand" id="hand"></div>
+  </div>
+
+  <div class="hint-line" id="hint"></div>
+  <div class="actions" id="actions"></div>
+
+</div>
+
+<script>
+const ATTRS4=['sun','dark','moon','kaos'];
+const ALABEL={moon:'MOON',sun:'SUN',dark:'DARK',kaos:'KAOS',air:'AIR'};
+const AJP={moon:'月',sun:'太陽',dark:'闇',kaos:'混沌',air:'空気'};
+const GLYPH={moon:'☾',sun:'☀',dark:'✦',kaos:'✷',air:'≈'};
+const beats={moon:'dark',dark:'sun',sun:'moon'};
+const START_LP=0;
+const TOTAL_ROUNDS=12;
+const AIR_LEFTOVER_MULTIPLIER=2; // 残り手札ボーナスで、Airは数字を2倍にして計算する
+
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+let youHand=[], cpuHand=[]; // 現在見えている実働手札(最大5枚)
+let youDrawPile=[], cpuDrawPile=[]; // 見えていない補充用の残り札
+let youFullDeal=[], cpuFullDeal=[]; // 配札時の全体(所有権計算・ボーナス計算用、不変)
+const ACTIVE_HAND_SIZE=6;
+let youLP=START_LP, cpuLP=START_LP;
+let round=1, youIsDealer=true, busy=false;
+let dealerCard=null, childCard=null; // {attr,num,owner:'you'|'cpu'}
+let phase='wait'; // wait/pick/decide
+let possibleAttrsByNum={}; // {1:[attr,...], ...} 相手が持ちうる属性(Air込み5属性プール)
+let poolOwner={}; // key attr+num -> 'you'|'cpu' (Air込み25枚中、配られた24枚の所有者)
+let allUsedPoolCards=new Set(); // 勝負・見送りを問わず場に出て消費されたカード(key attr+num)
+let revealedCards={}; // key attr+num -> true (勝負して公開されたカード)
+let youLastPassed=false, cpuLastPassed=false; // 直前に見送ったか(連続見送り禁止用)
+const PASS_TRUST_COST=1; // 親が撤退する時の戦略カウンターコスト
+const FORCE_TRUST_COST=2; // 子が戦略カウンターを払って奇襲するコスト(交代との資源競合を考慮し3→2に再調整)
+const SWAP_COST=2; // 親が「入替」(子の数字を見てから自分のカードを交換)するコスト(撤退との選択バランスを考慮し2に設定)
+let youSwapUsedThisRound=false, cpuSwapUsedThisRound=false; // 入替は1ラウンド1回まで
+const START_TRUST=5;
+let youTrust=START_TRUST, cpuTrust=START_TRUST; // 戦略カウンター(得点とは別の資源、各自個別)
+let youAirUsedSum=0, cpuAirUsedSum=0; // 使用したAirカードの数字合計(参考記録用、得点には影響しない)
+let roundLog=[]; // 対戦履歴
+let youPlayedCards=[]; // あなたがこれまでに場に出したカード(自分は常に見える)
+// (youAirUsedSum/cpuAirUsedSumは廃止: AirはもうカードではないためAir使用合計の概念は不要)
+let dealerShouldSwitch=true; // このラウンド終了後に親を交代すべきか(勝てば留任、負け/見送りで交代)
+
+const ATTRS5=['moon','sun','dark','kaos','air'];
+function computePossibleAttrs(myFullDeal){
+  const result={};
+  for(let n=0;n<=5;n++){
+    const mine=myFullDeal.filter(c=>c.num===n).map(c=>c.attr);
+    result[n]=ATTRS5.filter(a=>!mine.includes(a));
+  }
+  return result;
+}
+function remainingPossibleForNum(n){
+  const pool=(possibleAttrsByNum[n]||[]).filter(a=>!allUsedPoolCards.has(a+n));
+  return {pool, airPossible:false}; // airPossibleは後方互換のため残すが常にfalse(poolに統合済み)
+}
+
+// 相手の手札1枚を、数字+可能性アイコン付きの大きめカードとして描画
+function oppCardHTML(num){
+  const {pool}=remainingPossibleForNum(num);
+  const iconsHTML = pool.map(a=>`<div class="hint-icon tiny ${a}"></div>`).join('');
+  return `<div class="opp-card"><div class="opp-num">${num}</div><div class="opp-poss">${iconsHTML}</div></div>`;
+}
+
+function dealHands(){
+  const p1=[], p2=[]; // p1=you, p2=cpu
+  // Air(0~5)を共有プール化: シャッフルして3枚ずつ配る(6枚を3-3で分配、破棄なし)
+  const airShuffled=shuffle([0,1,2,3,4,5]);
+  p1.push({attr:'air',num:airShuffled[0]}); p1.push({attr:'air',num:airShuffled[1]}); p1.push({attr:'air',num:airShuffled[2]});
+  p2.push({attr:'air',num:airShuffled[3]}); p2.push({attr:'air',num:airShuffled[4]}); p2.push({attr:'air',num:airShuffled[5]});
+  for(let n=0;n<=5;n++){
+    const opts=shuffle([...ATTRS4]);
+    p1.push({attr:opts[0],num:n}); p1.push({attr:opts[1],num:n});
+    p2.push({attr:opts[2],num:n}); p2.push({attr:opts[3],num:n});
+  }
+  return {you:shuffle(p1), cpu:shuffle(p2)};
+}
+
+// ===== CPU設定の選択UI =====
+function initCpuSettingUI(){
+  document.querySelectorAll('#cpuTypeOpts .cpu-opt').forEach(el=>{
+    el.onclick=()=>{
+      document.querySelectorAll('#cpuTypeOpts .cpu-opt').forEach(x=>x.classList.remove('selected'));
+      el.classList.add('selected'); selectedCpuType=el.dataset.val;
+    };
+    if(el.dataset.val===selectedCpuType) el.classList.add('selected');
+  });
+  document.querySelectorAll('#cpuDiffOpts .cpu-opt').forEach(el=>{
+    el.onclick=()=>{
+      document.querySelectorAll('#cpuDiffOpts .cpu-opt').forEach(x=>x.classList.remove('selected'));
+      el.classList.add('selected'); selectedCpuDifficulty=el.dataset.val;
+    };
+    if(el.dataset.val===selectedCpuDifficulty) el.classList.add('selected');
+  });
+}
+// (initCpuSettingUI()はスクリプト末尾で呼び出す。変数宣言より先に実行されるのを防ぐため)
+
+// 対戦開始ボタン: 設定画面を閉じて親決め演出へ
+function beginMatchSetup(){
+  document.getElementById('instructions').style.display='none';
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('dealerDrawOverlay').classList.add('show');
+  document.getElementById('dealerDrawResult').textContent='';
+  document.getElementById('youDrawCard').classList.remove('faceup');
+  document.getElementById('youDrawNum').textContent='?';
+  document.getElementById('cpuDrawNum').textContent='?';
+  document.getElementById('dealerDrawBtn').style.display='inline-block';
+  document.getElementById('dealerDrawBtn').textContent='引く';
+}
+
+// 親決め: お互い1~5をランダムに引き、数字が大きい方が第1ラウンドの親(同値なら引き直し)
+function doDealerDraw(){
+  const btn=document.getElementById('dealerDrawBtn');
+  btn.style.display='none';
+  const youNum=Math.floor(Math.random()*5)+1;
+  const cpuNum=Math.floor(Math.random()*5)+1;
+  document.getElementById('youDrawNum').textContent=youNum;
+  document.getElementById('cpuDrawNum').textContent=cpuNum;
+  const resultEl=document.getElementById('dealerDrawResult');
+  if(youNum===cpuNum){
+    resultEl.textContent=`同値(${youNum} vs ${cpuNum})！引き直します…`;
+    setTimeout(()=>{
+      document.getElementById('youDrawNum').textContent='?';
+      document.getElementById('cpuDrawNum').textContent='?';
+      resultEl.textContent='';
+      btn.style.display='inline-block';
+    },1400);
+    return;
+  }
+  const youIsFirstDealer = youNum>cpuNum;
+  resultEl.innerHTML = youIsFirstDealer
+    ? `あなた${youNum} vs 相手${cpuNum} — <b style="color:var(--gold-bright)">あなたが第1ラウンドの親！</b>`
+    : `あなた${youNum} vs 相手${cpuNum} — <b style="color:var(--gold-bright)">相手が第1ラウンドの親！</b>`;
+  setTimeout(()=>{
+    document.getElementById('dealerDrawOverlay').classList.remove('show');
+    startGame(youIsFirstDealer);
+  },1800);
+}
+
+function startGame(initialDealerIsYou){
+  const {you,cpu}=dealHands();
+  youFullDeal=you; cpuFullDeal=cpu;
+  // 初期手札は数字0〜5が必ず1枚ずつ揃うように選出(数字の偏りをなくす)
+  const pick6=(fullDeal)=>{
+    const pool=[...fullDeal];
+    const hand=[]; const drawPile=[];
+    for(let n=0;n<=5;n++){
+      const candidates=pool.map((c,i)=>({c,i})).filter(x=>x.c.num===n);
+      const chosen=candidates[Math.floor(Math.random()*candidates.length)];
+      hand.push(chosen.c);
+      pool.splice(chosen.i,1);
+    }
+    drawPile.push(...shuffle(pool));
+    return {hand, drawPile};
+  };
+  const youPick=pick6(youFullDeal);
+  youHand=youPick.hand; youDrawPile=youPick.drawPile;
+  const cpuPick=pick6(cpuFullDeal);
+  cpuHand=cpuPick.hand; cpuDrawPile=cpuPick.drawPile;
+
+  // CPUの戦略パターン: 選択されていればそれを、おまかせならランダムに選択
+  cpuStrategy = selectedCpuType==='random'
+    ? CPU_STRATEGIES[Math.floor(Math.random()*CPU_STRATEGIES.length)]
+    : selectedCpuType;
+  cpuDifficulty = selectedCpuDifficulty;
+
+  youLP=START_LP; cpuLP=START_LP; round=1; youIsDealer=(initialDealerIsYou!==false); busy=false;
+  possibleAttrsByNum=computePossibleAttrs(youFullDeal);
+  poolOwner={};
+  youFullDeal.forEach(c=>{ poolOwner[c.attr+c.num]='you'; });
+  cpuFullDeal.forEach(c=>{ poolOwner[c.attr+c.num]='cpu'; });
+  allUsedPoolCards=new Set();
+  revealedCards={}; roundLog=[];
+  youLastPassed=false; cpuLastPassed=false;
+  youTrust=START_TRUST; cpuTrust=START_TRUST;
+  youAirUsedSum=0; cpuAirUsedSum=0;
+  youPlayedCards=[];
+  document.getElementById('instructions').style.display='none';
+  document.getElementById('overlay').classList.remove('show');
+  renderScore();
+  renderYouPlayed();
+  startRound();
+}
+
+function startRound(){
+  dealerCard=null; childCard=null;
+  youCardPeeking=false;
+  youSwapUsedThisRound=false; cpuSwapUsedThisRound=false;
+  document.getElementById('resultOv').classList.remove('show');
+  document.getElementById('btnNextRound').classList.remove('show');
+  document.getElementById('cpuSlot').innerHTML='<div class="empty-slot">待機</div>';
+  document.getElementById('youSlot').innerHTML='<div class="empty-slot">待機</div>';
+  document.getElementById('peek').textContent='';
+  document.getElementById('oppCardHint').textContent='';
+  document.getElementById('youCardHint').textContent='';
+
+  // ラウンド開始時に手札をまとめて補充し、結果を明示する
+  const youRefilled = refillYouHand();
+  const cpuRefilled = refillCpuHand();
+  renderRefillNotice(youRefilled, cpuRefilled);
+
+  renderScore();
+
+  const banner=document.getElementById('roleBanner');
+  if(youIsDealer){
+    banner.className='role-banner dealer';
+    banner.textContent='あなたが親です — 先にカードを置いてください';
+    phase='pick';
+    hint('手札から1枚選んで場に出そう');
+    renderHand(); renderActions();
+  } else {
+    banner.className='role-banner child';
+    banner.textContent='相手が親です — 相手が先に置きます…';
+    phase='wait';
+    renderHand(); renderActions();
+    setTimeout(cpuActAsDealer, 700);
+  }
+}
+
+function renderTrustSegs(wrapId, val){
+  const wrap=document.getElementById(wrapId);
+  wrap.innerHTML='';
+  for(let i=0;i<START_TRUST;i++){
+    const seg=document.createElement('div');
+    seg.className='lp-seg'+(i<val?' filled':'');
+    wrap.appendChild(seg);
+  }
+}
+
+function renderScore(){
+  document.getElementById('roundN').textContent=round;
+  document.getElementById('youLP').textContent=youLP;
+  document.getElementById('cpuLP').textContent=cpuLP;
+  // バーはAirチャージ(0~3固定)を表示する
+  renderTrustSegs('youBarWrap', youTrust);
+  renderTrustSegs('cpuBarWrap', cpuTrust);
+  document.getElementById('youDealerTag').style.display=youIsDealer?'block':'none';
+  document.getElementById('cpuDealerTag').style.display=!youIsDealer?'block':'none';
+  document.getElementById('youToken').textContent = `戦略 ${youTrust}`;
+  document.getElementById('cpuToken').textContent = `戦略 ${cpuTrust}`;
+  renderOppHand();
+}
+function renderOppHand(){
+  const row=document.getElementById('oppHandRow');
+  row.innerHTML='';
+  const cpuAll=[...cpuHand]; // 表示するのは実働手札(最大5枚)のみ
+  const label=document.createElement('div'); label.className='opp-hand-label';
+  label.innerHTML=`相手の残り手札：<b style="color:var(--gold-bright);font-family:'Cormorant Garamond',serif;font-size:14px;">${cpuAll.length}</b>枚`;
+  row.appendChild(label);
+  const chips=document.createElement('div');
+  chips.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;';
+  chips.innerHTML=[...cpuAll].sort((a,b)=>a.num-b.num).map(c=>oppCardHTML(c.num)).join('');
+  row.appendChild(chips);
+}
+
+// 自分がこれまでに場に出したカード(常に自分には見える)
+function renderYouPlayed(){
+  const row=document.getElementById('youPlayedRow');
+  if(!row) return;
+  row.innerHTML='';
+  const label=document.createElement('span'); label.className='you-played-label';
+  label.textContent=`あなたが場に出した札：${youPlayedCards.length}枚（長押しで詳細）`;
+  row.appendChild(label);
+  const icons=document.createElement('div'); icons.className='you-played-icons';
+  youPlayedCards.forEach(c=>{
+    const el=document.createElement('div');
+    el.className='you-mini-card '+c.attr;
+    el.innerHTML=`<span class="ymc-a">${ALABEL[c.attr]}</span><span>${c.num}</span>`;
+    el.style.cursor='pointer';
+    el.onclick=openPlayedDetail;
+    icons.appendChild(el);
+  });
+  row.appendChild(icons);
+}
+
+// 長押し検出(タッチ/マウス両対応)
+let youCardPeeking=false; // 場に出した自分のカードを表向きで見ているか(タップで切替)
+
+// 場の自分のカードをタップ表裏反転付きで描画
+function renderYouSlot(card){
+  const slot=document.getElementById('youSlot');
+  if(youCardPeeking){
+    slot.innerHTML=`<div class="card faceup ${card.attr}" style="cursor:pointer;"><div class="attr">${ALABEL[card.attr]}</div><div class="glyph">${GLYPH[card.attr]}</div><div class="num">${card.num}</div></div>`;
+  } else {
+    slot.innerHTML=`<div class="card facedown" style="cursor:pointer;"><div class="fd-top">あなた</div><div class="mask-emblem">◈</div><div class="num">${card.num}</div></div>`;
+  }
+  slot.querySelector('.card').onclick=()=>{ youCardPeeking=!youCardPeeking; renderYouSlot(card); };
+}
+
+// 場に出した札の詳細表(ラウンドごとの内訳)
+function openPlayedDetail(){
+  const scroll=document.getElementById('playedDetailScroll');
+  scroll.innerHTML='';
+  if(youPlayedCards.length===0){
+    scroll.innerHTML='<div class="hist-empty">まだ場に出したカードがありません。</div>';
+  } else {
+    [...youPlayedCards].reverse().forEach(c=>{
+      const row=document.createElement('div'); row.className='pd-row';
+      row.innerHTML=`<span class="pd-round">第${c.round}R</span>
+        <span class="pd-card" style="color:var(--${c.attr})">${AJP[c.attr]} ${c.num}</span>`;
+      scroll.appendChild(row);
+    });
+  }
+  document.getElementById('playedDetailModal').classList.add('show');
+}
+function closePlayedDetail(){ document.getElementById('playedDetailModal').classList.remove('show'); }
+
+function hint(t){ document.getElementById('hint').textContent=t; }
+
+// 手札選択モーダル内に、自分/相手の使用済み・相手の残り枚数を表示
+function renderHandModalContext(){
+  const ctx=document.getElementById('handModalContext');
+  ctx.innerHTML='';
+
+  // 自分の使用済み
+  const row1=document.createElement('div'); row1.className='hmc-row';
+  const label1=document.createElement('span'); label1.className='hmc-label';
+  label1.textContent=`自分の使用済み(${youPlayedCards.length}):`;
+  row1.appendChild(label1);
+  if(youPlayedCards.length===0){
+    const none=document.createElement('span'); none.className='hmc-none'; none.textContent='なし';
+    row1.appendChild(none);
+  } else {
+    youPlayedCards.forEach(c=>{
+      const el=document.createElement('div'); el.className='hmc-mini '+c.attr;
+      el.innerHTML=`<span class="hmc-a">${ALABEL[c.attr]}</span><span>${c.num}</span>`;
+      row1.appendChild(el);
+    });
+  }
+  ctx.appendChild(row1);
+
+  // 相手の使用済み(公開済みのみ: プールカード+Air)
+  const row2=document.createElement('div'); row2.className='hmc-row';
+  const label2=document.createElement('span'); label2.className='hmc-label';
+  const cpuUsedList=[];
+  Object.keys(poolOwner).forEach(key=>{
+    if(poolOwner[key]==='cpu' && allUsedPoolCards.has(key)){
+      const m=key.match(/^([a-z]+)(\d)$/);
+      if(m) cpuUsedList.push({attr:m[1], num:parseInt(m[2])});
+    }
+  });
+  cpuUsedList.sort((a,b)=>a.num-b.num);
+  label2.textContent=`相手の使用済み(${cpuUsedList.length}):`;
+  row2.appendChild(label2);
+  if(cpuUsedList.length===0){
+    const none=document.createElement('span'); none.className='hmc-none'; none.textContent='なし';
+    row2.appendChild(none);
+  } else {
+    cpuUsedList.forEach(c=>{
+      const el=document.createElement('div'); el.className='hmc-mini '+c.attr;
+      el.innerHTML=`<span class="hmc-a">${ALABEL[c.attr]}</span><span>${c.num}</span>`;
+      row2.appendChild(el);
+    });
+  }
+  ctx.appendChild(row2);
+
+  // 自分の山札(まだ引いていない残り) は中身が分かる(属性・数字表示)
+  const row3=document.createElement('div'); row3.className='hmc-row'; row3.style.flexWrap='wrap';
+  const label3=document.createElement('span'); label3.className='hmc-label';
+  label3.textContent=`自分の山札(${youDrawPile.length}):`;
+  row3.appendChild(label3);
+  if(youDrawPile.length===0){
+    const none=document.createElement('span'); none.className='hmc-none'; none.textContent='なし';
+    row3.appendChild(none);
+  } else {
+    [...youDrawPile].sort((a,b)=>a.num-b.num).forEach(c=>{
+      const el=document.createElement('div'); el.className='hmc-mini '+c.attr;
+      el.innerHTML=`<span class="hmc-a">${ALABEL[c.attr]}</span><span>${c.num}</span>`;
+      row3.appendChild(el);
+    });
+  }
+  ctx.appendChild(row3);
+
+  // 相手の残り手札: 自分の山札と同じ並びで、数字だけ分かるカードとして表示(属性は不明)
+  const row3b=document.createElement('div'); row3b.className='hmc-row'; row3b.style.flexWrap='wrap';
+  const cpuAll=[...cpuHand]; // 表示するのは実働手札(最大5枚)のみ
+  const label3b=document.createElement('span'); label3b.className='hmc-label';
+  label3b.textContent=`相手の残り手札(${cpuAll.length}):`;
+  row3b.appendChild(label3b);
+  [...cpuAll].sort((a,b)=>a.num-b.num).forEach(c=>{
+    row3b.insertAdjacentHTML('beforeend', oppCardHTML(c.num));
+  });
+  ctx.appendChild(row3b);
+
+  // 相手が各数字で選択できる属性の候補(推理)は、対戦中に相手が実際にカードを出した時のみ表示する
+  // (事前に全数字を一覧表示すると推理の楽しみが薄れるため、ここでは表示しない)
+}
+
+function renderHand(){
+  const h=document.getElementById('hand'); h.innerHTML='';
+  document.getElementById('handTitle').textContent = youIsDealer? 'あなたの手札（親）':'あなたの手札（子）';
+  const indexed = youHand.map((c,i)=>({c,i}));
+  indexed.sort((a,b)=> a.c.num-b.c.num || a.c.attr.localeCompare(b.c.attr));
+
+  const modalGrid=document.getElementById('handModalGrid');
+  const handWrap=document.getElementById('handWrap');
+
+  if(phase==='pick'){
+    // 選択可能な状態: モーダルの中身を準備しておく(表示はタップされた時)
+    document.getElementById('handModalTitle').textContent = youIsDealer? '手札から選ぼう（親）':'手札から選ぼう（子）';
+    renderHandModalContext();
+    modalGrid.innerHTML='';
+    indexed.forEach(({c,i})=>{
+      const el=document.createElement('div');
+      el.className='hmg-card '+c.attr;
+      el.innerHTML=`<div class="ha">${ALABEL[c.attr]}</div><div class="hg"></div><div class="hn">${c.num}</div>`;
+      el.onclick=(e)=>{ e.stopPropagation(); if(busy)return; closeHandModal(); playYouCard(i); };
+      modalGrid.appendChild(el);
+    });
+    handWrap.classList.add('tappable');
+  } else {
+    document.getElementById('handModal').classList.remove('show');
+    handWrap.classList.remove('tappable');
+  }
+
+  // 下部の簡易表示(プレビューのみ。タップは親のhandWrapが受けてモーダルを開く)
+  indexed.forEach(({c,i})=>{
+    const el=document.createElement('div');
+    el.className='hcard '+c.attr;
+    el.innerHTML=`<div class="ha">${ALABEL[c.attr]}</div><div class="hg"></div><div class="hn">${c.num}</div>`;
+    if(phase!=='pick'){ el.style.opacity='0.5'; }
+    el.style.cursor='default'; el.style.pointerEvents='none';
+    h.appendChild(el);
+  });
+}
+function openHandModalIfReady(){
+  if(phase==='pick') document.getElementById('handModal').classList.add('show');
+}
+function closeHandModal(){ document.getElementById('handModal').classList.remove('show'); }
+
+function renderActions(){
+  const actions=document.getElementById('actions');
+  actions.innerHTML='';
+  if(phase==='decide' && youIsDealer){
+    const fightBtn=document.createElement('div');
+    fightBtn.className='btn'; fightBtn.textContent='決戦';
+    fightBtn.onclick=()=>resolveFight(true);
+    const passBtn=document.createElement('div');
+    const canPass = youTrust>=PASS_TRUST_COST;
+    passBtn.className='btn ghost'+(canPass?'':' disabled');
+    passBtn.textContent = canPass ? `撤退 (戦略-${PASS_TRUST_COST})` : `撤退 (戦略不足)`;
+    passBtn.onclick=()=>{ if(canPass) resolveFight(false); };
+    const swapBtn=document.createElement('div');
+    const canSwap = youTrust>=SWAP_COST && youHand.length>0 && !youSwapUsedThisRound;
+    swapBtn.className='btn ghost'+(canSwap?'':' disabled');
+    swapBtn.textContent = youSwapUsedThisRound ? '入替 (使用済)' : (canSwap ? `入替 (戦略-${SWAP_COST})` : `入替 (不可)`);
+    swapBtn.onclick=()=>{ if(canSwap) openSwapModal(); };
+    actions.appendChild(passBtn); actions.appendChild(swapBtn); actions.appendChild(fightBtn);
+  }
+}
+
+// ===== 親の特権「入替」: 子の数字を見てから、自分のカードを手札の別の1枚と交換できる(1ラウンド1回まで) =====
+function openSwapModal(){
+  const modal=document.getElementById('handModal');
+  const grid=document.getElementById('handModalGrid');
+  grid.innerHTML='';
+  document.getElementById('handModalContext').innerHTML =
+    `<div style="color:var(--gold-bright);font-size:12px;margin-bottom:4px;">入替先を選んでください（戦略-${SWAP_COST}）</div>`;
+  youHand.forEach((c,i)=>{
+    const el=document.createElement('div'); el.className='hmg-card '+c.attr;
+    el.innerHTML=`<div class="ha">${AJP[c.attr]}</div><div class="hn">${c.num}</div>`;
+    el.onclick=()=>{ executeSwap(i); };
+    grid.appendChild(el);
+  });
+  modal.classList.add('show');
+}
+function executeSwap(idx){
+  const modal=document.getElementById('handModal');
+  modal.classList.remove('show');
+  const newCard=youHand.splice(idx,1)[0];
+  newCard.owner='you';
+  const oldCard=dealerCard;
+  oldCard.owner=undefined; // 手札に戻すので場のオーナー情報を解除
+  youHand.push(oldCard);
+  dealerCard=newCard;
+  youTrust-=SWAP_COST;
+  youSwapUsedThisRound=true;
+  renderYouSlot(newCard);
+  showYouCardHint(newCard.num);
+  hint(`入替した。新しい数字は ${newCard.num}。決戦か撤退か。`);
+  renderScore(); renderActions();
+}
+
+function cardHTML(c, faceDown, ownerLabel){
+  if(faceDown){
+    return `<div class="card facedown"><div class="fd-top">${ownerLabel}</div><div class="mask-emblem">◈</div><div class="num">${c.num}</div></div>`;
+  }
+  return `<div class="card faceup ${c.attr} flip-in"><div class="attr">${ALABEL[c.attr]}</div><div class="glyph">${GLYPH[c.attr]}</div><div class="num">${c.num}</div></div>`;
+}
+
+// ===== プレイヤーがカードを場に出す =====
+// カードを1枚使った後、山札から補充する(山札が尽きていれば何もしない)
+// (youSkipNextRefill/cpuSkipNextRefillは廃止: Airはもうカードとして手札に入らない)
+// 決戦・撤退・奇襲の分かりやすい演出バナーを表示する
+function showActionBanner(type, callback){
+  const banner=document.getElementById('actionBanner');
+  const cfg={
+    kessen:{icon:'⚔', text:'決戦', dur:750},
+    tettai:{icon:'↩', text:'撤退', dur:650},
+    kishuu:{icon:'⚡', text:'奇襲！', dur:900}
+  }[type];
+  banner.className='action-banner '+type;
+  banner.querySelector('.ab-icon').textContent=cfg.icon;
+  banner.querySelector('.ab-text').textContent=cfg.text;
+  requestAnimationFrame(()=>banner.classList.add('show'));
+  setTimeout(()=>{
+    banner.classList.remove('show');
+    if(callback) callback();
+  }, cfg.dur);
+}
+
+function renderRefillNotice(youRefilled, cpuRefilled){
+  const el=document.getElementById('peek');
+  const parts=[];
+  if(youRefilled) parts.push('あなた: 手札を1枚補充');
+  if(cpuRefilled) parts.push('相手: 手札を1枚補充');
+  if(parts.length>0){
+    el.innerHTML=`<span style="color:var(--gold-dim);">${parts.join('　／　')}</span>`;
+  }
+}
+
+function refillYouHand(){
+  if(youHand.length<ACTIVE_HAND_SIZE && youDrawPile.length>0){ youHand.push(youDrawPile.pop()); return true; }
+  return false;
+}
+function refillCpuHand(){
+  if(cpuHand.length<ACTIVE_HAND_SIZE && cpuDrawPile.length>0){ cpuHand.push(cpuDrawPile.pop()); return true; }
+  return false;
+}
+
+function playYouCard(idx){
+  const card=youHand.splice(idx,1)[0];
+  card.owner='you';
+  youCardPeeking=false;
+  showYouCardHint(card.num);
+  if(youIsDealer){
+    dealerCard=card;
+    renderYouSlot(card);
+    hint('相手が子として札を選んでいます…');
+    phase='wait'; renderHand(); renderActions();
+    setTimeout(cpuActAsChild, 700);
+  } else {
+    childCard=card;
+    renderYouSlot(card);
+    hint('相手（親）が判断しています…');
+    phase='wait'; renderHand(); renderActions();
+    setTimeout(cpuDecide, 700);
+  }
+}
+
+// ===== CPUが親として最初に出す =====
+function cpuActAsDealer(){
+  const idx=cpuChooseCard(cpuHand, null);
+  const card=cpuHand.splice(idx,1)[0]; card.owner='cpu';
+  dealerCard=card;
+  document.getElementById('cpuSlot').innerHTML=cardHTML(card,true,'相手');
+  hint('相手の数字は '+card.num+'。あなたが子です。出す札を選ぼう');
+  phase='pick'; renderHand(); renderActions(); renderScore();
+  showAttrHint(card.num);
+}
+
+// ===== CPUが子として、親(あなた)の数字を見て出す =====
+function cpuActAsChild(){
+  const idx=cpuChooseCard(cpuHand, dealerCard.num);
+  const card=cpuHand.splice(idx,1)[0]; card.owner='cpu';
+  childCard=card;
+  document.getElementById('cpuSlot').innerHTML=cardHTML(card,true,'相手');
+  hint('あなたは親です。子の数字は '+card.num+'。決戦か撤退か。');
+  phase='decide'; renderActions(); renderScore();
+  showAttrHint(card.num);
+}
+
+// 相手が出した数字から、可能性のある属性をヒント表示
+function showAttrHint(num){
+  const el=document.getElementById('oppCardHint');
+  const {pool} = remainingPossibleForNum(num);
+  const options = pool;
+  const iconsHTML = options.map(a=>`<div class="hint-icon ${a}${options.length===1?' confirmed':''}"></div>`).join('');
+  if(options.length===0){
+    el.innerHTML=`可能性：<b style="color:var(--gold-bright)">全て公開済み</b>`;
+  } else if(options.length===1){
+    el.innerHTML=`<span class="hint-icon-row">${iconsHTML}</span> <b style="color:var(--gold-bright)">で確定</b>`;
+  } else {
+    el.innerHTML=`可能性: <span class="hint-icon-row">${iconsHTML}</span>`;
+  }
+}
+
+// ===== CPUの推理: プレイヤーのカード(数字n)が取りうる属性を計算 =====
+// 自分が場に出した数字について、相手(CPU)視点でどの属性まで絞り込めるかを表示
+function showYouCardHint(num){
+  const el=document.getElementById('youCardHint');
+  const options=cpuPossibleAttrsFor(num);
+  const iconsHTML = options.map(a=>`<div class="hint-icon ${a}${options.length===1?' confirmed':''}"></div>`).join('');
+  if(options.length===0){
+    el.innerHTML=`相手視点：<b style="color:var(--gold-bright)">全て公開済み</b>`;
+  } else if(options.length===1){
+    el.innerHTML=`相手からは <span class="hint-icon-row">${iconsHTML}</span> <b style="color:var(--lose)">とバレている</b>`;
+  } else {
+    el.innerHTML=`相手からの見え方: <span class="hint-icon-row">${iconsHTML}</span>`;
+  }
+}
+
+function cpuPossibleAttrsFor(n){
+  const options=[];
+  ATTRS5.forEach(a=>{
+    const key=a+n;
+    if(poolOwner[key]==='you' && !allUsedPoolCards.has(key)) options.push(a);
+  });
+  return options;
+}
+// CPU視点: 自分のカード(myCard)が相手の数字(oppNum)に対してどれくらい勝てそうか
+const CPU_STRATEGIES=['aggressive','cautious','tricky'];
+let cpuStrategy='aggressive'; // ゲーム開始時に選ばれる(選択またはランダム)
+let cpuDifficulty='normal'; // 'weak'/'normal'/'strong'
+let selectedCpuType='random';
+let selectedCpuDifficulty='normal';
+
+function cpuEstimate(myCard, oppNum, iAmDealer){
+  const options=cpuPossibleAttrsFor(oppNum);
+  if(options.length===0) return {win:0.34,lose:0.33,draw:0.33};
+  let w=0,l=0,d=0;
+  options.forEach(a=>{
+    const opp={attr:a,num:oppNum};
+    const res = iAmDealer ? judge(myCard,opp) : judge(opp,myCard);
+    const myWin = iAmDealer ? 'dealer':'child';
+    const oppWin = iAmDealer ? 'child':'dealer';
+    if(res===myWin)w++; else if(res===oppWin)l++; else d++;
+  });
+  const t=options.length;
+  return {win:w/t, lose:l/t, draw:d/t};
+}
+
+// ===== CPUが親として、勝負するか決める(推理+LP状況+戦略パターン考慮) =====
+function cpuDecide(){
+  // 親の特権「入替」: 子の数字を見て、自分のカードが明確に不利なら入替を検討(1ラウンド1回まで)
+  if(!cpuSwapUsedThisRound && cpuTrust>=SWAP_COST && dealerCard.num < childCard.num && cpuHand.length>0){
+    const candidates = cpuHand.map((c,i)=>{
+      const est=cpuEstimate(c, childCard.num, true);
+      return {i, c, score: est.win*childCard.num - est.lose*c.num};
+    }).sort((a,b)=>b.score-a.score);
+    const currentEst=cpuEstimate(dealerCard, childCard.num, true);
+    const currentScore = currentEst.win*childCard.num - currentEst.lose*dealerCard.num;
+    // 慎重なほど入替しやすく、積極的なほど今の手を信じる
+    const swapBar = cpuStrategy==='cautious' ? 0.3 : (cpuStrategy==='aggressive' ? 1.5 : 0.8);
+    if(candidates[0].score > currentScore + swapBar){
+      const oldCard=dealerCard; oldCard.owner=undefined;
+      cpuHand.push(oldCard);
+      dealerCard=cpuHand.splice(candidates[0].i,1)[0];
+      dealerCard.owner='cpu';
+      cpuTrust-=SWAP_COST;
+      cpuSwapUsedThisRound=true;
+      document.getElementById('cpuSlot').innerHTML=cardHTML(dealerCard,true,'相手');
+      renderScore();
+    }
+  }
+
+  const est=cpuEstimate(dealerCard, childCard.num, true);
+  const expLoss=est.lose*dealerCard.num;
+  const expGain=est.win*childCard.num;
+  let threshold=0;
+
+  // 状況判断: 点差(自分視点)と残りラウンドで積極/慎重を調整
+  const scoreDiff = cpuLP - youLP; // 正なら相手(CPU)がリード
+  const roundsLeft = TOTAL_ROUNDS - round + 1;
+  const urgency = roundsLeft<=3 ? 1.6 : (roundsLeft<=6 ? 1.0 : 0.5);
+  if(scoreDiff < -2) threshold -= urgency;       // 負けている: 終盤ほど積極的に取り返しにいく
+  else if(scoreDiff > 2) threshold += urgency*0.6; // リード中: 終盤ほど手堅く逃げ切りたい
+
+  // 戦略パターンによる補正
+  if(cpuStrategy==='aggressive') threshold-=0.7; // 積極的: 多少不利でも勝負に出る
+  else if(cpuStrategy==='cautious') threshold+=0.9; // 慎重: 十分有利でないと勝負しない
+  else if(cpuStrategy==='tricky') threshold+=(Math.random()*2-1); // トリッキー: 毎回ブレる
+
+  // CPUの強さ: 弱いほど判断にノイズが乗り、強いほど正確
+  if(cpuDifficulty==='weak') threshold += (Math.random()*2.4-1.2);
+  else if(cpuDifficulty==='strong') threshold += (Math.random()*0.3-0.15);
+
+  // 戦略カウンターが尽きかけているなら、撤退/奇襲に頼れない分やや積極的に
+  if(cpuTrust<=1) threshold-=0.3;
+
+  let doFight = (expGain-expLoss) > threshold;
+  if(!doFight && (expGain-expLoss) > -PASS_TRUST_COST*0.5) doFight=true;
+  hint(doFight ? '相手が決戦を仕掛けてきた！' : '相手はこのラウンドを撤退した');
+  setTimeout(()=>resolveFight(doFight, true), 600);
+}
+
+// CPUのカード選択(推理+期待値ベース+戦略パターン)
+function cpuChooseCard(hand, oppNum){
+  let randomWeight = cpuStrategy==='tricky' ? 3.5 : (cpuStrategy==='cautious' ? 1.0 : 2.0);
+  // CPUの強さ: 弱いほどランダム性(ノイズ)が増え、強いほど期待値通りに動く
+  if(cpuDifficulty==='weak') randomWeight*=2.2;
+  else if(cpuDifficulty==='strong') randomWeight*=0.35;
+  const roundsLeft = TOTAL_ROUNDS - round + 1;
+  // Airは終盤ほど残せば得点(2倍)になるが、使えば即座に戦略カウンター+1を得られるため
+  // 温存インセンティブは以前より弱め、使用そのものにも一定の価値を持たせる
+  const airHoardBonus = roundsLeft * 0.12;
+  const airUseBonus = 1.2; // Air使用による戦略カウンター+1の価値
+  if(oppNum===null){
+    // 親として先に出す: 期待値の高い中庸〜強カードを重み付きで選ぶ
+    const scored=hand.map((c,i)=>{
+      let base=0;
+      if(c.attr==='kaos') base=c.num*0.5;
+      else if(c.attr==='air') base = (cpuStrategy==='cautious' ? 1.5 : 0.3) + airUseBonus - airHoardBonus;
+      else base=1.5;
+      if(cpuStrategy==='aggressive') base+=c.num*0.3; // 積極的: 高い数字を好む
+      return {i, score: base + Math.random()*randomWeight};
+    }).sort((a,b)=>b.score-a.score);
+    return scored[0].i;
+  }
+  // 子として、相手の数字を見て最良の一手を選ぶ
+  const scored=hand.map((c,i)=>{
+    const est=cpuEstimate(c, oppNum, false);
+    let ev = est.win*oppNum - est.lose*c.num;
+    if(c.attr==='air') ev += airUseBonus - airHoardBonus;
+    if(cpuStrategy==='aggressive') ev += est.win*0.5; // 積極的: 勝ち筋を重視
+    else if(cpuStrategy==='cautious') ev -= est.lose*0.5; // 慎重: 負けを強く嫌う
+    return {i, ev: ev + Math.random()*randomWeight*0.25};
+  }).sort((a,b)=>b.ev-a.ev);
+  return scored[0].i;
+}
+// CPU(子)が親の見送りに対してLPを払って強制勝負するか判断(戦略パターン反映)
+// CPU(子)が親の撤退に対して奇襲を仕掛けるか(無料の戦略判断)
+function cpuWantsForce(){
+  if(cpuTrust<FORCE_TRUST_COST) return false;
+  const est=cpuEstimate(childCard, dealerCard.num, false);
+  const ev=est.win*dealerCard.num - est.lose*childCard.num;
+  let bar = 1.0;
+  if(cpuStrategy==='aggressive') bar=0.4;
+  else if(cpuStrategy==='cautious') bar=1.8;
+  else if(cpuStrategy==='tricky') bar=1.0+(Math.random()*1.2-0.6);
+
+  // 状況判断: 負けていて残り少ないなら強気に、リード中で戦略が乏しいなら温存
+  const scoreDiff = cpuLP - youLP;
+  const roundsLeft = TOTAL_ROUNDS - round + 1;
+  if(scoreDiff < -2 && roundsLeft<=4) bar -= 0.6;
+  if(scoreDiff > 2 && cpuTrust<=2) bar += 0.5;
+
+  if(cpuDifficulty==='weak') bar += (Math.random()*1.6-0.8);
+  else if(cpuDifficulty==='strong') bar += (Math.random()*0.2-0.1);
+
+  return ev > bar;
+}
+
+// CPUがAirチャージを使って、決戦/奇襲を引き分けに持ち込むか
+function judge(dealer, child){
+  // 新ルール: Kaosは数字問わずAirに勝利(Airの必ず引き分けルールより優先)
+  if(dealer.attr==='kaos'&&child.attr==='air') return 'dealer';
+  if(child.attr==='kaos'&&dealer.attr==='air') return 'child';
+  if(dealer.attr==='air'||child.attr==='air') return 'draw'; // Airが絡めば必ず引き分け(Kaos以外)
+
+  // Kaos特殊ルール: Kaos1は全ての5に勝ち、Kaos5は全ての1に負ける(Airの次に優先)
+  if(dealer.attr==='kaos'&&dealer.num===1&&child.num===5) return 'dealer';
+  if(child.attr==='kaos'&&child.num===1&&dealer.num===5) return 'child';
+  if(dealer.attr==='kaos'&&dealer.num===5&&child.num===1) return 'child';
+  if(child.attr==='kaos'&&child.num===5&&dealer.num===1) return 'dealer';
+
+  if(dealer.attr==='kaos'||child.attr==='kaos'){
+    if(dealer.num>child.num) return 'dealer';
+    if(child.num>dealer.num) return 'child';
+    // 同値: Kaos側の弱点(両方Kaosなら通常通り引き分け)
+    if(dealer.attr==='kaos'&&child.attr!=='kaos') return 'child';
+    if(child.attr==='kaos'&&dealer.attr!=='kaos') return 'dealer';
+    return 'draw';
+  }
+  if(dealer.attr===child.attr){
+    if(dealer.num>child.num) return 'dealer';
+    if(child.num>dealer.num) return 'child';
+    return 'draw';
+  }
+  if(beats[dealer.attr]===child.attr) return 'dealer';
+  if(beats[child.attr]===dealer.attr) return 'child';
+  return 'draw';
+}
+function whyText(dealer, child, result){
+  if(dealer.attr==='kaos'&&child.attr==='air') return 'Kaosの特殊効果 → 数字問わずAirに勝利';
+  if(child.attr==='kaos'&&dealer.attr==='air') return 'Kaosの特殊効果 → 数字問わずAirに勝利';
+  if(dealer.attr==='air'||child.attr==='air'){
+    return 'Air が絡んだ → 必ず引き分け';
+  }
+  // Kaos特殊ルールの説明
+  if(dealer.attr==='kaos'&&dealer.num===1&&child.num===5) return 'Kaos1の特殊効果 → あらゆる5に勝利';
+  if(child.attr==='kaos'&&child.num===1&&dealer.num===5) return 'Kaos1の特殊効果 → あらゆる5に勝利';
+  if(dealer.attr==='kaos'&&dealer.num===5&&child.num===1) return 'Kaos5の特殊弱点 → あらゆる1に敗北';
+  if(child.attr==='kaos'&&child.num===5&&dealer.num===1) return 'Kaos5の特殊弱点 → あらゆる1に敗北';
+  if(dealer.attr==='kaos'||child.attr==='kaos'){
+    if(dealer.num===child.num) return 'Kaos → 数字勝負だが、同値の場合はKaos側が敗北';
+    return 'Kaos → 属性問わず数字勝負';
+  }
+  if(dealer.attr===child.attr) return '同じ属性 → 数字勝負';
+  return `${AJP[dealer.attr]} と ${AJP[child.attr]} の相性で決着`;
+}
+
+// 見送りの実行(親がPASS_COSTを支払う)
+function executePass(isCpuDealer){
+  busy=true;
+  document.getElementById('actions').innerHTML='';
+  if(youIsDealer) youTrust=Math.max(0,youTrust-PASS_TRUST_COST); else cpuTrust=Math.max(0,cpuTrust-PASS_TRUST_COST);
+  if(youIsDealer) youLastPassed=true; else cpuLastPassed=true;
+  // 自分が出したカードを記録(撤退でも自分は中身を知っている)
+  const myCard = dealerCard.owner==='you' ? dealerCard : childCard;
+  youPlayedCards.push({attr:myCard.attr, num:myCard.num, round});
+
+  // 撤退したカードは双方開示してから捨て札にする
+  [dealerCard, childCard].forEach(c=>{
+    allUsedPoolCards.add(c.attr+c.num); revealedCards[c.attr+c.num]=true;
+    if(c.attr==='air'){ if(c.owner==='you') youAirUsedSum+=c.num; else cpuAirUsedSum+=c.num; }
+  });
+
+  showActionBanner('tettai', ()=>{
+    hint('撤退。中身を公開します…');
+    document.getElementById('cpuSlot').innerHTML=cardHTML(dealerCard.owner==='cpu'?dealerCard:childCard, false);
+    setTimeout(()=>{
+      document.getElementById('youSlot').innerHTML=cardHTML(dealerCard.owner==='you'?dealerCard:childCard, false);
+      setTimeout(()=>{
+        finishPassReveal();
+      },600);
+    },500);
+  });
+}
+
+function finishPassReveal(){
+      if(!dealerCard || !childCard){ busy=false; return; } // 安全装置: 非同期タイミングでカードが無効化された場合
+      const rc=document.getElementById('resultCard');
+      rc.className='result-card pass';
+      rc.querySelector('.rtitle').textContent='撤退';
+      rc.querySelector('.rdetail').innerHTML=`${AJP[dealerCard.attr]}${dealerCard.num}(親) と ${AJP[childCard.attr]}${childCard.num}(子)<br>中身を開示して<b>双方とも破棄</b>される。<br>撤退コストとして親の戦略カウンターが <b style="color:var(--lose)">-${PASS_TRUST_COST}</b>`;
+      document.getElementById('resultOv').classList.add('show');
+      roundLog.push({
+        round, dealerIsYou:youIsDealer, passed:true,
+        dealerCard:{attr:dealerCard.attr,num:dealerCard.num}, childCard:{attr:childCard.attr,num:childCard.num}
+      });
+      renderScore(); renderYouPlayed();
+      document.getElementById('btnNextRound').classList.add('show');
+      pendingAdvance='round';
+}
+
+function resolveFight(doFight, isCpuDealer){
+  if(busy) return; busy=true;
+  document.getElementById('actions').innerHTML='';
+
+  if(!doFight){
+    // --- 子が戦略カウンターを払って撤退を無効化できる ---
+    if(isCpuDealer){
+      // 相手(CPU)が親で撤退 → あなた(子)が戦略カウンターを払って奇襲できる
+      if(youTrust>=FORCE_TRUST_COST){
+        busy=false;
+        hint(`相手は撤退しようとしている。戦略${FORCE_TRUST_COST}払って奇襲？`);
+        const actions=document.getElementById('actions');
+        const acceptBtn=document.createElement('div');
+        acceptBtn.className='btn ghost'; acceptBtn.textContent='撤退を受け入れる';
+        acceptBtn.onclick=()=>{ executePass(isCpuDealer); };
+        const forceBtn=document.createElement('div');
+        forceBtn.className='btn danger'; forceBtn.textContent=`戦略${FORCE_TRUST_COST}払って奇襲！`;
+        forceBtn.onclick=()=>{
+          youTrust-=FORCE_TRUST_COST; renderScore();
+          showActionBanner('kishuu', ()=>{
+            busy=false;
+            resolveFight(true, isCpuDealer);
+          });
+        };
+        actions.appendChild(acceptBtn); actions.appendChild(forceBtn);
+        return;
+      }
+      executePass(isCpuDealer); return;
+    } else {
+      // あなたが親で撤退 → CPU(子)が戦略カウンターを払って奇襲してくるか
+      if(cpuWantsForce()){
+        cpuTrust-=FORCE_TRUST_COST;
+        hint(`相手が戦略カウンターを払って奇襲を仕掛けてきた！`);
+        renderScore();
+        showActionBanner('kishuu', ()=>{
+          busy=false;
+          resolveFight(true, isCpuDealer);
+        });
+        return;
+      }
+      executePass(isCpuDealer); return;
+    }
+  }
+
+  // 決戦: 公開して判定
+  showActionBanner('kessen', ()=>{
+    document.getElementById('cpuSlot').innerHTML=cardHTML(dealerCard.owner==='cpu'?dealerCard:childCard, false);
+    setTimeout(()=>{
+      document.getElementById('youSlot').innerHTML=cardHTML(dealerCard.owner==='you'?dealerCard:childCard, false);
+      setTimeout(()=>{
+        resolveFightJudge();
+      },600);
+    },500);
+  });
+}
+
+function resolveFightJudge(){
+      if(!dealerCard || !childCard){ busy=false; return; } // 安全装置
+      const result=judge(dealerCard, childCard); // 'dealer'/'child'/'draw'
+      const why=whyText(dealerCard, childCard, result);
+      const yEl=document.querySelector('#youSlot .card');
+      const cEl=document.querySelector('#cpuSlot .card');
+      const rc=document.getElementById('resultCard'); const ov=document.getElementById('resultOv');
+      let title, cls, detail;
+
+      // Airを出した側は、決戦の結果に関わらず戦略カウンター+1(Airを能動的に使う理由付け)
+      let youAirBonusGained=false, cpuAirBonusGained=false;
+      [dealerCard, childCard].forEach(c=>{
+        if(c.attr==='air'){
+          if(c.owner==='you'){ youTrust=Math.min(START_TRUST, youTrust+1); youAirBonusGained=true; }
+          else { cpuTrust=Math.min(START_TRUST, cpuTrust+1); cpuAirBonusGained=true; }
+        }
+      });
+      const airBonusNote = (youAirBonusGained||cpuAirBonusGained)
+        ? `<br>Air使用により、戦略カウンター${youAirBonusGained&&cpuAirBonusGained?'（双方）':youAirBonusGained?'（あなた）':'（相手）'}が <b style="color:var(--win)">+1</b>`
+        : '';
+
+      if(result==='draw'){
+        cls='draw'; title='引き分け';
+        detail=`${AJP[dealerCard.attr]}(親) と ${AJP[childCard.attr]}(子)<br>${why}<br>得点増減なし${airBonusNote}`;
+      } else {
+        const dealerIsYou = dealerCard.owner==='you';
+        const winnerIsDealer = result==='dealer';
+        const winnerIsYou = winnerIsDealer? dealerIsYou : !dealerIsYou;
+        const loserCard = winnerIsDealer? childCard : dealerCard;
+        const dmg=loserCard.num; // 勝者が得る点数(=相手の仮面の数字)
+        if(winnerIsYou){ youLP+=dmg; youTrust=Math.min(START_TRUST, youTrust+1); }
+        else { cpuLP+=dmg; cpuTrust=Math.min(START_TRUST, cpuTrust+1); }
+
+        if(winnerIsYou){ cls='win'; title='あなたの勝ち';
+          detail=`${winnerIsDealer?'親':'子'}のあなたが制した<br>${why}<br>相手の仮面(数字${dmg})を得点として獲得 <b style="color:var(--win)">+${dmg}pt</b><br>決戦に勝利し、戦略カウンターが <b style="color:var(--win)">+1</b>（上限${START_TRUST}）${airBonusNote}`;
+        } else { cls='lose'; title='相手の勝ち';
+          detail=`${winnerIsDealer?'親':'子'}の相手が制した<br>${why}<br>相手があなたの仮面(数字${dmg})を得点として獲得 <b style="color:var(--lose)">相手+${dmg}pt</b><br>相手は決戦に勝利し、戦略カウンターが<b style="color:var(--lose)">+1</b>${airBonusNote}`;
+        }
+        yEl.classList.remove('win-glow','lose-dim'); cEl.classList.remove('win-glow','lose-dim');
+        if(winnerIsYou){ yEl.classList.add('win-glow'); cEl.classList.add('lose-dim'); }
+        else { cEl.classList.add('win-glow'); yEl.classList.add('lose-dim'); }
+      }
+
+      rc.className='result-card '+cls;
+      rc.querySelector('.rtitle').textContent=title;
+      rc.querySelector('.rdetail').innerHTML=detail;
+      ov.classList.add('show');
+
+      // 公開されたカードを推理用に記録(Airも統合済みプールとして扱う)
+      [dealerCard, childCard].forEach(c=>{
+        revealedCards[c.attr+c.num]=true; allUsedPoolCards.add(c.attr+c.num);
+        if(c.attr==='air'){ if(c.owner==='you') youAirUsedSum+=c.num; else cpuAirUsedSum+=c.num; }
+      });
+      // 親が負けた場合のみ交代。勝った/引き分けなら親は留任
+      dealerShouldSwitch = (result==='child');
+      roundLog.push({
+        round, dealerIsYou:youIsDealer, passed:false,
+        dealerCard:{attr:dealerCard.attr,num:dealerCard.num},
+        childCard:{attr:childCard.attr,num:childCard.num},
+        result, dmg: result==='draw'?0:(result==='dealer'?childCard.num:dealerCard.num)
+      });
+      const myCard = dealerCard.owner==='you' ? dealerCard : childCard;
+      youPlayedCards.push({attr:myCard.attr, num:myCard.num, round});
+      if(youIsDealer) youLastPassed=false; else cpuLastPassed=false;
+
+      renderScore(); renderYouPlayed();
+
+      document.getElementById('btnNextRound').classList.add('show');
+      pendingAdvance='round';
+}
+
+let pendingAdvance=null; // '次へ'ボタン待機中に何を実行するか('round'または'end')
+function proceedToNextRound(){
+  document.getElementById('btnNextRound').classList.remove('show');
+  if(pendingAdvance==='round') nextRound();
+  pendingAdvance=null;
+}
+
+function nextRound(){
+  busy=false;
+  if(round>=TOTAL_ROUNDS){ endGame(); return; }
+  round++;
+  youIsDealer=!youIsDealer; // 毎ラウンド必ず交代
+  startRound();
+}
+
+function openHistory(){
+  const scroll=document.getElementById('histScroll');
+  scroll.innerHTML='';
+  if(roundLog.length===0){
+    scroll.innerHTML='<div class="hist-empty">まだ記録がありません。<br>ラウンドを進めると、ここに履歴が残ります。</div>';
+  } else {
+    [...roundLog].reverse().forEach(r=>{
+      const row=document.createElement('div'); row.className='hist-row';
+      if(r.passed){
+        const dLabel = r.dealerIsYou ? 'あなた(親)' : '相手(親)';
+        const cLabel = r.dealerIsYou ? '相手(子)' : 'あなた(子)';
+        row.innerHTML=`<div class="hr-top"><span>第${r.round}R</span><span>${r.dealerIsYou?'あなたが親':'相手が親'}</span></div>
+          <div class="hr-cards">
+            <span class="hist-tag ${r.dealerCard.attr}">${dLabel} ${AJP[r.dealerCard.attr]}${r.dealerCard.num}</span>
+            <span style="color:var(--ink-dim);">vs</span>
+            <span class="hist-tag ${r.childCard.attr}">${cLabel} ${AJP[r.childCard.attr]}${r.childCard.num}</span>
+            <span class="hist-result draw">撤退</span>
+          </div>`;
+      } else {
+        const dLabel = r.dealerIsYou ? 'あなた(親)' : '相手(親)';
+        const cLabel = r.dealerIsYou ? '相手(子)' : 'あなた(子)';
+        const outMark = r.result==='draw' ? '引分' : (r.result==='dealer' ? dLabel+'勝ち' : cLabel+'勝ち');
+        const outCls = r.result==='draw' ? 'draw' : 'win';
+        row.innerHTML=`<div class="hr-top"><span>第${r.round}R</span><span>${r.dealerIsYou?'あなたが親':'相手が親'}</span></div>
+          <div class="hr-cards">
+            <span class="hist-tag ${r.dealerCard.attr}">${dLabel} ${AJP[r.dealerCard.attr]}${r.dealerCard.num}</span>
+            <span style="color:var(--ink-dim);">vs</span>
+            <span class="hist-tag ${r.childCard.attr}">${cLabel} ${AJP[r.childCard.attr]}${r.childCard.num}</span>
+            <span class="hist-result ${outCls}">${outMark}${r.result!=='draw' ? ` (+${r.dmg}pt)` : ''}</span>
+          </div>`;
+      }
+      scroll.appendChild(row);
+    });
+  }
+  document.getElementById('historyModal').classList.add('show');
+}
+function closeHistory(){ document.getElementById('historyModal').classList.remove('show'); }
+
+// 手札一覧表: Moon/Sun/Dark/Kaos(所有者確定)+Air(自分/相手それぞれ)
+function openTracker(){
+  const scroll=document.getElementById('trackerScroll');
+  scroll.innerHTML='';
+  const grid=document.createElement('div'); grid.className='tracker-grid';
+
+  // ヘッダ行
+  grid.appendChild(document.createElement('div'));
+  for(let n=0;n<=5;n++){ const h=document.createElement('div'); h.className='tg-head'; h.textContent=n; grid.appendChild(h); }
+
+  // Moon/Sun/Dark/Kaos/Air: 全て所有権が確定しているので統一ロジックで表示
+  ['moon','sun','dark','kaos','air'].forEach(attr=>{
+    const label=document.createElement('div'); label.className='tg-row-label'; label.textContent=AJP[attr];
+    grid.appendChild(label);
+    for(let n=0;n<=5;n++){
+      const cell=document.createElement('div'); cell.className='tg-cell';
+      const key=attr+n;
+      const used=allUsedPoolCards.has(key);
+      const owner=poolOwner[key]; // 'you' or 'cpu' or undefined(誰も持たない余りの1枚)
+      if(used){
+        cell.classList.add('used');
+        cell.innerHTML=`<div>✕</div><div class="tg-sub">使用済</div>`;
+      } else if(owner==='you'){
+        cell.classList.add('mine');
+        cell.innerHTML=`<div>${n}</div><div class="tg-sub">自分</div>`;
+      } else if(owner==='cpu'){
+        cell.classList.add('opp-alive');
+        cell.innerHTML=`<div>${n}</div><div class="tg-sub">相手</div>`;
+      } else {
+        cell.classList.add('unknown');
+        cell.innerHTML='<div>―</div><div class="tg-sub">余り札</div>';
+      }
+      grid.appendChild(cell);
+    }
+  });
+
+  scroll.appendChild(grid);
+  const legend=document.createElement('div'); legend.className='tracker-legend';
+  legend.innerHTML=`
+    <span><span class="sw" style="background:rgba(232,200,119,0.4);border:1px solid var(--gold-bright);"></span>自分の手札</span>
+    <span><span class="sw" style="background:rgba(193,75,82,0.2);border:1px solid rgba(193,75,82,0.6);"></span>相手の手札(推定/不明)</span>
+    <span><span class="sw" style="background:#161420;border:1px solid #2c2836;"></span>使用済み</span>
+  `;
+  scroll.appendChild(legend);
+
+  document.getElementById('trackerModal').classList.add('show');
+}
+function closeTracker(){ document.getElementById('trackerModal').classList.remove('show'); }
+
+function computeMatchSummary(){
+  const s={ youWins:0, cpuWins:0, draws:0, passes:0, youAir:0, cpuAir:0, youKaos:0, cpuKaos:0 };
+  roundLog.forEach(r=>{
+    if(r.passed){
+      s.passes++;
+      const yc = r.dealerIsYou ? r.dealerCard : r.childCard;
+      const cc = r.dealerIsYou ? r.childCard : r.dealerCard;
+      if(yc.attr==='air') s.youAir++; if(yc.attr==='kaos') s.youKaos++;
+      if(cc.attr==='air') s.cpuAir++; if(cc.attr==='kaos') s.cpuKaos++;
+    } else {
+      const yc = r.dealerIsYou ? r.dealerCard : r.childCard;
+      const cc = r.dealerIsYou ? r.childCard : r.dealerCard;
+      if(yc.attr==='air') s.youAir++; if(yc.attr==='kaos') s.youKaos++;
+      if(cc.attr==='air') s.cpuAir++; if(cc.attr==='kaos') s.cpuKaos++;
+      if(r.result==='draw') s.draws++;
+      else {
+        const winnerIsDealer = r.result==='dealer';
+        const winnerIsYou = winnerIsDealer ? r.dealerIsYou : !r.dealerIsYou;
+        if(winnerIsYou) s.youWins++; else s.cpuWins++;
+      }
+    }
+  });
+  return s;
+}
+
+// ===== プレイログの自動収集・統計・エクスポート =====
+const HISTORY_KEY='maskd_game_history_v1';
+
+function loadGameHistory(){
+  try{
+    const raw=localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; } // localStorageが使えない環境では空扱い(機能自体は落とさない)
+}
+
+function saveGameToHistory(youFinal, cpuFinal, summary){
+  try{
+    const games=loadGameHistory();
+    games.push({
+      ts: Date.now(),
+      youFinal, cpuFinal,
+      result: youFinal>cpuFinal?'win':(cpuFinal>youFinal?'lose':'draw'),
+      youWins:summary.youWins, cpuWins:summary.cpuWins, draws:summary.draws,
+      passes:summary.passes, youAir:summary.youAir, cpuAir:summary.cpuAir,
+      youKaos:summary.youKaos, cpuKaos:summary.cpuKaos,
+      cpuStrategy, cpuDifficulty,
+      rounds: JSON.parse(JSON.stringify(roundLog)) // ラウンド別の詳細も保存(後で詳細分析できるように)
+    });
+    // 直近100試合分だけ保持(ストレージ肥大化を防ぐ)
+    while(games.length>100) games.shift();
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(games));
+  }catch(e){
+    // 保存に失敗しても対戦自体には影響させない
+    console.warn('ログの保存に失敗しました', e);
+  }
+}
+
+function computeAggregateStats(games){
+  const agg={ totalGames:games.length, youWins:0, cpuWins:0, draws:0,
+    totalRounds:0, totalPasses:0, totalYouAir:0, totalCpuAir:0, totalYouKaos:0, totalCpuKaos:0,
+    dealerRoundWins:0, childRoundWins:0, roundDraws:0 };
+  games.forEach(g=>{
+    if(g.result==='win') agg.youWins++; else if(g.result==='lose') agg.cpuWins++; else agg.draws++;
+    agg.totalPasses += g.passes||0;
+    agg.totalYouAir += g.youAir||0; agg.totalCpuAir += g.cpuAir||0;
+    agg.totalYouKaos += g.youKaos||0; agg.totalCpuKaos += g.cpuKaos||0;
+    (g.rounds||[]).forEach(r=>{
+      agg.totalRounds++;
+      if(r.passed){ /* 撤退は上のpassesで集計済み */ }
+      else if(r.result==='draw') agg.roundDraws++;
+      else if(r.result==='dealer') agg.dealerRoundWins++;
+      else if(r.result==='child') agg.childRoundWins++;
+    });
+  });
+  return agg;
+}
+
+function openStats(){
+  const games=loadGameHistory();
+  const modal=document.getElementById('statsModal');
+  const body=document.getElementById('statsBody');
+  if(games.length===0){
+    body.innerHTML='<p style="color:var(--ink-dim);text-align:center;">まだ記録された対戦がありません</p>';
+    modal.classList.add('show');
+    return;
+  }
+  const a=computeAggregateStats(games);
+  const decidedRounds = a.dealerRoundWins+a.childRoundWins;
+  const retreatOpp = a.totalPasses; // 撤退が発生した局面の総数(近似)
+  body.innerHTML=`
+    <div class="ms-row"><span>記録された試合数</span><span>${a.totalGames}戦</span></div>
+    <div class="ms-row"><span>総合成績</span><span>${a.youWins}勝 ${a.cpuWins}敗 ${a.draws}分</span></div>
+    <div class="ms-row"><span>親の決戦勝率</span><span>${decidedRounds?(a.dealerRoundWins/decidedRounds*100).toFixed(1):'-'}%</span></div>
+    <div class="ms-row"><span>子の決戦勝率</span><span>${decidedRounds?(a.childRoundWins/decidedRounds*100).toFixed(1):'-'}%</span></div>
+    <div class="ms-row"><span>ラウンド内引分率</span><span>${a.totalRounds?(a.roundDraws/a.totalRounds*100).toFixed(1):'-'}%</span></div>
+    <div class="ms-row"><span>1試合あたりの撤退回数</span><span>${(a.totalPasses/a.totalGames).toFixed(2)}回</span></div>
+    <div class="ms-row"><span>1試合あたりのAir使用</span><span>あなた${(a.totalYouAir/a.totalGames).toFixed(2)} ／ 相手${(a.totalCpuAir/a.totalGames).toFixed(2)}</span></div>
+    <div class="ms-row"><span>1試合あたりのKaos使用</span><span>あなた${(a.totalYouKaos/a.totalGames).toFixed(2)} ／ 相手${(a.totalCpuKaos/a.totalGames).toFixed(2)}</span></div>
+  `;
+  modal.classList.add('show');
+}
+function closeStats(){ document.getElementById('statsModal').classList.remove('show'); }
+
+function exportStatsJSON(){
+  const games=loadGameHistory();
+  const json=JSON.stringify(games, null, 2);
+  // クリップボードにコピーを試み、失敗したらテキストとして表示する
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(json).then(()=>{
+      alert(`${games.length}試合分のログをコピーしました。Claudeとの会話に貼り付けて分析を依頼できます。`);
+    }).catch(()=>{ showExportFallback(json); });
+  } else {
+    showExportFallback(json);
+  }
+}
+function showExportFallback(json){
+  const body=document.getElementById('statsBody');
+  body.innerHTML = `<p style="font-size:11px;color:var(--ink-dim);">コピーできませんでした。下のテキストを手動で選択してコピーしてください。</p>
+    <textarea readonly style="width:100%;height:200px;font-size:9px;background:#0d0b12;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px;">${json}</textarea>`;
+}
+function clearGameHistory(){
+  if(!confirm('保存されている全ての対戦ログを削除します。よろしいですか？')) return;
+  try{ localStorage.removeItem(HISTORY_KEY); }catch(e){}
+  openStats();
+}
+
+function endGame(){
+  const ov=document.getElementById('overlay'), t=document.getElementById('ovTitle');
+  // 残り手札ボーナス: 使わなかったカードの数字を加算(Airは2倍)
+  const calcLeftoverBonus=(hand, drawPile)=>{
+    let bonus=0;
+    [...hand, ...drawPile].forEach(c=>{
+      bonus += c.attr==='air' ? c.num*AIR_LEFTOVER_MULTIPLIER : c.num;
+    });
+    return bonus;
+  };
+  const youLeftoverBonus = calcLeftoverBonus(youHand, youDrawPile);
+  const cpuLeftoverBonus = calcLeftoverBonus(cpuHand, cpuDrawPile);
+  // 戦略カウンターの残りと、残り手札ボーナスを得点に加算
+  const youFinal = youLP + youTrust + youLeftoverBonus;
+  const cpuFinal = cpuLP + cpuTrust + cpuLeftoverBonus;
+  const s=computeMatchSummary();
+  const bonusLine=`<div style="font-size:11px;color:var(--ink-dim);margin-top:6px;">
+    戦略カウンター加算: あなた +${youTrust} ／ 相手 +${cpuTrust}<br>
+    残り手札ボーナス（Air2倍）: あなた +${youLeftoverBonus} ／ 相手 +${cpuLeftoverBonus}
+  </div>
+  <div class="match-summary">
+    <div class="ms-row"><span>勝敗</span><span>あなた${s.youWins}勝 － ${s.cpuWins}勝相手 （引分${s.draws}）</span></div>
+    <div class="ms-row"><span>撤退回数</span><span>${s.passes}回</span></div>
+    <div class="ms-row"><span>Air使用</span><span>あなた${s.youAir}回 ／ 相手${s.cpuAir}回</span></div>
+    <div class="ms-row"><span>Kaos使用</span><span>あなた${s.youKaos}回 ／ 相手${s.cpuKaos}回</span></div>
+  </div>
+  <div style="display:flex;gap:6px;margin-top:10px;">
+    <div class="btn" style="flex:1;font-size:12px;" onclick="openHistory()">対戦履歴</div>
+    <div class="btn ghost" style="flex:1;font-size:12px;" onclick="openStats()">通算統計</div>
+  </div>`;
+  if(youFinal>cpuFinal){ t.textContent='VICTORY'; t.className='big win'; }
+  else if(cpuFinal>youFinal){ t.textContent='DEFEAT'; t.className='big lose'; }
+  else { t.textContent='DRAW'; t.className='big draw'; }
+  document.getElementById('ovScore').innerHTML=`あなた <b>${youFinal}</b>pt － <b>${cpuFinal}</b>pt 相手`+bonusLine;
+  saveGameToHistory(youFinal, cpuFinal, s);
+  ov.classList.add('show');
+}
+
+initCpuSettingUI(); // 全ての変数・関数定義が済んだ後に呼び出す
+</script>
+</body>
+</html>
