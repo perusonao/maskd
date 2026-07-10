@@ -35,7 +35,8 @@
     display:flex; flex-direction:column; overflow:hidden; position:relative;
   }
   .hd{ padding:8px 18px 6px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); flex-shrink:0; }
-  .brand{ font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:600; font-size:19px; letter-spacing:0.1em; color:var(--gold); }
+  .brand{ font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:600; font-size:19px; letter-spacing:0.1em; color:var(--gold); cursor:pointer; }
+  .version-tag{ font-family:sans-serif; font-style:normal; font-weight:400; font-size:9px; letter-spacing:0; color:var(--ink-dim); vertical-align:super; }
   .top-right{ display:flex; align-items:center; gap:6px; }
   .round-badge{ font-size:10px; letter-spacing:0.1em; color:var(--ink-dim); }
   .round-badge b{ color:var(--gold-bright); font-family:'Cormorant Garamond',serif; font-size:14px; }
@@ -595,6 +596,13 @@
     <div class="btn-close-modal" onclick="closeStats()">閉じる</div>
   </div>
 
+  <div class="history-modal" id="changelogModal">
+    <h3>変更履歴</h3>
+    <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">現在のバージョン: <b id="versionTagInModal" style="color:var(--gold-bright);"></b></p>
+    <div class="hist-scroll" id="changelogScroll"></div>
+    <div class="btn-close-modal" onclick="closeChangelog()">閉じる</div>
+  </div>
+
   <div class="history-modal" id="trackerModal">
     <h3>手札一覧表</h3>
     <div class="hist-scroll" id="trackerScroll"></div>
@@ -617,7 +625,7 @@
   </div>
 
   <div class="hd">
-    <div class="brand">MASKD</div>
+    <div class="brand" onclick="openChangelog()">MASKD <span class="version-tag" id="versionTag"></span></div>
     <div class="top-right">
       <div class="grid-btn" onclick="openTracker()">一覧表</div>
       <div class="grid-btn" onclick="openHistory()">履歴 ↺</div>
@@ -1763,6 +1771,43 @@ function computeMatchSummary(){
 }
 
 // ===== プレイログの自動収集・統計・エクスポート =====
+// ===== バージョン・変更履歴 =====
+const GAME_VERSION = 'v1.0';
+const CHANGELOG = [
+  { version:'v1.0', date:'2026-07-10', items:[
+    'Kaos0にも「全属性の5に勝つ」特殊ルールを追加(Kaos1のみだった弱点を緩和)',
+    '通算統計・プレイログの自動収集機能を追加(端末に保存、JSONエクスポート対応)',
+    'Air使用で結果に関わらず戦略カウンター+1(温存一択の解消)',
+    '「入替」実装：親の特権として、子の数字を見てから手札を交換可能に(1ラウンド1回、戦略-2)',
+    '戦略カウンターの用途を整理：撤退-1／入替-2／奇襲-2、決戦勝利で+1(上限5)',
+    '「信頼カウンター」を「戦略カウンター」に改名',
+    '全属性に0を追加(0〜5の6数字に拡張)、Airも3枚ずつの均等分配に変更(余りカード廃止)',
+    '残り手札ボーナスを追加：使わずに残ったカードの数字を加算(Airは2倍)',
+    'ラウンド数を12に調整、初期手札6枚(0〜5を1枚ずつ)',
+    'Kaosは数字問わずAirに勝利する特殊ルールを追加',
+  ]},
+  { version:'旧バージョン', date:'-', items:[
+    '親決めの引き直し演出、CPU種類・強さの選択機能を追加',
+    'Kaos特殊ルール(1が5に勝つ／5が1に負ける)の初期実装',
+    '決戦・撤退・奇襲の演出バナー、相手の可能性ヒント表示など基礎UIを整備',
+  ]}
+];
+
+function openChangelog(){
+  document.getElementById('versionTagInModal').textContent = GAME_VERSION;
+  const scroll = document.getElementById('changelogScroll');
+  scroll.innerHTML = CHANGELOG.map(entry => `
+    <div class="hist-row">
+      <div class="hr-top"><span style="color:var(--gold-bright);font-weight:600;">${entry.version}</span><span>${entry.date}</span></div>
+      <ul style="margin:6px 0 0; padding-left:18px; font-size:11px; color:var(--ink-dim); line-height:1.6;">
+        ${entry.items.map(i=>`<li>${i}</li>`).join('')}
+      </ul>
+    </div>
+  `).join('');
+  document.getElementById('changelogModal').classList.add('show');
+}
+function closeChangelog(){ document.getElementById('changelogModal').classList.remove('show'); }
+
 const HISTORY_KEY='maskd_game_history_v1';
 
 function loadGameHistory(){
@@ -1902,6 +1947,7 @@ function endGame(){
 }
 
 initCpuSettingUI(); // 全ての変数・関数定義が済んだ後に呼び出す
+document.getElementById('versionTag').textContent = GAME_VERSION;
 </script>
 </body>
 </html>
