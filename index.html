@@ -509,7 +509,7 @@
       <li><b style="color:var(--air)">Air</b>が絡む → 属性・数字問わず<b>必ず引き分け</b>（得点増減なし）。ただし<b>Kaosは数字問わずAirに勝利</b>する</li>
       <li>Airを決戦に使うと、結果（勝ち・負け・引分）に関わらず<b>戦略カウンターが+1</b>される</li>
       <li><b style="color:var(--kaos)">Kaos</b>が絡む（Airなし） → 属性問わず数字が大きい方の勝ち。同値は<b>Kaos側が敗北</b></li>
-      <li><b>特殊ルール</b>：Kaos<b>1</b>は全属性の<b>5に勝つ</b>／Kaos<b>5</b>は全属性の<b>1に負ける</b></li>
+      <li><b>特殊ルール</b>：Kaos<b>0・1</b>は全属性の<b>5に勝つ</b>／Kaos<b>5</b>は全属性の<b>1に負ける</b></li>
       <li>同じ属性同士 → 数字が大きい方の勝ち</li>
       <li>異なる属性同士（Sun/Dark/Moon） → Moon→Dark→Sun→Moon の3すくみ</li>
     </ul>
@@ -1422,9 +1422,9 @@ function judge(dealer, child){
   if(child.attr==='kaos'&&dealer.attr==='air') return 'child';
   if(dealer.attr==='air'||child.attr==='air') return 'draw'; // Airが絡めば必ず引き分け(Kaos以外)
 
-  // Kaos特殊ルール: Kaos1は全ての5に勝ち、Kaos5は全ての1に負ける(Airの次に優先)
-  if(dealer.attr==='kaos'&&dealer.num===1&&child.num===5) return 'dealer';
-  if(child.attr==='kaos'&&child.num===1&&dealer.num===5) return 'child';
+  // Kaos特殊ルール: Kaos0/1は全ての5に勝ち、Kaos5は全ての1に負ける(Airの次に優先)
+  if(dealer.attr==='kaos'&&(dealer.num===0||dealer.num===1)&&child.num===5) return 'dealer';
+  if(child.attr==='kaos'&&(child.num===0||child.num===1)&&dealer.num===5) return 'child';
   if(dealer.attr==='kaos'&&dealer.num===5&&child.num===1) return 'child';
   if(child.attr==='kaos'&&child.num===5&&dealer.num===1) return 'dealer';
 
@@ -1452,8 +1452,8 @@ function whyText(dealer, child, result){
     return 'Air が絡んだ → 必ず引き分け';
   }
   // Kaos特殊ルールの説明
-  if(dealer.attr==='kaos'&&dealer.num===1&&child.num===5) return 'Kaos1の特殊効果 → あらゆる5に勝利';
-  if(child.attr==='kaos'&&child.num===1&&dealer.num===5) return 'Kaos1の特殊効果 → あらゆる5に勝利';
+  if(dealer.attr==='kaos'&&(dealer.num===0||dealer.num===1)&&child.num===5) return `Kaos${dealer.num}の特殊効果 → あらゆる5に勝利`;
+  if(child.attr==='kaos'&&(child.num===0||child.num===1)&&dealer.num===5) return `Kaos${child.num}の特殊効果 → あらゆる5に勝利`;
   if(dealer.attr==='kaos'&&dealer.num===5&&child.num===1) return 'Kaos5の特殊弱点 → あらゆる1に敗北';
   if(child.attr==='kaos'&&child.num===5&&dealer.num===1) return 'Kaos5の特殊弱点 → あらゆる1に敗北';
   if(dealer.attr==='kaos'||child.attr==='kaos'){
