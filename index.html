@@ -327,6 +327,75 @@
     60%{ border-color:var(--gold-bright); box-shadow:0 0 10px 2px rgba(232,200,119,.5); transform:translateY(-2px) scale(1.03); }
     100%{ box-shadow:none; transform:none; }
   }
+  /* ===== 勝敗演出 ===== */
+  /* 勝者: 仮面が輝き、背後から光が放射する */
+  .card.triumph{ animation:triumphGlow 1s ease; z-index:2; }
+  @keyframes triumphGlow{
+    0%{ box-shadow:0 0 22px 3px rgba(126,201,138,.65); transform:translateY(-3px) scale(1.04); }
+    30%{ box-shadow:0 0 44px 12px rgba(232,200,119,.95), 0 0 80px 20px rgba(126,201,138,.5); transform:translateY(-8px) scale(1.14); }
+    100%{ box-shadow:0 0 24px 4px rgba(126,201,138,.7); transform:translateY(-4px) scale(1.06); }
+  }
+  .ray-burst{
+    position:absolute; inset:-40%; border-radius:50%; pointer-events:none; z-index:-1; opacity:0;
+    background:conic-gradient(from 0deg, rgba(232,200,119,.55) 0deg 6deg, transparent 6deg 24deg,
+      rgba(232,200,119,.4) 24deg 30deg, transparent 30deg 48deg);
+    animation:rayBurst 1s ease forwards;
+  }
+  @keyframes rayBurst{
+    0%{ opacity:0; transform:scale(0.3) rotate(0deg); }
+    35%{ opacity:.9; }
+    100%{ opacity:0; transform:scale(1.4) rotate(70deg); }
+  }
+  /* 敗者: 仮面にヒビが入り、砕けて崩れ落ちる */
+  .card.shatter{ animation:shatterShake .7s ease forwards; }
+  @keyframes shatterShake{
+    0%{ transform:translateY(0) scale(1); }
+    12%{ transform:translateX(-4px) rotate(-3deg); }
+    24%{ transform:translateX(4px) rotate(3deg); }
+    36%{ transform:translateX(-3px) rotate(-2deg); }
+    48%{ transform:translateX(2px); }
+    100%{ transform:translateY(9px) scale(0.9) rotate(-2deg); opacity:0.3; filter:grayscale(.7) brightness(.7); }
+  }
+  .crack-overlay{
+    position:absolute; inset:0; pointer-events:none; opacity:0; z-index:3;
+    background:
+      linear-gradient(58deg, transparent 47%, rgba(255,255,255,.85) 48% 49%, transparent 50%),
+      linear-gradient(122deg, transparent 44%, rgba(255,255,255,.7) 45% 46%, transparent 47%),
+      linear-gradient(12deg, transparent 55%, rgba(255,255,255,.6) 56% 57%, transparent 58%),
+      linear-gradient(-40deg, transparent 60%, rgba(255,255,255,.7) 61% 62%, transparent 63%);
+    animation:crackShow .7s ease forwards;
+  }
+  @keyframes crackShow{ 0%{opacity:0;} 18%{opacity:1;} 100%{opacity:.5;} }
+  /* ===== Air使用演出: 静寂の風 ===== */
+  .air-flash{
+    position:absolute; inset:0; z-index:9; pointer-events:none; opacity:0; overflow:hidden;
+    background:radial-gradient(circle at center, rgba(111,191,160,0.28), transparent 72%);
+  }
+  .air-flash.fire{ animation:kaosFlashAnim 1s ease; }
+  .air-flash::after{
+    content:''; position:absolute; inset:0;
+    background:repeating-linear-gradient(115deg, transparent 0 14px, rgba(155,216,194,.25) 14px 17px, transparent 17px 34px);
+    animation:airSweep 1s ease;
+  }
+  @keyframes airSweep{ 0%{ transform:translateX(-30%); opacity:0; } 30%{opacity:1;} 100%{ transform:translateX(30%); opacity:0; } }
+  .air-flash .kf-label{
+    position:absolute; top:14%; left:0; right:0; text-align:center;
+    font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:600; font-size:20px;
+    color:var(--air); text-shadow:0 0 16px rgba(111,191,160,0.9); letter-spacing:0.06em;
+  }
+  /* ===== 戦略カウンターの増減演出 ===== */
+  .lp-bar-wrap.pulse{ animation:barPulse .7s ease; }
+  @keyframes barPulse{ 0%,100%{ filter:none; } 40%{ filter:drop-shadow(0 0 7px var(--gold-bright)); } }
+  .lp-seg.seg-flash{ animation:segFlash .7s ease; }
+  @keyframes segFlash{ 0%,100%{ transform:scaleY(1); } 45%{ transform:scaleY(1.7); box-shadow:0 0 8px var(--gold-bright); } }
+  .trust-delta{
+    position:absolute; right:8px; top:44%; pointer-events:none;
+    font-family:'Cormorant Garamond',serif; font-weight:700; font-size:15px;
+    animation:trustFloat 1.05s ease forwards; text-shadow:0 0 8px currentColor;
+  }
+  .trust-delta.plus{ color:var(--win); } .trust-delta.minus{ color:var(--lose); }
+  @keyframes trustFloat{ 0%{opacity:0; transform:translateY(8px) scale(.8);} 20%{opacity:1; transform:translateY(0) scale(1.1);} 100%{opacity:0; transform:translateY(-16px) scale(1);} }
+
   .empty-slot{ width:64px;height:88px;border-radius:9px;border:1px dashed rgba(201,162,74,.18); display:flex;align-items:center;justify-content:center; font-size:8px; color:var(--ink-dim); }
   .flip-in{ animation:flipIn .45s ease; }
   @keyframes flipIn{ from{transform:rotateY(90deg);opacity:0;} to{transform:rotateY(0);opacity:1;} }
@@ -735,6 +804,7 @@
     </div>
     <div class="action-banner" id="actionBanner"><div class="ab-icon"></div><div class="ab-text"></div></div>
     <div class="kaos-flash" id="kaosFlash"><div class="kf-label"></div></div>
+    <div class="air-flash" id="airFlash"><div class="kf-label"></div></div>
     <div class="result-overlay" id="resultOv">
       <div class="result-card" id="resultCard">
         <div class="rtitle"></div><div class="rdetail"></div>
@@ -925,6 +995,7 @@ function startGame(initialDealerIsYou){
   revealedCards={}; roundLog=[];
   youLastPassed=false; cpuLastPassed=false;
   youTrust=START_TRUST; cpuTrust=START_TRUST;
+  _lastYouTrust=START_TRUST; _lastCpuTrust=START_TRUST; // 増減演出の基準をリセット
   youAirUsedSum=0; cpuAirUsedSum=0;
   youPlayedCards=[];
   document.getElementById('instructions').style.display='none';
@@ -979,13 +1050,33 @@ function renderTrustSegs(wrapId, val){
   }
 }
 
+// 戦略カウンターの増減を、バーの脈動＋フロートする「+1/-2」表示で目立たせる
+let _lastYouTrust=START_TRUST, _lastCpuTrust=START_TRUST;
+function animateTrustDelta(cellId, wrapId, delta){
+  const wrap=document.getElementById(wrapId);
+  wrap.classList.remove('pulse'); void wrap.offsetWidth; wrap.classList.add('pulse');
+  wrap.querySelectorAll('.lp-seg.filled').forEach(seg=>{
+    seg.classList.remove('seg-flash'); void seg.offsetWidth; seg.classList.add('seg-flash');
+  });
+  const cell=document.getElementById(cellId);
+  const badge=document.createElement('div');
+  badge.className='trust-delta '+(delta>0?'plus':'minus');
+  badge.textContent=(delta>0?'+':'')+delta;
+  cell.appendChild(badge);
+  setTimeout(()=>badge.remove(), 1100);
+}
+
 function renderScore(){
   document.getElementById('roundN').textContent=round;
   document.getElementById('youLP').textContent=youLP;
   document.getElementById('cpuLP').textContent=cpuLP;
-  // バーはAirチャージ(0~3固定)を表示する
+  // 戦略カウンターの増減を検出して演出(前回描画時との差分)
+  const dY=youTrust-_lastYouTrust, dC=cpuTrust-_lastCpuTrust;
   renderTrustSegs('youBarWrap', youTrust);
   renderTrustSegs('cpuBarWrap', cpuTrust);
+  if(dY!==0) animateTrustDelta('youCell','youBarWrap',dY);
+  if(dC!==0) animateTrustDelta('cpuCell','cpuBarWrap',dC);
+  _lastYouTrust=youTrust; _lastCpuTrust=cpuTrust;
   document.getElementById('youDealerTag').style.display=youIsDealer?'block':'none';
   document.getElementById('cpuDealerTag').style.display=!youIsDealer?'block':'none';
   document.getElementById('youToken').textContent = `戦略 ${youTrust}`;
@@ -1286,6 +1377,30 @@ function fireKaosFlash(label){
   fl.classList.remove('fire'); void fl.offsetWidth; // アニメ再始動
   fl.classList.add('fire');
   setTimeout(()=>fl.classList.remove('fire'), 950);
+}
+// Air使用時の「静寂の風」フラッシュ演出(特別な一手だと感じさせる)
+function fireAirFlash(label){
+  const fl=document.getElementById('airFlash');
+  fl.querySelector('.kf-label').textContent=label||'AIR';
+  fl.classList.remove('fire'); void fl.offsetWidth;
+  fl.classList.add('fire');
+  setTimeout(()=>fl.classList.remove('fire'), 1000);
+}
+// 勝者カードを輝かせ、背後から光を放射する
+function applyTriumph(cardEl){
+  if(!cardEl) return;
+  cardEl.classList.add('triumph');
+  const ray=document.createElement('div'); ray.className='ray-burst';
+  cardEl.appendChild(ray);
+  setTimeout(()=>{ ray.remove(); }, 1000);
+}
+// 敗者カードにヒビを入れ、砕けて崩れさせる
+function applyShatter(cardEl){
+  if(!cardEl) return;
+  const crack=document.createElement('div'); crack.className='crack-overlay';
+  cardEl.appendChild(crack);
+  // ヒビが見えてから砕ける(少し溜めてから崩す)
+  setTimeout(()=>{ cardEl.classList.add('shatter'); }, 180);
 }
 
 let youJustDrawnKey=null; // ラウンド開始時に補充された札(1回だけ光らせる)
@@ -1729,19 +1844,32 @@ function resolveFightJudge(){
           detail=`${winnerIsDealer?'親':'子'}の相手が制した<br>${why}<br>相手があなたの仮面(数字${loserCard.num})を得点として獲得 <b style="color:var(--lose)">相手+${dmg}pt</b>${lateNote}<br>相手は決戦に勝利し、戦略カウンターが<b style="color:var(--lose)">+1</b>${airBonusNote}`;
         }
         yEl.classList.remove('win-glow','lose-dim','kaos-special'); cEl.classList.remove('win-glow','lose-dim','kaos-special');
-        if(winnerIsYou){ yEl.classList.add('win-glow'); cEl.classList.add('lose-dim'); }
-        else { cEl.classList.add('win-glow'); yEl.classList.add('lose-dim'); }
+        const winEl=winnerIsYou?yEl:cEl, loseEl=winnerIsYou?cEl:yEl;
+        winEl.classList.add('win-glow'); applyTriumph(winEl);  // 勝者: 仮面が輝き、光を放射
+        applyShatter(loseEl);                                   // 敗者: 仮面にヒビが入り砕ける
         // Kaosの特殊ルール発動時は、勝者カードを混沌色で脈動させ画面をフラッシュ
         if(isKaosSpecial(dealerCard, childCard)){
-          (winnerIsYou?yEl:cEl).classList.add('kaos-special');
+          winEl.classList.add('kaos-special');
           fireKaosFlash('混沌の特殊効果');
         }
       }
 
+      // Air使用演出: Airが絡む決戦は「静寂の風」で特別な一手だと感じさせる(Kaos特殊が優先)
+      if((dealerCard.attr==='air'||childCard.attr==='air') && !isKaosSpecial(dealerCard, childCard)){
+        fireAirFlash('静寂の風');
+      }
+      // 場のAirカード自体を淡く発光させる
+      const youOwnedCard = dealerCard.owner==='you'?dealerCard:childCard;
+      const cpuOwnedCard = dealerCard.owner==='cpu'?dealerCard:childCard;
+      if(youOwnedCard.attr==='air' && yEl) yEl.classList.add('air-neutral');
+      if(cpuOwnedCard.attr==='air' && cEl) cEl.classList.add('air-neutral');
+
       rc.className='result-card '+cls;
       rc.querySelector('.rtitle').textContent=title;
       rc.querySelector('.rdetail').innerHTML=detail;
-      ov.classList.add('show');
+      // 勝敗は、砕ける/輝く演出を見せてから結果カードを表示する(引き分けは短め)
+      const overlayDelay = (result==='draw') ? 250 : 760;
+      setTimeout(()=>ov.classList.add('show'), overlayDelay);
 
       // 公開されたカードを推理用に記録(Airも統合済みプールとして扱う)
       [dealerCard, childCard].forEach(c=>{
@@ -1895,8 +2023,14 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.2';
+const GAME_VERSION = 'v1.3';
 const CHANGELOG = [
+  { version:'v1.3', date:'2026-07-11', items:[
+    '勝敗演出を強化：勝者カードは輝いて光を放射、敗者カードは仮面にヒビが入り砕けて崩れる',
+    'Air使用時に「静寂の風」の画面演出を追加し、特別な一手だと感じられるようにした',
+    '戦略カウンターの増減を、バーの脈動＋フロートする「+1/-2」表示で目立たせた',
+    '勝敗の演出を見せてから結果カードを表示するよう表示タイミングを調整',
+  ]},
   { version:'v1.2', date:'2026-07-11', items:[
     'トップページ(スタート画面)にバージョン表記を追加',
     'ルール説明・更新履歴をトップのボタンから開くモーダル表示にし、トップページをすっきり整理(全文スクロール可能)',
