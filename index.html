@@ -2499,20 +2499,22 @@ if(typeof CARD_IMG!=='undefined' && CARD_IMG.back){
        match /logs/{doc} { allow create: if true; allow read: if false; }
 -->
 <script type="module">
-  // ▼▼▼ ここに firebaseConfig を貼り付け(未設定なら null のまま=送信無効) ▼▼▼
-  const firebaseConfig = null;
-  // 例:
-  // const firebaseConfig = {
-  //   apiKey: "xxxx", authDomain: "maskd.firebaseapp.com",
-  //   projectId: "maskd", storageBucket: "maskd.appspot.com",
-  //   messagingSenderId: "xxxx", appId: "xxxx"
-  // };
+  // ▼▼▼ Firebase 設定(このプロジェクトのもの) ▼▼▼
+  const firebaseConfig = {
+    apiKey: "AIzaSyCH6JF6VL4OnYL2mR8N3V1LUZ920QADuvc",
+    authDomain: "maskd-8eafb.firebaseapp.com",
+    projectId: "maskd-8eafb",
+    storageBucket: "maskd-8eafb.firebasestorage.app",
+    messagingSenderId: "138967847579",
+    appId: "1:138967847579:web:866ddf9bac4af567f76c3e",
+    measurementId: "G-3Q429M5PXD"
+  };
   // ▲▲▲
   if (firebaseConfig && firebaseConfig.projectId) {
     try {
-      const { initializeApp } = await import("https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js");
+      const { initializeApp } = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js");
       const { getFirestore, collection, addDoc, serverTimestamp } =
-        await import("https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js");
+        await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js");
       const app = initializeApp(firebaseConfig);
       const db = getFirestore(app);
       window.__maskdSaveLog = async (log) => {
@@ -2520,6 +2522,13 @@ if(typeof CARD_IMG!=='undefined' && CARD_IMG.back){
         catch (e) { console.warn("MASKD: ログ送信に失敗", e); return false; }
       };
       window.__maskdLoggingReady = true;
+      // アクセス状況の把握(任意): Firebase Analytics
+      try {
+        if (firebaseConfig.measurementId) {
+          const { getAnalytics } = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-analytics.js");
+          getAnalytics(app);
+        }
+      } catch (e) { /* Analyticsは失敗してもゲームに影響なし */ }
     } catch (e) {
       console.warn("MASKD: Firebase 初期化に失敗(送信は無効)", e);
     }
