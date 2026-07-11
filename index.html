@@ -591,7 +591,10 @@
         <div class="cpu-opt" data-val="strong">強い</div>
       </div>
     </div>
-    <div class="btn-wrap"><div class="btn" onclick="beginMatchSetup()">対戦を始める</div></div>
+    <div class="btn-wrap" style="display:flex;gap:8px;">
+      <div class="btn" style="flex:2;" onclick="beginMatchSetup()">対戦を始める</div>
+      <div class="btn ghost" style="flex:1.2;" onclick="openStats()">通算成績・履歴</div>
+    </div>
   </div>
 
   <div class="overlay" id="dealerDrawOverlay">
@@ -1872,6 +1875,7 @@ const CHANGELOG = [
     '終盤の逆転要素を追加：最終2ラウンド(第11・12R)の決戦は得点2倍(リード固定化を緩和、逆転率が約13%→17%に上昇)',
     'Kaos特殊ルール発動時の演出を強化：勝者カードの脈動＋画面フラッシュ「混沌の特殊効果」',
     'ラウンド開始時に補充された手札を光らせる演出を追加',
+    'スタート画面(トップ)から通算成績・履歴を確認できるボタンを追加',
     '本物のゲームロジックを移植したシミュレータで上記2つのバランスを検証(先手勝率・引分率は不変を確認)',
   ]},
   { version:'v1.0', date:'2026-07-10', items:[
