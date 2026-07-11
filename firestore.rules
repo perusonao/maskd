@@ -1,0 +1,38 @@
+rules_version = '2';
+
+// MASKD の Firestore セキュリティルール
+// 適用方法: Firebase コンソール →「Firestore Database」→「ルール」タブに貼り付けて「公開」。
+//   （または Firebase CLI: firebase deploy --only firestore:rules）
+//
+// 方針:
+//   - logs コレクション: プレイログの「追加(create)」と「読み取り(read)」のみ許可
+//   - update / delete は禁止（既存ログの改ざん・削除を防ぐ）
+//   - logs 以外のコレクションは全面拒否
+//   - 有効期限なし（テストモードのような自動失効はしない）
+//   - create は最低限のバリデーションで不正・巨大データを弾く
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // プレイログ（匿名・集計用）
+    match /logs/{docId} {
+      allow read: if true;               // 「みんなの統計」で集計表示（匿名データのみ）
+      allow create: if isValidLog();     // 追加のみ許可
+      allow update, delete: if false;    // 改ざん・削除は不可
+    }
+
+    // 上記以外はすべて拒否
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // プレイログの最低限のバリデーション
+    function isValidLog() {
+      let d = request.resource.data;
+      return 'winner' in d && d.winner in ['player', 'cpu', 'draw']
+          && 'playerFinal' in d && d.playerFinal is number
+          && 'cpuFinal' in d && d.cpuFinal is number
+          && d.size() <= 40;             // フィールド数の上限（巨大ペイロード防止）
+    }
+  }
+}
