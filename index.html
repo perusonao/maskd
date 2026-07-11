@@ -79,16 +79,15 @@
   .ml-caret{ font-size:8px; color:var(--ink-dim); }
   .ml-detail{ display:flex; flex-direction:column; gap:4px; padding:6px 8px 8px; border-top:1px solid var(--line); }
 
-  /* 山札インジケータ(プレイ画面) */
-  .deck-bar{ display:flex; align-items:center; gap:8px; margin:2px 14px 0; padding:5px 10px;
-    border:1px solid var(--line); border-radius:8px; background:var(--bg-panel);
-    font-size:11px; color:var(--ink-dim); cursor:pointer; flex-shrink:0; }
-  .deck-bar b{ color:var(--gold-bright); font-size:12px; }
-  .deck-bar .deck-ico{ font-size:14px; color:var(--gold); }
-  .deck-bar .deck-next{ color:var(--ink); }
-  .deck-bar .deck-more{ margin-left:auto; color:var(--gold); font-size:10px; }
-  .deck-bar.empty{ opacity:0.6; cursor:default; }
-  .deck-bar.empty .deck-more{ display:none; }
+  /* 山札インジケータ(プレイ画面・中央の仕切りに小さく配置) */
+  .deck-chip{ position:absolute; right:6px; top:50%; transform:translateY(-50%);
+    display:inline-flex; align-items:center; gap:5px; padding:3px 8px;
+    border:1px solid var(--line); border-radius:14px; background:rgba(13,11,18,0.82);
+    font-size:10px; color:var(--ink-dim); cursor:pointer; white-space:nowrap; z-index:3; }
+  .deck-chip b{ color:var(--gold-bright); font-size:11px; }
+  .deck-chip .deck-ico{ font-size:12px; color:var(--gold); }
+  .deck-chip .deck-next{ color:var(--ink); }
+  .deck-chip.empty{ opacity:0.55; cursor:default; }
   /* 山札モーダルの中身 */
   .deck-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(58px,1fr)); gap:6px; padding:4px 2px; }
   .deck-card{ position:relative; border:1px solid; border-radius:8px; padding:8px 4px; text-align:center;
@@ -103,6 +102,22 @@
   .deck-card.next{ box-shadow:0 0 0 2px var(--gold-bright), 0 0 10px rgba(217,180,90,0.4); }
   .deck-card .dc-badge{ position:absolute; top:-7px; right:-6px; background:var(--gold-bright); color:#1a1526;
     font-size:8px; font-weight:700; padding:1px 5px; border-radius:6px; }
+
+  /* 親決めルーレット */
+  .dealer-roulette{ display:flex; align-items:center; justify-content:center; gap:16px; margin:18px 0; }
+  .dr-side{ display:flex; flex-direction:column; align-items:center; gap:5px; padding:14px 18px;
+    border:1px solid var(--line); border-radius:12px; background:var(--bg-panel); min-width:82px;
+    transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+  .dr-side .dr-mask{ font-size:22px; color:var(--ink-dim); transition:color .15s ease; }
+  .dr-side .dr-name{ font-size:12px; color:var(--ink); }
+  .dr-vs{ font-family:'Cormorant Garamond',serif; font-style:italic; color:var(--ink-dim); font-size:14px; }
+  .dr-side.lit{ border-color:var(--gold); box-shadow:0 0 14px 1px rgba(217,180,90,0.35); }
+  .dr-side.lit .dr-mask{ color:var(--gold-bright); }
+  .dr-side.chosen{ border-color:var(--gold-bright); transform:scale(1.12);
+    box-shadow:0 0 26px 3px rgba(217,180,90,0.65); animation:dealerChosenPulse .6s ease; }
+  .dr-side.chosen .dr-mask{ color:var(--gold-bright); text-shadow:0 0 16px rgba(217,180,90,0.9); }
+  .dr-side.chosen .dr-name{ color:var(--gold-bright); font-weight:700; }
+  @keyframes dealerChosenPulse{ 0%{ transform:scale(0.9); } 55%{ transform:scale(1.2); } 100%{ transform:scale(1.12); } }
 
   .tracker-grid{ display:grid; grid-template-columns:44px repeat(6,1fr); gap:3px; }
   .tg-head{ font-size:10px; color:var(--ink-dim); text-align:center; padding:4px 0; }
@@ -244,7 +259,7 @@
   .mask-badge.you{ border-color:var(--gold-bright); }
   .mask-badge.you::after{ color:var(--gold-bright); }
   .slot-row{ display:flex; align-items:center; justify-content:center; }
-  .mid-divider{ display:flex; align-items:center; gap:10px; width:66%; }
+  .mid-divider{ display:flex; align-items:center; gap:10px; width:66%; position:relative; }
   .mid-divider .ln{ flex:1; height:1px; background:var(--line); }
   .mid-divider .vs{ font-family:'Cormorant Garamond',serif; font-style:italic; color:var(--ink-dim); font-size:12px; }
 
@@ -816,20 +831,14 @@
 
   <div class="overlay" id="dealerDrawOverlay">
     <div class="big" style="font-size:26px;">親決め</div>
-    <p style="font-size:12px;color:var(--ink-dim);">お互い1枚引いて、数字が大きい方が第1ラウンドの親になる</p>
-    <div style="display:flex; gap:20px; align-items:center; justify-content:center; margin:14px 0;">
-      <div style="text-align:center;">
-        <div style="font-size:10px;color:var(--ink-dim);margin-bottom:4px;">あなた</div>
-        <div class="card facedown" id="youDrawCard" style="width:64px;height:88px;"><div class="fd-top">？</div><div class="mask-emblem">◈</div><div class="num" id="youDrawNum">?</div></div>
-      </div>
-      <div style="font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--ink-dim);">VS</div>
-      <div style="text-align:center;">
-        <div style="font-size:10px;color:var(--ink-dim);margin-bottom:4px;">相手</div>
-        <div class="card facedown" id="cpuDrawCard" style="width:64px;height:88px;"><div class="fd-top">？</div><div class="mask-emblem">◈</div><div class="num" id="cpuDrawNum">?</div></div>
-      </div>
+    <p style="font-size:12px;color:var(--ink-dim);">第1ラウンドの親を<b>ランダム</b>に決めます</p>
+    <div class="dealer-roulette">
+      <div class="dr-side" id="drYou"><div class="dr-mask">◈</div><div class="dr-name">あなた</div></div>
+      <div class="dr-vs">VS</div>
+      <div class="dr-side" id="drCpu"><div class="dr-mask">◈</div><div class="dr-name">相手</div></div>
     </div>
-    <div id="dealerDrawResult" style="font-size:13px;color:var(--gold-bright);min-height:18px;"></div>
-    <div class="btn" style="flex:none;padding:12px 32px;" id="dealerDrawBtn" onclick="doDealerDraw()">引く</div>
+    <div id="dealerDrawResult" style="font-size:15px;color:var(--gold-bright);min-height:22px;"></div>
+    <div class="btn" style="flex:none;padding:12px 32px;" id="dealerDrawBtn" onclick="doDealerDraw()">親を決める</div>
   </div>
 
   <div class="overlay" id="overlay">
@@ -853,12 +862,23 @@
     <div class="match-summary" id="statsBody" style="margin:10px 0;"></div>
     <div style="display:flex;gap:6px;margin-bottom:6px;">
       <div class="btn" style="flex:1;font-size:12px;" onclick="openMatchLog()">対戦ログ一覧を見る</div>
+      <div class="btn ghost" style="flex:1;font-size:12px;" onclick="openGlobalStats()">みんなの統計（クラウド）</div>
     </div>
     <div style="display:flex;gap:6px;">
       <div class="btn ghost" style="flex:1;font-size:12px;" onclick="exportStatsJSON()">JSONをコピー</div>
       <div class="btn ghost" style="flex:1;font-size:12px;color:var(--lose);" onclick="clearGameHistory()">記録を削除</div>
     </div>
     <div class="btn-close-modal" onclick="closeStats()">閉じる</div>
+  </div>
+
+  <div class="history-modal" id="globalStatsModal">
+    <h3>みんなの統計</h3>
+    <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">クラウド（Firebase）に蓄積された全プレイヤーの集計</p>
+    <div class="match-summary" id="globalStatsBody" style="margin:10px 0;"></div>
+    <div style="display:flex;gap:6px;">
+      <div class="btn ghost" style="flex:1;font-size:12px;" onclick="openGlobalStats()">再読み込み</div>
+    </div>
+    <div class="btn-close-modal" onclick="closeGlobalStats()">閉じる</div>
   </div>
 
   <div class="history-modal" id="deckModal">
@@ -981,7 +1001,9 @@
       <div class="zone-hint" id="oppCardHint"></div>
     </div>
     <div class="slot-row" id="cpuSlot"><div class="empty-slot">待機</div></div>
-    <div class="mid-divider"><div class="ln"></div><div class="vs">VS</div><div class="ln"></div></div>
+    <div class="mid-divider"><div class="ln"></div><div class="vs">VS</div><div class="ln"></div>
+      <div class="deck-chip" id="deckBar" onclick="event.stopPropagation(); openDeckModal()"></div>
+    </div>
     <div class="slot-row" id="youSlot"><div class="empty-slot">あなた</div></div>
     <div class="zone-wrap">
       <div class="zone-hint" id="youCardHint"></div>
@@ -1005,8 +1027,6 @@
     <div class="hand-title" id="handTitle">あなたの手札</div>
     <div class="hand" id="hand"></div>
   </div>
-
-  <div class="deck-bar" id="deckBar" onclick="openDeckModal()"></div>
 
   <div class="coach-line" id="coachLine"></div>
   <div class="hint-line" id="hint"></div>
@@ -1128,40 +1148,51 @@ function beginMatchSetup(){
   document.getElementById('overlay').classList.remove('show');
   document.getElementById('dealerDrawOverlay').classList.add('show');
   document.getElementById('dealerDrawResult').textContent='';
-  document.getElementById('youDrawCard').classList.remove('faceup');
-  document.getElementById('youDrawNum').textContent='?';
-  document.getElementById('cpuDrawNum').textContent='?';
-  document.getElementById('dealerDrawBtn').style.display='inline-block';
-  document.getElementById('dealerDrawBtn').textContent='引く';
+  document.getElementById('drYou').classList.remove('lit','chosen');
+  document.getElementById('drCpu').classList.remove('lit','chosen');
+  const btn=document.getElementById('dealerDrawBtn');
+  btn.style.display='inline-block'; btn.textContent='親を決める';
 }
 
-// 親決め: お互い1~5をランダムに引き、数字が大きい方が第1ラウンドの親(同値なら引き直し)
+// 親決め: 完全ランダムに第1ラウンドの親を決定し、ルーレット風の演出で強調して見せる
+let _dealerSpinTimer=null;
 function doDealerDraw(){
   const btn=document.getElementById('dealerDrawBtn');
   btn.style.display='none';
-  const youNum=Math.floor(Math.random()*5)+1;
-  const cpuNum=Math.floor(Math.random()*5)+1;
-  document.getElementById('youDrawNum').textContent=youNum;
-  document.getElementById('cpuDrawNum').textContent=cpuNum;
+  const youIsFirstDealer = Math.random()<0.5; // 完全ランダム(引いた札とは無関係)
+  const drYou=document.getElementById('drYou'), drCpu=document.getElementById('drCpu');
   const resultEl=document.getElementById('dealerDrawResult');
-  if(youNum===cpuNum){
-    resultEl.textContent=`同値(${youNum} vs ${cpuNum})！引き直します…`;
-    setTimeout(()=>{
-      document.getElementById('youDrawNum').textContent='?';
-      document.getElementById('cpuDrawNum').textContent='?';
-      resultEl.textContent='';
-      btn.style.display='inline-block';
-    },1400);
-    return;
-  }
-  const youIsFirstDealer = youNum>cpuNum;
-  resultEl.innerHTML = youIsFirstDealer
-    ? `あなた${youNum} vs 相手${cpuNum} — <b style="color:var(--gold-bright)">あなたが第1ラウンドの親！</b>`
-    : `あなた${youNum} vs 相手${cpuNum} — <b style="color:var(--gold-bright)">相手が第1ラウンドの親！</b>`;
-  setTimeout(()=>{
-    document.getElementById('dealerDrawOverlay').classList.remove('show');
-    startGame(youIsFirstDealer);
-  },1800);
+  resultEl.textContent='';
+  drYou.classList.remove('chosen'); drCpu.classList.remove('chosen');
+  // ルーレット: 交互に点灯 → 徐々に減速して決定側で止める
+  if(_dealerSpinTimer){ clearInterval(_dealerSpinTimer); }
+  let ticks=0; const total=15; let delay=70;
+  const step=()=>{
+    const onYou = ticks%2===0;
+    drYou.classList.toggle('lit', onYou);
+    drCpu.classList.toggle('lit', !onYou);
+    ticks++;
+    if(ticks>=total){
+      // 最後は勝者側で点灯を確定させる
+      drYou.classList.toggle('lit', youIsFirstDealer);
+      drCpu.classList.toggle('lit', !youIsFirstDealer);
+      const winner = youIsFirstDealer? drYou : drCpu;
+      winner.classList.remove('lit'); winner.classList.add('chosen');
+      (youIsFirstDealer? drCpu: drYou).classList.remove('lit');
+      resultEl.innerHTML = youIsFirstDealer
+        ? `<b style="color:var(--gold-bright)">✦ あなたが第1ラウンドの親！ ✦</b>`
+        : `<b style="color:var(--gold-bright)">✦ 相手が第1ラウンドの親！ ✦</b>`;
+      setTimeout(()=>{
+        document.getElementById('dealerDrawOverlay').classList.remove('show');
+        startGame(youIsFirstDealer);
+      }, 1500);
+      return;
+    }
+    // 後半は減速して緊張感を出す
+    if(ticks>total-5) delay+=45;
+    _dealerSpinTimer=setTimeout(step, delay);
+  };
+  step();
 }
 
 function startGame(initialDealerIsYou){
@@ -2352,10 +2383,16 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.0.0';
+const GAME_VERSION = 'v0.12.0';
 const CHANGELOG = [
-  { version:'v1.0.0', date:'2026-07-11', items:[
-    'ルール確定・安定版。カード構成・配り方をリニューアル。初期手札を「0〜5を1枚ずつ」から【ランダムな5枚】に変更し、毎回ちがう展開に（手札の数字構成が1通り→多数へ）',
+  { version:'v0.12.0', date:'2026-07-11', items:[
+    '親決めを「引いた札で比較」から【完全ランダム＋ルーレット演出】に変更し、決定を強調表示',
+    '山札インジケータを画面中央の仕切りにコンパクト配置（邪魔にならない位置へ移動）',
+    'みんなの統計（Firebaseに蓄積された全プレイの集計）を追加。クラウドからの読み取り確認用',
+    'バージョン表記を修正（ルールは開発中のため 0.x 系に）',
+  ]},
+  { version:'v0.11.0', date:'2026-07-11', items:[
+    'カード構成・配り方をリニューアル。初期手札を「0〜5を1枚ずつ」から【ランダムな5枚】に変更し、毎回ちがう展開に（手札の数字構成が1通り→多数へ）',
     '配札運を是正：強力な低Kaos（0・1）を必ず両者に1枚ずつ配るように。配札による勝率差を大幅圧縮（約10pt→約3pt）',
     'テンポ改善：全12ラウンド→【全8ラウンド】に短縮（約33%）。終盤2倍は最終2R（第7・8R）に自動追従。接戦化し逆転も増加',
     '自分の山札の残り枚数・次に引く札を表示し、タップで山札の中身を一覧できるように',
@@ -2654,10 +2691,10 @@ function renderDeckChip(){
   const bar=document.getElementById('deckBar');
   if(!bar) return;
   const n=youDrawPile.length;
-  if(n===0){ bar.className='deck-bar empty'; bar.innerHTML='<span class="deck-ico">🂠</span><span>山札：なし</span>'; return; }
-  bar.className='deck-bar';
+  if(n===0){ bar.className='deck-chip empty'; bar.innerHTML='<span class="deck-ico">🂠</span><span>山札なし</span>'; return; }
+  bar.className='deck-chip';
   const next=youDrawPile[n-1];
-  bar.innerHTML=`<span class="deck-ico">🂠</span><span>山札 残り<b>${n}</b>枚</span><span class="deck-next">次に引く <b>${next.num}</b></span><span class="deck-more">中身を見る ›</span>`;
+  bar.innerHTML=`<span class="deck-ico">🂠</span><span>山札<b>${n}</b></span><span class="deck-next">次<b>${next.num}</b></span>`;
 }
 function openDeckModal(){
   const body=document.getElementById('deckModalBody');
@@ -2679,6 +2716,53 @@ function openDeckModal(){
   document.getElementById('deckModal').classList.add('show');
 }
 function closeDeckModal(){ document.getElementById('deckModal').classList.remove('show'); }
+
+// ===== みんなの統計(クラウドからの読み取り) =====
+const DIFF_JP_G={weak:'やさしい',normal:'普通',strong:'強い'};
+async function openGlobalStats(){
+  const modal=document.getElementById('globalStatsModal');
+  const body=document.getElementById('globalStatsBody');
+  modal.classList.add('show');
+  if(!window.__maskdFetchLogs){
+    body.innerHTML='<p style="color:var(--ink-dim);text-align:center;font-size:12px;">クラウド機能が無効です（Firebase未設定または初期化に失敗）。</p>';
+    return;
+  }
+  body.innerHTML='<p style="text-align:center;color:var(--ink-dim);font-size:12px;">クラウドから読み込み中…</p>';
+  try{
+    const logs=await window.__maskdFetchLogs();
+    if(!logs.length){
+      body.innerHTML='<p style="color:var(--ink-dim);text-align:center;font-size:12px;">まだクラウドに蓄積されたデータがありません。<br>「送って協力する」を選んだ対戦が集まると、ここに表示されます。</p>';
+      return;
+    }
+    let pw=0,cw=0,dr=0,sumP=0,sumC=0; const diff={}; const players=new Set(); const vers={};
+    logs.forEach(g=>{
+      if(g.winner==='player')pw++; else if(g.winner==='cpu')cw++; else dr++;
+      if(g.cpuDifficulty) diff[g.cpuDifficulty]=(diff[g.cpuDifficulty]||0)+1;
+      if(g.playerId) players.add(g.playerId);
+      if(g.version) vers[g.version]=(vers[g.version]||0)+1;
+      sumP+=(g.playerFinal||0); sumC+=(g.cpuFinal||0);
+    });
+    const N=logs.length, pct=x=>(x/N*100).toFixed(1)+'%';
+    const diffStr=Object.keys(diff).sort().map(k=>`${DIFF_JP_G[k]||k} ${diff[k]}`).join(' ／ ')||'-';
+    const verStr=Object.keys(vers).sort().reverse().slice(0,3).map(k=>`${k}:${vers[k]}`).join(' ／ ')||'-';
+    body.innerHTML=`
+      <div class="ms-row"><span>蓄積プレイ数</span><span><b style="color:var(--gold-bright)">${N}</b> 戦</span></div>
+      <div class="ms-row"><span>参加プレイヤー数(概算)</span><span>${players.size} 人</span></div>
+      <div class="ms-row"><span>プレイヤー勝率</span><span>${pct(pw)}（勝${pw}）</span></div>
+      <div class="ms-row"><span>CPU勝率</span><span>${pct(cw)}（勝${cw}）</span></div>
+      <div class="ms-row"><span>引分率</span><span>${pct(dr)}（${dr}）</span></div>
+      <div class="ms-row"><span>平均スコア</span><span>プレイヤー ${(sumP/N).toFixed(1)} ／ CPU ${(sumC/N).toFixed(1)}</span></div>
+      <div class="ms-row"><span>難易度の内訳</span><span>${diffStr}</span></div>
+      <div class="ms-row"><span>バージョン別</span><span>${verStr}</span></div>`;
+  }catch(e){
+    const code=(e&&(e.code||e.message))||'';
+    body.innerHTML=`<p style="color:var(--lose);text-align:center;font-size:12px;">クラウドからの読み取りに失敗しました。</p>
+      <p style="color:var(--ink-dim);font-size:11px;line-height:1.7;">Firestoreのセキュリティルールで <code>logs</code> の<b>読み取り</b>を許可してください。例：<br>
+      <code style="font-size:10px;">match /logs/{doc} {<br>&nbsp;allow create: if true;<br>&nbsp;allow read: if true;<br>}</code></p>
+      <p style="font-size:9px;color:var(--ink-dim);">詳細: ${code}</p>`;
+  }
+}
+function closeGlobalStats(){ document.getElementById('globalStatsModal').classList.remove('show'); }
 
 // ===== アプリを閉じる(1試合後の選択肢) =====
 // ブラウザのタブは通常スクリプトから閉じられないため、試みたうえで
@@ -2821,8 +2905,10 @@ if(typeof CARD_IMG!=='undefined' && CARD_IMG.back){
      使い方: 下の firebaseConfig に、Firebase コンソールで発行した設定を貼り付けてください。
      設定するとゲーム終了時に匿名のプレイログが Firestore の "logs" コレクションへ送信されます
      (プレイヤーが「送って協力する」を選んだ場合のみ)。null のままなら送信機能は完全に無効です。
-     Firestore セキュリティルール例(作成のみ許可・読み取り不可):
-       match /logs/{doc} { allow create: if true; allow read: if false; }
+     Firestore セキュリティルール例:
+       ・書き込みのみ(従来):      match /logs/{doc} { allow create: if true; allow read: if false; }
+       ・「みんなの統計」を使う場合: match /logs/{doc} { allow create: if true; allow read: if true; }
+         ※ read を true にすると匿名ログを誰でも読めます。集計表示のみで個人情報は含みません。
 -->
 <script type="module">
   // ▼▼▼ Firebase 設定(このプロジェクトのもの) ▼▼▼
@@ -2839,13 +2925,18 @@ if(typeof CARD_IMG!=='undefined' && CARD_IMG.back){
   if (firebaseConfig && firebaseConfig.projectId) {
     try {
       const { initializeApp } = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js");
-      const { getFirestore, collection, addDoc, serverTimestamp } =
+      const { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, limit } =
         await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js");
       const app = initializeApp(firebaseConfig);
       const db = getFirestore(app);
       window.__maskdSaveLog = async (log) => {
         try { await addDoc(collection(db, "logs"), { ...log, serverTs: serverTimestamp() }); return true; }
         catch (e) { console.warn("MASKD: ログ送信に失敗", e); return false; }
+      };
+      // クラウドからの読み取り(みんなの統計用)。Firestoreルールで read を許可した場合のみ成功する。
+      window.__maskdFetchLogs = async () => {
+        const snap = await getDocs(query(collection(db, "logs"), limit(2000)));
+        const out = []; snap.forEach(d => out.push(d.data())); return out;
       };
       window.__maskdLoggingReady = true;
       // アクセス状況の把握(任意): Firebase Analytics
