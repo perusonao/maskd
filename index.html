@@ -88,6 +88,15 @@
   .deck-chip .deck-ico{ font-size:12px; color:var(--gold); }
   .deck-chip .deck-next{ color:var(--ink); }
   .deck-chip.empty{ opacity:0.55; cursor:default; }
+  .deck-chip.opp{ right:auto; left:6px; }
+  .deck-chip.opp .deck-next{ color:var(--kaos); }
+  /* 相手山札の推理候補 */
+  .odc-cand{ display:flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid var(--line);
+    border-radius:10px; background:var(--bg-panel); margin-bottom:6px; }
+  .odc-num{ font-size:20px; font-weight:700; font-family:'Cormorant Garamond',serif; color:var(--gold-bright); min-width:22px; text-align:center; }
+  .odc-x{ font-size:11px; color:var(--ink-dim); }
+  .odc-poss{ display:flex; align-items:center; gap:5px; margin-left:auto; flex-wrap:wrap; justify-content:flex-end; }
+  .odc-lbl{ font-size:9px; color:var(--ink-dim); }
   /* 山札モーダルの中身 */
   .deck-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(58px,1fr)); gap:6px; padding:4px 2px; }
   .deck-card{ position:relative; border:1px solid; border-radius:8px; padding:8px 4px; text-align:center;
@@ -111,7 +120,7 @@
   .dd-card.flipped .dd-inner{ transform:rotateY(180deg); }
   .dd-face{ position:absolute; inset:0; -webkit-backface-visibility:hidden; backface-visibility:hidden;
     border-radius:9px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; border:1px solid var(--line); }
-  .dd-back{ background:var(--card-back, #1a1526) center/cover; color:var(--gold); font-size:20px; }
+  .dd-back{ background:var(--card-back) center/cover no-repeat, #14121c; }
   .dd-front{ transform:rotateY(180deg); background:var(--bg-panel); }
   .dd-front .dd-a{ font-size:8px; letter-spacing:0.04em; }
   .dd-front .dd-n{ font-size:20px; font-weight:700; font-family:'Cormorant Garamond',serif; }
@@ -890,6 +899,13 @@
     <div class="btn-close-modal" onclick="closeDeckModal()">閉じる</div>
   </div>
 
+  <div class="history-modal" id="oppDeckModal">
+    <h3>相手の山札（推理）</h3>
+    <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">相手がまだ引いていない札の推理候補（数字・枚数・候補の属性）。属性は確定できません</p>
+    <div class="hist-scroll" id="oppDeckModalBody"></div>
+    <div class="btn-close-modal" onclick="closeOppDeckModal()">閉じる</div>
+  </div>
+
   <div class="history-modal" id="matchLogModal">
     <h3>対戦ログ一覧</h3>
     <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">この端末に保存された過去の対戦（新しい順・直近100戦）</p>
@@ -1004,6 +1020,7 @@
     </div>
     <div class="slot-row" id="cpuSlot"><div class="empty-slot">待機</div></div>
     <div class="mid-divider"><div class="ln"></div><div class="vs">VS</div><div class="ln"></div>
+      <div class="deck-chip opp" id="deckBarOpp" onclick="event.stopPropagation(); openOppDeckModal()"></div>
       <div class="deck-chip" id="deckBar" onclick="event.stopPropagation(); openDeckModal()"></div>
     </div>
     <div class="slot-row" id="youSlot"><div class="empty-slot">あなた</div></div>
@@ -1177,7 +1194,7 @@ function setupDealerDraw(){
     const el=document.createElement('div');
     el.className='dd-card'; el.dataset.attr=attr;
     el.innerHTML=`<div class="dd-inner">
-      <div class="dd-face dd-back">◈</div>
+      <div class="dd-face dd-back"></div>
       <div class="dd-face dd-front ${attr}"><span class="dd-a">${ALABEL[attr]}</span><span class="dd-n">0</span></div>
     </div><div class="dd-label"></div>`;
     el.onclick=()=>playerPickDealer(attr);
@@ -1510,6 +1527,7 @@ function renderHand(){
   const h=document.getElementById('hand'); h.innerHTML='';
   document.getElementById('handTitle').textContent = youIsDealer? 'あなたの手札（親）':'あなたの手札（子）';
   renderDeckChip();
+  renderOppDeckChip();
   const indexed = youHand.map((c,i)=>({c,i}));
   indexed.sort((a,b)=> a.c.num-b.c.num || a.c.attr.localeCompare(b.c.attr));
 
@@ -2415,8 +2433,12 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.13.0';
+const GAME_VERSION = 'v0.14.0';
 const CHANGELOG = [
+  { version:'v0.14.0', date:'2026-07-11', items:[
+    '親決めの裏面を、ゲーム本編と同じカード裏面イメージに統一',
+    '相手の山札を推理表示：中央の仕切り左に相手の山札枚数チップを追加し、タップで「数字・枚数・候補の属性」を表示（配札から推理できる公平な情報のみ。中身は確定させない）',
+  ]},
   { version:'v0.13.0', date:'2026-07-11', items:[
     '親決めを刷新：各属性の「0」カード5枚を裏向きに並べ、両者1枚ずつめくって属性の相性で勝った方が第1ラウンドの親に。引き分け（Air絡み）ならその2枚を除いて選び直し（Airが抜けるので次は必ず決着）',
     '結果に「どちらの属性が勝ったか」を明示（例：太陽0が月0に勝利）',
@@ -2753,6 +2775,47 @@ function openDeckModal(){
   document.getElementById('deckModal').classList.add('show');
 }
 function closeDeckModal(){ document.getElementById('deckModal').classList.remove('show'); }
+
+// ===== 相手の山札(推理候補) =====
+// 公平な情報のみで算出: 相手のデッキ(全30枚−自分の配札=remainingPossibleForNum)から、
+// 見えている相手の手札の数字ぶんを引くと、山札に眠る札の「数字と枚数と候補属性」が出る。
+function oppDrawPileCandidates(){
+  const handCount={}; cpuHand.forEach(c=>{ handCount[c.num]=(handCount[c.num]||0)+1; });
+  const out=[];
+  for(let n=0;n<=5;n++){
+    const pool=(remainingPossibleForNum(n).pool)||[]; // 相手の未使用札(手札+山札)の属性候補
+    const drawCount=pool.length-(handCount[n]||0);    // うち手札ぶんを除くと山札の枚数
+    if(drawCount>0) out.push({num:n, count:drawCount, attrs:pool});
+  }
+  return out;
+}
+function renderOppDeckChip(){
+  const bar=document.getElementById('deckBarOpp');
+  if(!bar) return;
+  const total=oppDrawPileCandidates().reduce((s,c)=>s+c.count,0);
+  if(total<=0){ bar.className='deck-chip opp empty'; bar.innerHTML='<span class="deck-ico">🂠</span><span>相手山札なし</span>'; return; }
+  bar.className='deck-chip opp';
+  bar.innerHTML=`<span class="deck-ico">🂠</span><span>相手山札<b>${total}</b></span><span class="deck-next">推理 ›</span>`;
+}
+function openOppDeckModal(){
+  const body=document.getElementById('oppDeckModalBody');
+  const cand=oppDrawPileCandidates();
+  const total=cand.reduce((s,c)=>s+c.count,0);
+  if(total<=0){
+    body.innerHTML='<div class="hist-empty">相手の山札は空です。</div>';
+  } else {
+    body.innerHTML=cand.map(c=>{
+      const icons=c.attrs.map(a=>`<div class="hint-icon ${a}${c.attrs.length===1?' confirmed':''}"></div>`).join('');
+      return `<div class="odc-cand">
+        <div class="odc-num">${c.num}</div>
+        <div class="odc-x">×${c.count}</div>
+        <div class="odc-poss"><span class="odc-lbl">${c.attrs.length===1?'確定':'候補'}</span>${icons}</div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('oppDeckModal').classList.add('show');
+}
+function closeOppDeckModal(){ document.getElementById('oppDeckModal').classList.remove('show'); }
 
 // ===== みんなの統計(クラウドからの読み取り) =====
 const DIFF_JP_G={weak:'やさしい',normal:'普通',strong:'強い'};
