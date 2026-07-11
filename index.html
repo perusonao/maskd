@@ -1671,8 +1671,9 @@ function cpuDecide(){
   }
 
   const est=cpuEstimate(dealerCard, childCard.num, true);
-  const expLoss=est.lose*dealerCard.num;
-  const expGain=est.win*childCard.num;
+  const lm=scoreMultiplier(); // 終盤2倍を意識(勝ちの価値・負けの痛みが倍)
+  const expLoss=est.lose*dealerCard.num*lm;
+  const expGain=est.win*childCard.num*lm;
   let threshold=0;
 
   // 状況判断: 点差(自分視点)と残りラウンドで積極/慎重を調整
@@ -1724,9 +1725,10 @@ function cpuChooseCard(hand, oppNum){
     return scored[0].i;
   }
   // 子として、相手の数字を見て最良の一手を選ぶ
+  const lm=scoreMultiplier(); // 終盤2倍を意識(勝ちの価値・負けの痛みが倍)
   const scored=hand.map((c,i)=>{
     const est=cpuEstimate(c, oppNum, false);
-    let ev = est.win*oppNum - est.lose*c.num;
+    let ev = est.win*oppNum*lm - est.lose*c.num*lm;
     if(c.attr==='air') ev += airUseBonus - airHoardBonus;
     if(cpuStrategy==='aggressive') ev += est.win*0.5; // 積極的: 勝ち筋を重視
     else if(cpuStrategy==='cautious') ev -= est.lose*0.5; // 慎重: 負けを強く嫌う
@@ -2150,8 +2152,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.7';
+const GAME_VERSION = 'v1.8';
 const CHANGELOG = [
+  { version:'v1.8', date:'2026-07-11', items:[
+    'CPUの思考を強化：終盤2ラウンド(得点2倍)を正しく評価するように。強い札を終盤に活かし、終盤の失点を避ける判断ができるようになった',
+  ]},
   { version:'v1.7', date:'2026-07-11', items:[
     'プレイログのクラウド保存(Firebase Firestore)に対応。ゲーム終了時に匿名のプレイ結果を送信(同意した場合のみ)。バランス改善のためのデータ収集用',
     '匿名プレイヤーID・同意管理・送信のオン/オフ切替(通算統計から変更可)を追加',
