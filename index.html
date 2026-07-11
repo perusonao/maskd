@@ -79,6 +79,31 @@
   .ml-caret{ font-size:8px; color:var(--ink-dim); }
   .ml-detail{ display:flex; flex-direction:column; gap:4px; padding:6px 8px 8px; border-top:1px solid var(--line); }
 
+  /* 山札インジケータ(プレイ画面) */
+  .deck-bar{ display:flex; align-items:center; gap:8px; margin:2px 14px 0; padding:5px 10px;
+    border:1px solid var(--line); border-radius:8px; background:var(--bg-panel);
+    font-size:11px; color:var(--ink-dim); cursor:pointer; flex-shrink:0; }
+  .deck-bar b{ color:var(--gold-bright); font-size:12px; }
+  .deck-bar .deck-ico{ font-size:14px; color:var(--gold); }
+  .deck-bar .deck-next{ color:var(--ink); }
+  .deck-bar .deck-more{ margin-left:auto; color:var(--gold); font-size:10px; }
+  .deck-bar.empty{ opacity:0.6; cursor:default; }
+  .deck-bar.empty .deck-more{ display:none; }
+  /* 山札モーダルの中身 */
+  .deck-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(58px,1fr)); gap:6px; padding:4px 2px; }
+  .deck-card{ position:relative; border:1px solid; border-radius:8px; padding:8px 4px; text-align:center;
+    display:flex; flex-direction:column; align-items:center; gap:3px; background:var(--bg-panel); }
+  .deck-card .dc-a{ font-size:8px; letter-spacing:0.04em; opacity:0.85; }
+  .deck-card .dc-n{ font-size:18px; font-weight:700; font-family:'Cormorant Garamond',serif; }
+  .deck-card.moon{ color:var(--moon); border-color:var(--moon); }
+  .deck-card.sun{ color:var(--sun); border-color:var(--sun); }
+  .deck-card.dark{ color:var(--dark); border-color:var(--dark); }
+  .deck-card.kaos{ color:var(--kaos); border-color:var(--kaos); }
+  .deck-card.air{ color:var(--air); border-color:var(--air); }
+  .deck-card.next{ box-shadow:0 0 0 2px var(--gold-bright), 0 0 10px rgba(217,180,90,0.4); }
+  .deck-card .dc-badge{ position:absolute; top:-7px; right:-6px; background:var(--gold-bright); color:#1a1526;
+    font-size:8px; font-weight:700; padding:1px 5px; border-radius:6px; }
+
   .tracker-grid{ display:grid; grid-template-columns:44px repeat(6,1fr); gap:3px; }
   .tg-head{ font-size:10px; color:var(--ink-dim); text-align:center; padding:4px 0; }
   .tg-row-label{ font-size:10px; color:var(--gold-dim); display:flex; align-items:center; padding-left:2px; }
@@ -836,6 +861,13 @@
     <div class="btn-close-modal" onclick="closeStats()">閉じる</div>
   </div>
 
+  <div class="history-modal" id="deckModal">
+    <h3>自分の山札</h3>
+    <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">まだ引いていない自分の残り札です（次に引く札を強調表示）</p>
+    <div class="hist-scroll" id="deckModalBody"></div>
+    <div class="btn-close-modal" onclick="closeDeckModal()">閉じる</div>
+  </div>
+
   <div class="history-modal" id="matchLogModal">
     <h3>対戦ログ一覧</h3>
     <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">この端末に保存された過去の対戦（新しい順・直近100戦）</p>
@@ -849,8 +881,8 @@
       <h3>手札の構成</h3>
       <ul>
         <li>Air（0〜5）も含めた全30枚（5属性×6数字）を2人で分配（同じ数字を2枚ずつ、Airも3枚ずつで破棄なし）。<b>低いKaos（0・1）は両者に1枚ずつ</b>配られ、配札運を抑える</li>
-        <li>初期の実働手札6枚は<b>ランダム</b>に選ばれる（毎回ちがう手札で展開が変化）。残りは山札から補充</li>
-        <li>1枚使うたびに、ラウンド開始時に山札から1枚補充される</li>
+        <li>初期の実働手札<b>5枚</b>は<b>ランダム</b>に選ばれる（毎回ちがう手札で展開が変化）。残りは山札から補充</li>
+        <li>1枚使うたびに、ラウンド開始時に山札から1枚補充される。自分の山札の<b>残り枚数と次に引く札</b>は画面下に表示され、タップで中身を確認できる</li>
       </ul>
       <h3>勝敗ルール</h3>
       <ul>
@@ -974,6 +1006,8 @@
     <div class="hand" id="hand"></div>
   </div>
 
+  <div class="deck-bar" id="deckBar" onclick="openDeckModal()"></div>
+
   <div class="coach-line" id="coachLine"></div>
   <div class="hint-line" id="hint"></div>
   <div class="actions" id="actions"></div>
@@ -996,7 +1030,7 @@ function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.rando
 let youHand=[], cpuHand=[]; // 現在見えている実働手札(最大5枚)
 let youDrawPile=[], cpuDrawPile=[]; // 見えていない補充用の残り札
 let youFullDeal=[], cpuFullDeal=[]; // 配札時の全体(所有権計算・ボーナス計算用、不変)
-const ACTIVE_HAND_SIZE=6;
+const ACTIVE_HAND_SIZE=5;
 let youLP=START_LP, cpuLP=START_LP;
 let round=1, youIsDealer=true, busy=false;
 let dealerCard=null, childCard=null; // {attr,num,owner:'you'|'cpu'}
@@ -1133,12 +1167,12 @@ function doDealerDraw(){
 function startGame(initialDealerIsYou){
   const {you,cpu}=dealHands();
   youFullDeal=you; cpuFullDeal=cpu;
-  // 初期手札はランダム6枚(数字構成が毎回変わり、序盤の展開が多様化する)。
+  // 初期手札はランダムに選ぶ(数字構成が毎回変わり、序盤の展開が多様化する)。
   // 残りは山札。デッキ全15枚は破棄しない=相手手札の属性推理を正確に保つため。
   const pick6=(fullDeal)=>{
     const shuffled=shuffle([...fullDeal]);
-    const hand=shuffled.slice(0,6);
-    const drawPile=shuffled.slice(6);
+    const hand=shuffled.slice(0,ACTIVE_HAND_SIZE);
+    const drawPile=shuffled.slice(ACTIVE_HAND_SIZE);
     return {hand, drawPile};
   };
   const youPick=pick6(youFullDeal);
@@ -1412,6 +1446,7 @@ function renderHandModalContext(){
 function renderHand(){
   const h=document.getElementById('hand'); h.innerHTML='';
   document.getElementById('handTitle').textContent = youIsDealer? 'あなたの手札（親）':'あなたの手札（子）';
+  renderDeckChip();
   const indexed = youHand.map((c,i)=>({c,i}));
   indexed.sort((a,b)=> a.c.num-b.c.num || a.c.attr.localeCompare(b.c.attr));
 
@@ -2317,56 +2352,57 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.2.0';
+const GAME_VERSION = 'v1.0.0';
 const CHANGELOG = [
-  { version:'v0.2.0', date:'2026-07-11', items:[
-    'カード構成・配り方をリニューアル。初期手札6枚を「0〜5を1枚ずつ」から【ランダム6枚】に変更し、毎回ちがう展開に（手札の数字構成が1通り→300通り超へ）',
+  { version:'v1.0.0', date:'2026-07-11', items:[
+    'ルール確定・安定版。カード構成・配り方をリニューアル。初期手札を「0〜5を1枚ずつ」から【ランダムな5枚】に変更し、毎回ちがう展開に（手札の数字構成が1通り→多数へ）',
     '配札運を是正：強力な低Kaos（0・1）を必ず両者に1枚ずつ配るように。配札による勝率差を大幅圧縮（約10pt→約3pt）',
     'テンポ改善：全12ラウンド→【全8ラウンド】に短縮（約33%）。終盤2倍は最終2R（第7・8R）に自動追従。接戦化し逆転も増加',
+    '自分の山札の残り枚数・次に引く札を表示し、タップで山札の中身を一覧できるように',
   ]},
-  { version:'v1.9', date:'2026-07-11', items:[
+  { version:'v0.10.0', date:'2026-07-11', items:[
     '初心者向けヒント機能を追加：子のときは手札モーダルで「おすすめ札」に印、決戦前の親には有利/不利のアドバイス、相手の数字に応じた特殊ルールのリマインドを表示',
     '決戦の結果に、なぜ勝った/負けたのかのやさしい解説を追加',
     'ヒントは設定からいつでもオン/オフ可能（初期値オン）',
   ]},
-  { version:'v1.8', date:'2026-07-11', items:[
+  { version:'v0.9.0', date:'2026-07-11', items:[
     'CPUの思考を強化：終盤2ラウンド(得点2倍)を正しく評価するように。強い札を終盤に活かし、終盤の失点を避ける判断ができるようになった',
   ]},
-  { version:'v1.7', date:'2026-07-11', items:[
+  { version:'v0.8.0', date:'2026-07-11', items:[
     'プレイログのクラウド保存(Firebase Firestore)に対応。ゲーム終了時に匿名のプレイ結果を送信(同意した場合のみ)。バランス改善のためのデータ収集用',
     '匿名プレイヤーID・同意管理・送信のオン/オフ切替(通算統計から変更可)を追加',
   ]},
-  { version:'v1.6', date:'2026-07-11', items:[
+  { version:'v0.7.0', date:'2026-07-11', items:[
     '初回ガイド（チュートリアル）を追加：7ステップで目的・親子・出し方・相性・推理・得点を案内。初回自動表示＋スタート画面の「遊び方」からいつでも再表示',
     '属性の予想アイコンを見直し：闇をハーレクインの菱形にして混沌と区別、コントラストを強化',
   ]},
-  { version:'v1.5', date:'2026-07-11', items:[
+  { version:'v0.6.0', date:'2026-07-11', items:[
     'カード5属性を、枠まで属性色で統一した新しい仮面デザインに刷新（月=青／空気=緑青／太陽=金／混沌=赤／闇=紫）',
     '英字表記を修正（DARK 等）し、各カードにMASKD見出し・和名・説明を統一',
     'カード裏面を、金の装飾枠＋星空＋仮面の新デザインに刷新',
   ]},
-  { version:'v1.4.1', date:'2026-07-11', items:[
+  { version:'v0.5.1', date:'2026-07-11', items:[
     '手札選択モーダルでカードの数字が見えなかった不具合を修正（数字バッジを大きく明確に）',
     '場に出したカードの表示を大きくして見やすく',
     '闇（DARK）のカードを新しい仮面イラストに差し替え',
   ]},
-  { version:'v1.4', date:'2026-07-11', items:[
+  { version:'v0.5.0', date:'2026-07-11', items:[
     'カードを仮面モチーフのタロット調イラストに刷新（Sun/Moon/Dark/Kaos/Air＋裏面）',
     '数字は金のバッジで各カードに重ね、相手の伏せ札は新しい裏面デザインに',
     '手札・場・モーダル・場に出した札など全カード表示をイラストに対応（相手の残り手札は属性非表示のまま）',
     '結果オーバーレイがラウンドを跨いで再表示されることがある不具合を修正',
   ]},
-  { version:'v1.3', date:'2026-07-11', items:[
+  { version:'v0.4.0', date:'2026-07-11', items:[
     '勝敗演出を強化：勝者カードは輝いて光を放射、敗者カードは仮面にヒビが入り砕けて崩れる',
     'Air使用時に「静寂の風」の画面演出を追加し、特別な一手だと感じられるようにした',
     '戦略カウンターの増減を、バーの脈動＋フロートする「+1/-2」表示で目立たせた',
     '勝敗の演出を見せてから結果カードを表示するよう表示タイミングを調整',
   ]},
-  { version:'v1.2', date:'2026-07-11', items:[
+  { version:'v0.3.0', date:'2026-07-11', items:[
     'トップページ(スタート画面)にバージョン表記を追加',
     'ルール説明・更新履歴をトップのボタンから開くモーダル表示にし、トップページをすっきり整理(全文スクロール可能)',
   ]},
-  { version:'v1.1', date:'2026-07-10', items:[
+  { version:'v0.2.0', date:'2026-07-10', items:[
     'Kaos5の救済ルールを追加：全属性の5に同値でも打ち勝つ(所持者ゲーム勝率が約40%→46%に改善、他のKaos番号と同水準に)',
     '終盤の逆転要素を追加：最終2ラウンド(第11・12R)の決戦は得点2倍(リード固定化を緩和、逆転率が約13%→17%に上昇)',
     'Kaos特殊ルール発動時の演出を強化：勝者カードの脈動＋画面フラッシュ「混沌の特殊効果」',
@@ -2374,7 +2410,7 @@ const CHANGELOG = [
     'スタート画面(トップ)から通算成績・履歴を確認できるボタンを追加',
     '本物のゲームロジックを移植したシミュレータで上記2つのバランスを検証(先手勝率・引分率は不変を確認)',
   ]},
-  { version:'v1.0', date:'2026-07-10', items:[
+  { version:'v0.1.0', date:'2026-07-10', items:[
     'Kaos0にも「全属性の5に勝つ」特殊ルールを追加(Kaos1のみだった弱点を緩和)',
     '通算統計・プレイログの自動収集機能を追加(端末に保存、JSONエクスポート対応)',
     'Air使用で結果に関わらず戦略カウンター+1(温存一択の解消)',
@@ -2611,6 +2647,38 @@ function toggleMatchLogDetail(idx){
   el.style.display='block'; if(caret)caret.textContent='▲';
 }
 function closeMatchLog(){ document.getElementById('matchLogModal').classList.remove('show'); }
+
+// ===== 自分の山札(残り札)の表示と一覧 =====
+// 次に引く札は youDrawPile の末尾(refillはpop()で末尾から取る)
+function renderDeckChip(){
+  const bar=document.getElementById('deckBar');
+  if(!bar) return;
+  const n=youDrawPile.length;
+  if(n===0){ bar.className='deck-bar empty'; bar.innerHTML='<span class="deck-ico">🂠</span><span>山札：なし</span>'; return; }
+  bar.className='deck-bar';
+  const next=youDrawPile[n-1];
+  bar.innerHTML=`<span class="deck-ico">🂠</span><span>山札 残り<b>${n}</b>枚</span><span class="deck-next">次に引く <b>${next.num}</b></span><span class="deck-more">中身を見る ›</span>`;
+}
+function openDeckModal(){
+  const body=document.getElementById('deckModalBody');
+  const n=youDrawPile.length;
+  if(n===0){
+    body.innerHTML='<div class="hist-empty">山札は空です。<br>手札の札で戦いましょう。</div>';
+  } else {
+    const next=youDrawPile[n-1];
+    const sorted=[...youDrawPile].sort((a,b)=> a.num-b.num || a.attr.localeCompare(b.attr));
+    body.innerHTML=`<div class="deck-grid">`+sorted.map(c=>{
+      const isNext = c===next;
+      return `<div class="deck-card ${c.attr}${isNext?' next':''}">
+        <span class="dc-a">${ALABEL[c.attr]}</span>
+        <span class="dc-n">${c.num}</span>
+        ${isNext?'<span class="dc-badge">次</span>':''}
+      </div>`;
+    }).join('')+`</div>`;
+  }
+  document.getElementById('deckModal').classList.add('show');
+}
+function closeDeckModal(){ document.getElementById('deckModal').classList.remove('show'); }
 
 // ===== アプリを閉じる(1試合後の選択肢) =====
 // ブラウザのタブは通常スクリプトから閉じられないため、試みたうえで
