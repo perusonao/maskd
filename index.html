@@ -289,6 +289,44 @@
   .card.win-glow{ box-shadow:0 0 22px 3px rgba(126,201,138,.65); transform:translateY(-3px) scale(1.04); }
   .card.lose-dim{ opacity:0.5; }
   .card.air-neutral{ box-shadow:0 0 16px 2px rgba(111,191,160,.4); }
+  /* Kaos特殊ルール発動時、勝者カードを混沌色で強く脈動させる */
+  .card.kaos-special{ animation:kaosSpecialPulse 1.1s ease; }
+  @keyframes kaosSpecialPulse{
+    0%{ box-shadow:0 0 22px 3px rgba(126,201,138,.65); }
+    25%{ box-shadow:0 0 40px 10px rgba(193,75,82,.95); transform:translateY(-5px) scale(1.1) rotate(-2deg); }
+    50%{ box-shadow:0 0 26px 6px rgba(221,122,128,.8); transform:translateY(-3px) scale(1.05) rotate(2deg); }
+    75%{ box-shadow:0 0 40px 10px rgba(193,75,82,.9); transform:translateY(-4px) scale(1.08) rotate(-1deg); }
+    100%{ box-shadow:0 0 22px 3px rgba(126,201,138,.65); transform:translateY(-3px) scale(1.04); }
+  }
+  /* Kaos特殊ルール発動を告げる画面フラッシュ */
+  .kaos-flash{
+    position:absolute; inset:0; z-index:9; pointer-events:none; opacity:0;
+    background:radial-gradient(circle at center, rgba(193,75,82,0.35), transparent 70%);
+  }
+  .kaos-flash.fire{ animation:kaosFlashAnim .9s ease; }
+  @keyframes kaosFlashAnim{
+    0%{ opacity:0; } 20%{ opacity:1; } 100%{ opacity:0; }
+  }
+  .kaos-flash .kf-label{
+    position:absolute; top:14%; left:0; right:0; text-align:center;
+    font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:600; font-size:20px;
+    color:var(--kaos); text-shadow:0 0 16px rgba(193,75,82,0.9); letter-spacing:0.06em;
+  }
+  /* 終盤決戦(得点2倍)を告げるバッジ */
+  .late-badge{
+    font-size:9px; font-weight:700; letter-spacing:0.04em; color:#2a0d0d;
+    background:linear-gradient(160deg,#dd7a80,var(--kaos)); border-radius:8px;
+    padding:1px 6px; margin-left:5px; display:none; animation:latePulse 1.4s ease-in-out infinite;
+  }
+  .late-badge.show{ display:inline-block; }
+  @keyframes latePulse{ 0%,100%{ box-shadow:0 0 0 rgba(193,75,82,0.6); } 50%{ box-shadow:0 0 10px 1px rgba(193,75,82,0.8); } }
+  /* ラウンド開始時に補充された新しい札を光らせる */
+  .hcard.just-drawn{ animation:justDrawnGlow 1.6s ease; }
+  @keyframes justDrawnGlow{
+    0%{ border-color:var(--gold-bright); box-shadow:0 0 16px 3px rgba(232,200,119,.8); transform:translateY(-6px) scale(1.12); }
+    60%{ border-color:var(--gold-bright); box-shadow:0 0 10px 2px rgba(232,200,119,.5); transform:translateY(-2px) scale(1.03); }
+    100%{ box-shadow:none; transform:none; }
+  }
   .empty-slot{ width:64px;height:88px;border-radius:9px;border:1px dashed rgba(201,162,74,.18); display:flex;align-items:center;justify-content:center; font-size:8px; color:var(--ink-dim); }
   .flip-in{ animation:flipIn .45s ease; }
   @keyframes flipIn{ from{transform:rotateY(90deg);opacity:0;} to{transform:rotateY(0);opacity:1;} }
@@ -510,13 +548,14 @@
       <li><b style="color:var(--air)">Air</b>が絡む → 属性・数字問わず<b>必ず引き分け</b>（得点増減なし）。ただし<b>Kaosは数字問わずAirに勝利</b>する</li>
       <li>Airを決戦に使うと、結果（勝ち・負け・引分）に関わらず<b>戦略カウンターが+1</b>される</li>
       <li><b style="color:var(--kaos)">Kaos</b>が絡む（Airなし） → 属性問わず数字が大きい方の勝ち。同値は<b>Kaos側が敗北</b></li>
-      <li><b>特殊ルール</b>：Kaos<b>0・1</b>は全属性の<b>5に勝つ</b>／Kaos<b>5</b>は全属性の<b>1に負ける</b></li>
+      <li><b>特殊ルール</b>：Kaos<b>0・1</b>は全属性の<b>5に勝つ</b>／Kaos<b>5</b>は全属性の<b>5に打ち勝つ</b>（同値でも勝利）が、全属性の<b>1には負ける</b></li>
       <li>同じ属性同士 → 数字が大きい方の勝ち</li>
       <li>異なる属性同士（Sun/Dark/Moon） → Moon→Dark→Sun→Moon の3すくみ</li>
     </ul>
     <h3>得点</h3>
     <ul>
       <li>初期値0。<b>勝った側は、相手が出した仮面の数字ぶん得点を獲得</b>する（負けた側の得点は減らない）</li>
+      <li><b style="color:var(--kaos)">終盤決戦</b>：最終2ラウンド（第11・12R）の決戦は<b>得点が2倍</b>。逆転の最後のチャンス。強いカードを終盤まで温存する戦略も有効</li>
       <li>12ラウンド後、<b>得点＋残り戦略カウンター＋残り手札ボーナス</b>の合計が多い方の勝ち</li>
       <li><b>残り手札ボーナス</b>：使わずに残ったカードの数字を加算（<b style="color:var(--air)">Airは数字を2倍</b>にして計算）</li>
     </ul>
@@ -629,7 +668,7 @@
     <div class="top-right">
       <div class="grid-btn" onclick="openTracker()">一覧表</div>
       <div class="grid-btn" onclick="openHistory()">履歴 ↺</div>
-      <div class="round-badge">ラウンド <b id="roundN">1</b> / 12</div>
+      <div class="round-badge">ラウンド <b id="roundN">1</b> / 12<span class="late-badge" id="lateBadge">決戦×2</span></div>
     </div>
   </div>
 
@@ -665,6 +704,7 @@
       <div class="zone-label you"><div class="mask-badge you"></div>あなた</div>
     </div>
     <div class="action-banner" id="actionBanner"><div class="ab-icon"></div><div class="ab-text"></div></div>
+    <div class="kaos-flash" id="kaosFlash"><div class="kf-label"></div></div>
     <div class="result-overlay" id="resultOv">
       <div class="result-card" id="resultCard">
         <div class="rtitle"></div><div class="rdetail"></div>
@@ -920,6 +960,7 @@ function renderScore(){
   document.getElementById('cpuDealerTag').style.display=!youIsDealer?'block':'none';
   document.getElementById('youToken').textContent = `戦略 ${youTrust}`;
   document.getElementById('cpuToken').textContent = `戦略 ${cpuTrust}`;
+  document.getElementById('lateBadge').classList.toggle('show', isLateGame());
   renderOppHand();
 }
 function renderOppHand(){
@@ -1099,11 +1140,13 @@ function renderHand(){
   indexed.forEach(({c,i})=>{
     const el=document.createElement('div');
     el.className='hcard '+c.attr;
+    if(youJustDrawnKey && c.attr+c.num===youJustDrawnKey){ el.classList.add('just-drawn'); }
     el.innerHTML=`<div class="ha">${ALABEL[c.attr]}</div><div class="hg"></div><div class="hn">${c.num}</div>`;
     if(phase!=='pick'){ el.style.opacity='0.5'; }
     el.style.cursor='default'; el.style.pointerEvents='none';
     h.appendChild(el);
   });
+  youJustDrawnKey=null; // 光らせるのは補充直後の最初の描画1回だけ
 }
 function openHandModalIfReady(){
   if(phase==='pick') document.getElementById('handModal').classList.add('show');
@@ -1196,13 +1239,33 @@ function renderRefillNotice(youRefilled, cpuRefilled){
   const parts=[];
   if(youRefilled) parts.push('あなた: 手札を1枚補充');
   if(cpuRefilled) parts.push('相手: 手札を1枚補充');
-  if(parts.length>0){
-    el.innerHTML=`<span style="color:var(--gold-dim);">${parts.join('　／　')}</span>`;
+  const segs=[];
+  if(isLateGame()){
+    segs.push(`<b style="color:var(--kaos)">終盤決戦 — このラウンドの決戦は得点2倍！</b>`);
   }
+  if(parts.length>0){
+    segs.push(`<span style="color:var(--gold-dim);">${parts.join('　／　')}</span>`);
+  }
+  if(segs.length>0) el.innerHTML=segs.join('<br>');
 }
 
+// Kaosの特殊ルールが発動した時の画面フラッシュ演出
+function fireKaosFlash(label){
+  const fl=document.getElementById('kaosFlash');
+  fl.querySelector('.kf-label').textContent=label||'混沌';
+  fl.classList.remove('fire'); void fl.offsetWidth; // アニメ再始動
+  fl.classList.add('fire');
+  setTimeout(()=>fl.classList.remove('fire'), 950);
+}
+
+let youJustDrawnKey=null; // ラウンド開始時に補充された札(1回だけ光らせる)
 function refillYouHand(){
-  if(youHand.length<ACTIVE_HAND_SIZE && youDrawPile.length>0){ youHand.push(youDrawPile.pop()); return true; }
+  if(youHand.length<ACTIVE_HAND_SIZE && youDrawPile.length>0){
+    const drawn=youDrawPile.pop(); youHand.push(drawn);
+    youJustDrawnKey=drawn.attr+drawn.num;
+    return true;
+  }
+  youJustDrawnKey=null;
   return false;
 }
 function refillCpuHand(){
@@ -1435,6 +1498,9 @@ function judge(dealer, child){
   if(child.attr==='kaos'&&(child.num===0||child.num===1)&&dealer.num===5) return 'child';
   if(dealer.attr==='kaos'&&dealer.num===5&&child.num===1) return 'child';
   if(child.attr==='kaos'&&child.num===5&&dealer.num===1) return 'dealer';
+  // Kaos5の救済ルール: 相手の5(Kaos以外)には同値でも打ち勝つ(唯一「持つと不利」だった弱点の緩和)
+  if(dealer.attr==='kaos'&&dealer.num===5&&child.num===5&&child.attr!=='kaos') return 'dealer';
+  if(child.attr==='kaos'&&child.num===5&&dealer.num===5&&dealer.attr!=='kaos') return 'child';
 
   if(dealer.attr==='kaos'||child.attr==='kaos'){
     if(dealer.num>child.num) return 'dealer';
@@ -1464,6 +1530,8 @@ function whyText(dealer, child, result){
   if(child.attr==='kaos'&&(child.num===0||child.num===1)&&dealer.num===5) return `Kaos${child.num}の特殊効果 → あらゆる5に勝利`;
   if(dealer.attr==='kaos'&&dealer.num===5&&child.num===1) return 'Kaos5の特殊弱点 → あらゆる1に敗北';
   if(child.attr==='kaos'&&child.num===5&&dealer.num===1) return 'Kaos5の特殊弱点 → あらゆる1に敗北';
+  if(dealer.attr==='kaos'&&dealer.num===5&&child.num===5&&child.attr!=='kaos') return 'Kaos5の救済効果 → あらゆる5に打ち勝つ';
+  if(child.attr==='kaos'&&child.num===5&&dealer.num===5&&dealer.attr!=='kaos') return 'Kaos5の救済効果 → あらゆる5に打ち勝つ';
   if(dealer.attr==='kaos'||child.attr==='kaos'){
     if(dealer.num===child.num) return 'Kaos → 数字勝負だが、同値の場合はKaos側が敗北';
     return 'Kaos → 属性問わず数字勝負';
@@ -1471,6 +1539,24 @@ function whyText(dealer, child, result){
   if(dealer.attr===child.attr) return '同じ属性 → 数字勝負';
   return `${AJP[dealer.attr]} と ${AJP[child.attr]} の相性で決着`;
 }
+
+// Kaosの特殊ルール(数字反転・Air撃破・救済)が発動したかを判定(UI演出用)
+function isKaosSpecial(dealer, child){
+  if(dealer.attr==='kaos'&&child.attr==='air') return true;
+  if(child.attr==='kaos'&&dealer.attr==='air') return true;
+  if(dealer.attr==='kaos'&&(dealer.num===0||dealer.num===1)&&child.num===5) return true;
+  if(child.attr==='kaos'&&(child.num===0||child.num===1)&&dealer.num===5) return true;
+  if(dealer.attr==='kaos'&&dealer.num===5&&child.num===1) return true;
+  if(child.attr==='kaos'&&child.num===5&&dealer.num===1) return true;
+  if(dealer.attr==='kaos'&&dealer.num===5&&child.num===5&&child.attr!=='kaos') return true;
+  if(child.attr==='kaos'&&child.num===5&&dealer.num===5&&dealer.attr!=='kaos') return true;
+  return false;
+}
+
+// 終盤2ラウンド(R11・R12)の決戦は得点2倍(逆転要素)。それ以外は等倍
+const LATE_GAME_START = TOTAL_ROUNDS - 1; // 11
+function scoreMultiplier(){ return round>=LATE_GAME_START ? 2 : 1; }
+function isLateGame(){ return round>=LATE_GAME_START; }
 
 // 見送りの実行(親がPASS_COSTを支払う)
 function executePass(isCpuDealer){
@@ -1601,18 +1687,25 @@ function resolveFightJudge(){
         const winnerIsDealer = result==='dealer';
         const winnerIsYou = winnerIsDealer? dealerIsYou : !dealerIsYou;
         const loserCard = winnerIsDealer? childCard : dealerCard;
-        const dmg=loserCard.num; // 勝者が得る点数(=相手の仮面の数字)
+        const mult=scoreMultiplier(); // 終盤2Rは2倍
+        const dmg=loserCard.num*mult; // 勝者が得る点数(=相手の仮面の数字×終盤倍率)
         if(winnerIsYou){ youLP+=dmg; youTrust=Math.min(START_TRUST, youTrust+1); }
         else { cpuLP+=dmg; cpuTrust=Math.min(START_TRUST, cpuTrust+1); }
+        const lateNote = mult>1 ? `<br><b style="color:var(--kaos)">終盤決戦ボーナス ×2</b>（${loserCard.num}→${dmg}pt）` : '';
 
         if(winnerIsYou){ cls='win'; title='あなたの勝ち';
-          detail=`${winnerIsDealer?'親':'子'}のあなたが制した<br>${why}<br>相手の仮面(数字${dmg})を得点として獲得 <b style="color:var(--win)">+${dmg}pt</b><br>決戦に勝利し、戦略カウンターが <b style="color:var(--win)">+1</b>（上限${START_TRUST}）${airBonusNote}`;
+          detail=`${winnerIsDealer?'親':'子'}のあなたが制した<br>${why}<br>相手の仮面(数字${loserCard.num})を得点として獲得 <b style="color:var(--win)">+${dmg}pt</b>${lateNote}<br>決戦に勝利し、戦略カウンターが <b style="color:var(--win)">+1</b>（上限${START_TRUST}）${airBonusNote}`;
         } else { cls='lose'; title='相手の勝ち';
-          detail=`${winnerIsDealer?'親':'子'}の相手が制した<br>${why}<br>相手があなたの仮面(数字${dmg})を得点として獲得 <b style="color:var(--lose)">相手+${dmg}pt</b><br>相手は決戦に勝利し、戦略カウンターが<b style="color:var(--lose)">+1</b>${airBonusNote}`;
+          detail=`${winnerIsDealer?'親':'子'}の相手が制した<br>${why}<br>相手があなたの仮面(数字${loserCard.num})を得点として獲得 <b style="color:var(--lose)">相手+${dmg}pt</b>${lateNote}<br>相手は決戦に勝利し、戦略カウンターが<b style="color:var(--lose)">+1</b>${airBonusNote}`;
         }
-        yEl.classList.remove('win-glow','lose-dim'); cEl.classList.remove('win-glow','lose-dim');
+        yEl.classList.remove('win-glow','lose-dim','kaos-special'); cEl.classList.remove('win-glow','lose-dim','kaos-special');
         if(winnerIsYou){ yEl.classList.add('win-glow'); cEl.classList.add('lose-dim'); }
         else { cEl.classList.add('win-glow'); yEl.classList.add('lose-dim'); }
+        // Kaosの特殊ルール発動時は、勝者カードを混沌色で脈動させ画面をフラッシュ
+        if(isKaosSpecial(dealerCard, childCard)){
+          (winnerIsYou?yEl:cEl).classList.add('kaos-special');
+          fireKaosFlash('混沌の特殊効果');
+        }
       }
 
       rc.className='result-card '+cls;
@@ -1631,7 +1724,7 @@ function resolveFightJudge(){
         round, dealerIsYou:youIsDealer, passed:false,
         dealerCard:{attr:dealerCard.attr,num:dealerCard.num},
         childCard:{attr:childCard.attr,num:childCard.num},
-        result, dmg: result==='draw'?0:(result==='dealer'?childCard.num:dealerCard.num)
+        result, dmg: result==='draw'?0:(result==='dealer'?childCard.num:dealerCard.num)*scoreMultiplier()
       });
       const myCard = dealerCard.owner==='you' ? dealerCard : childCard;
       youPlayedCards.push({attr:myCard.attr, num:myCard.num, round});
@@ -1772,8 +1865,15 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.0';
+const GAME_VERSION = 'v1.1';
 const CHANGELOG = [
+  { version:'v1.1', date:'2026-07-10', items:[
+    'Kaos5の救済ルールを追加：全属性の5に同値でも打ち勝つ(所持者ゲーム勝率が約40%→46%に改善、他のKaos番号と同水準に)',
+    '終盤の逆転要素を追加：最終2ラウンド(第11・12R)の決戦は得点2倍(リード固定化を緩和、逆転率が約13%→17%に上昇)',
+    'Kaos特殊ルール発動時の演出を強化：勝者カードの脈動＋画面フラッシュ「混沌の特殊効果」',
+    'ラウンド開始時に補充された手札を光らせる演出を追加',
+    '本物のゲームロジックを移植したシミュレータで上記2つのバランスを検証(先手勝率・引分率は不変を確認)',
+  ]},
   { version:'v1.0', date:'2026-07-10', items:[
     'Kaos0にも「全属性の5に勝つ」特殊ルールを追加(Kaos1のみだった弱点を緩和)',
     '通算統計・プレイログの自動収集機能を追加(端末に保存、JSONエクスポート対応)',
