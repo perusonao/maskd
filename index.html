@@ -78,6 +78,11 @@
   .ml-date{ margin-left:auto; font-size:9px; color:var(--ink-dim); }
   .ml-caret{ font-size:8px; color:var(--ink-dim); }
   .ml-detail{ display:flex; flex-direction:column; gap:4px; padding:6px 8px 8px; border-top:1px solid var(--line); }
+  /* 対戦の詳細モーダル */
+  .md-head{ text-align:center; padding:4px 0 10px; border-bottom:1px solid var(--line); margin-bottom:8px; }
+  .md-head .md-score{ font-size:17px; }
+  .md-head .md-score b{ color:var(--gold-bright); }
+  .md-head .md-meta{ font-size:10px; color:var(--ink-dim); margin-top:5px; }
 
   /* 山札インジケータ(プレイ画面・中央の仕切りに小さく配置) */
   .deck-chip{ position:absolute; right:6px; top:50%; transform:translateY(-50%);
@@ -908,9 +913,15 @@
 
   <div class="history-modal" id="matchLogModal">
     <h3>対戦ログ一覧</h3>
-    <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">この端末に保存された過去の対戦（新しい順・直近100戦）</p>
+    <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">この端末に保存された過去の対戦（新しい順・直近100戦）。タップで詳細</p>
     <div class="hist-scroll" id="matchLogBody"></div>
     <div class="btn-close-modal" onclick="closeMatchLog()">閉じる</div>
+  </div>
+
+  <div class="history-modal" id="matchDetailModal">
+    <h3>対戦の詳細</h3>
+    <div class="hist-scroll" id="matchDetailBody"></div>
+    <div class="btn-close-modal" onclick="closeMatchDetail()">閉じる</div>
   </div>
 
   <div class="history-modal" id="rulesModal">
@@ -2433,8 +2444,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.14.0';
+const GAME_VERSION = 'v0.15.0';
 const CHANGELOG = [
+  { version:'v0.15.0', date:'2026-07-11', items:[
+    '対戦ログ一覧で試合をタップすると、全ラウンドの詳細を専用モーダルで表示するように変更（インライン展開で全部見えなかった問題を解消）',
+  ]},
   { version:'v0.14.0', date:'2026-07-11', items:[
     '親決めの裏面を、ゲーム本編と同じカード裏面イメージに統一',
     '相手の山札を推理表示：中央の仕切り左に相手の山札枚数チップを追加し、タップで「数字・枚数・候補の属性」を表示（配札から推理できる公平な情報のみ。中身は確定させない）',
@@ -2719,29 +2733,36 @@ function openMatchLog(){
       const rc=CPU_TYPE_JP[g.cpuStrategy]||g.cpuStrategy||'?';
       const rd=CPU_DIFF_JP[g.cpuDifficulty]||g.cpuDifficulty||'';
       const badge = g.result==='win'?'<span class="ml-badge win">WIN</span>':(g.result==='lose'?'<span class="ml-badge lose">LOSE</span>':'<span class="ml-badge draw">DRAW</span>');
-      return `<div class="ml-item">
-        <div class="ml-head" onclick="toggleMatchLogDetail(${idx})">
+      return `<div class="ml-item" onclick="openMatchDetail(${idx})">
+        <div class="ml-head">
           ${badge}
           <span class="ml-score"><b>${g.youFinal}</b> - <b>${g.cpuFinal}</b></span>
           <span class="ml-meta">CPU:${rc}${rd?'/'+rd:''}</span>
           <span class="ml-date">${fmtLogDate(g.ts)}</span>
-          <span class="ml-caret" id="mlCaret${idx}">▼</span>
+          <span class="ml-caret">›</span>
         </div>
-        <div class="ml-detail" id="mlDetail${idx}" style="display:none;"></div>
       </div>`;
     }).join('');
   }
   document.getElementById('matchLogModal').classList.add('show');
 }
-function toggleMatchLogDetail(idx){
-  const el=document.getElementById('mlDetail'+idx), caret=document.getElementById('mlCaret'+idx);
-  if(!el) return;
-  if(el.style.display!=='none'){ el.style.display='none'; if(caret)caret.textContent='▼'; return; }
+// 選択した1試合の詳細を専用モーダルで全ラウンド表示(一覧内インライン展開だと収まりきらないため)
+function openMatchDetail(idx){
   const g=loadGameHistory()[idx];
-  const rounds=(g&&g.rounds)||[];
-  el.innerHTML = rounds.length ? rounds.map(pastRoundRowHTML).join('') : '<div class="hist-empty" style="padding:12px;">ラウンド詳細は記録されていません</div>';
-  el.style.display='block'; if(caret)caret.textContent='▲';
+  if(!g) return;
+  const rc=CPU_TYPE_JP[g.cpuStrategy]||g.cpuStrategy||'?';
+  const rd=CPU_DIFF_JP[g.cpuDifficulty]||g.cpuDifficulty||'';
+  const badge = g.result==='win'?'<span class="ml-badge win">WIN</span>':(g.result==='lose'?'<span class="ml-badge lose">LOSE</span>':'<span class="ml-badge draw">DRAW</span>');
+  const rounds=(g.rounds)||[];
+  const head=`<div class="md-head">
+    <div class="md-score">${badge} <b>${g.youFinal}</b> <span style="color:var(--ink-dim)">-</span> <b>${g.cpuFinal}</b></div>
+    <div class="md-meta">${fmtLogDate(g.ts)} ／ CPU:${rc}${rd?'/'+rd:''} ／ 全${rounds.length}ラウンド</div>
+  </div>`;
+  const list = rounds.length ? rounds.map(pastRoundRowHTML).join('') : '<div class="hist-empty" style="padding:12px;">ラウンド詳細は記録されていません</div>';
+  document.getElementById('matchDetailBody').innerHTML = head + list;
+  document.getElementById('matchDetailModal').classList.add('show');
 }
+function closeMatchDetail(){ document.getElementById('matchDetailModal').classList.remove('show'); }
 function closeMatchLog(){ document.getElementById('matchLogModal').classList.remove('show'); }
 
 // ===== 自分の山札(残り札)の表示と一覧 =====
