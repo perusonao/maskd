@@ -529,50 +529,86 @@
   .trust-table td.lose{ color:var(--lose); font-weight:700; text-align:right; }
   .trust-table td.win{ color:var(--win); font-weight:700; text-align:right; font-size:10px; }
   .btn-wrap{ margin-top:12px; }
+  /* トップページのバージョン表記 */
+  .version-inline{
+    font-family:sans-serif; font-style:normal; font-weight:400; font-size:12px;
+    color:var(--ink-dim); letter-spacing:0; vertical-align:middle;
+  }
+  /* 開閉できるセクション(ルール説明・更新履歴)。デフォルト閉じる */
+  .collapse-sec{
+    border:1px solid var(--line); border-radius:10px; margin:7px 0; overflow:hidden;
+    background:rgba(255,255,255,0.015);
+  }
+  .collapse-sec summary{
+    cursor:pointer; list-style:none; padding:11px 14px;
+    font-size:12px; letter-spacing:0.08em; color:var(--gold-bright); font-weight:600;
+    display:flex; align-items:center; justify-content:space-between; user-select:none;
+  }
+  .collapse-sec summary::-webkit-details-marker{ display:none; }
+  .collapse-sec summary::after{ content:'▾'; color:var(--gold-dim); font-size:12px; transition:transform .2s; }
+  .collapse-sec[open] summary{ border-bottom:1px solid var(--line); }
+  .collapse-sec[open] summary::after{ transform:rotate(180deg); }
+  .collapse-body{ padding:4px 14px 12px; }
+  .collapse-body h3:first-child{ margin-top:6px; }
 </style>
 </head>
 <body>
 <div class="app">
 
   <div class="instructions" id="instructions">
-    <h2>MASKD</h2>
+    <h2>MASKD <span class="version-inline" id="versionTagTop"></span></h2>
     <p class="lead">全12ラウンド、<b>毎ラウンド親が交代</b>。親は先に置き、子は後から置く。親だけが「決戦か撤退か」を決められる。</p>
-    <h3>手札の構成</h3>
-    <ul>
-      <li>Air（0〜5）も含めた全30枚（5属性×6数字）を2人で分配（同じ数字を2枚ずつ、Airも3枚ずつで破棄なし）</li>
-      <li>初期の実働手札6枚は<b>数字0〜5が必ず1枚ずつ</b>揃うように選ばれる（数字の偏りなし）</li>
-      <li>1枚使うたびに、ラウンド開始時に山札から1枚補充される</li>
-    </ul>
-    <h3>勝敗ルール</h3>
-    <ul>
-      <li><b style="color:var(--air)">Air</b>が絡む → 属性・数字問わず<b>必ず引き分け</b>（得点増減なし）。ただし<b>Kaosは数字問わずAirに勝利</b>する</li>
-      <li>Airを決戦に使うと、結果（勝ち・負け・引分）に関わらず<b>戦略カウンターが+1</b>される</li>
-      <li><b style="color:var(--kaos)">Kaos</b>が絡む（Airなし） → 属性問わず数字が大きい方の勝ち。同値は<b>Kaos側が敗北</b></li>
-      <li><b>特殊ルール</b>：Kaos<b>0・1</b>は全属性の<b>5に勝つ</b>／Kaos<b>5</b>は全属性の<b>5に打ち勝つ</b>（同値でも勝利）が、全属性の<b>1には負ける</b></li>
-      <li>同じ属性同士 → 数字が大きい方の勝ち</li>
-      <li>異なる属性同士（Sun/Dark/Moon） → Moon→Dark→Sun→Moon の3すくみ</li>
-    </ul>
-    <h3>得点</h3>
-    <ul>
-      <li>初期値0。<b>勝った側は、相手が出した仮面の数字ぶん得点を獲得</b>する（負けた側の得点は減らない）</li>
-      <li><b style="color:var(--kaos)">終盤決戦</b>：最終2ラウンド（第11・12R）の決戦は<b>得点が2倍</b>。逆転の最後のチャンス。強いカードを終盤まで温存する戦略も有効</li>
-      <li>12ラウンド後、<b>得点＋残り戦略カウンター＋残り手札ボーナス</b>の合計が多い方の勝ち</li>
-      <li><b>残り手札ボーナス</b>：使わずに残ったカードの数字を加算（<b style="color:var(--air)">Airは数字を2倍</b>にして計算）</li>
-    </ul>
-    <h3>戦略カウンター（初期値5、各自個別）</h3>
-    <table class="trust-table">
-      <tr><th>契機</th><th>増減</th></tr>
-      <tr><td>撤退（親）</td><td class="lose">-1</td></tr>
-      <tr><td>奇襲（子）</td><td class="lose">-2</td></tr>
-      <tr><td>入替（親、子の数字を見てから）</td><td class="lose">-2</td></tr>
-      <tr><td>決戦に勝利</td><td class="win">+1（上限5）</td></tr>
-      <tr><td>ゲーム終了時、残った分がそのまま得点に加算</td><td class="win">残量そのまま</td></tr>
-    </table>
-    <ul>
-      <li>戦略カウンターが足りなくなると、その行動は選べなくなる</li>
-      <li>撤退したカードは<b>双方とも開示してから破棄</b>される</li>
-      <li><b>入替</b>：親だけの特権。子の数字を見た後、自分が場に出したカードを手札の別の1枚と交換できる（1ラウンド1回まで）</li>
-    </ul>
+
+    <details class="collapse-sec">
+      <summary>ルール説明</summary>
+      <div class="collapse-body">
+        <h3>手札の構成</h3>
+        <ul>
+          <li>Air（0〜5）も含めた全30枚（5属性×6数字）を2人で分配（同じ数字を2枚ずつ、Airも3枚ずつで破棄なし）</li>
+          <li>初期の実働手札6枚は<b>数字0〜5が必ず1枚ずつ</b>揃うように選ばれる（数字の偏りなし）</li>
+          <li>1枚使うたびに、ラウンド開始時に山札から1枚補充される</li>
+        </ul>
+        <h3>勝敗ルール</h3>
+        <ul>
+          <li><b style="color:var(--air)">Air</b>が絡む → 属性・数字問わず<b>必ず引き分け</b>（得点増減なし）。ただし<b>Kaosは数字問わずAirに勝利</b>する</li>
+          <li>Airを決戦に使うと、結果（勝ち・負け・引分）に関わらず<b>戦略カウンターが+1</b>される</li>
+          <li><b style="color:var(--kaos)">Kaos</b>が絡む（Airなし） → 属性問わず数字が大きい方の勝ち。同値は<b>Kaos側が敗北</b></li>
+          <li><b>特殊ルール</b>：Kaos<b>0・1</b>は全属性の<b>5に勝つ</b>／Kaos<b>5</b>は全属性の<b>5に打ち勝つ</b>（同値でも勝利）が、全属性の<b>1には負ける</b></li>
+          <li>同じ属性同士 → 数字が大きい方の勝ち</li>
+          <li>異なる属性同士（Sun/Dark/Moon） → Moon→Dark→Sun→Moon の3すくみ</li>
+        </ul>
+        <h3>得点</h3>
+        <ul>
+          <li>初期値0。<b>勝った側は、相手が出した仮面の数字ぶん得点を獲得</b>する（負けた側の得点は減らない）</li>
+          <li><b style="color:var(--kaos)">終盤決戦</b>：最終2ラウンド（第11・12R）の決戦は<b>得点が2倍</b>。逆転の最後のチャンス。強いカードを終盤まで温存する戦略も有効</li>
+          <li>12ラウンド後、<b>得点＋残り戦略カウンター＋残り手札ボーナス</b>の合計が多い方の勝ち</li>
+          <li><b>残り手札ボーナス</b>：使わずに残ったカードの数字を加算（<b style="color:var(--air)">Airは数字を2倍</b>にして計算）</li>
+        </ul>
+        <h3>戦略カウンター（初期値5、各自個別）</h3>
+        <table class="trust-table">
+          <tr><th>契機</th><th>増減</th></tr>
+          <tr><td>撤退（親）</td><td class="lose">-1</td></tr>
+          <tr><td>奇襲（子）</td><td class="lose">-2</td></tr>
+          <tr><td>入替（親、子の数字を見てから）</td><td class="lose">-2</td></tr>
+          <tr><td>決戦に勝利</td><td class="win">+1（上限5）</td></tr>
+          <tr><td>ゲーム終了時、残った分がそのまま得点に加算</td><td class="win">残量そのまま</td></tr>
+        </table>
+        <ul>
+          <li>戦略カウンターが足りなくなると、その行動は選べなくなる</li>
+          <li>撤退したカードは<b>双方とも開示してから破棄</b>される</li>
+          <li><b>入替</b>：親だけの特権。子の数字を見た後、自分が場に出したカードを手札の別の1枚と交換できる（1ラウンド1回まで）</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="collapse-sec">
+      <summary>更新履歴</summary>
+      <div class="collapse-body">
+        <p style="font-size:11px;color:var(--ink-dim);margin:2px 0 6px;">現在のバージョン: <b id="versionTagInline" style="color:var(--gold-bright);"></b></p>
+        <div id="changelogInline"></div>
+      </div>
+    </details>
+
     <h3>対戦相手の設定</h3>
     <div class="cpu-setting-row">
       <div class="cpu-setting-label">CPUの種類</div>
@@ -1868,8 +1904,12 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.1';
+const GAME_VERSION = 'v1.2';
 const CHANGELOG = [
+  { version:'v1.2', date:'2026-07-11', items:[
+    'トップページ(スタート画面)にバージョン表記を追加し、更新履歴もトップから確認できるようにした',
+    'ルール説明・更新履歴を開閉式(デフォルトは閉じた状態)にし、トップページをすっきり整理',
+  ]},
   { version:'v1.1', date:'2026-07-10', items:[
     'Kaos5の救済ルールを追加：全属性の5に同値でも打ち勝つ(所持者ゲーム勝率が約40%→46%に改善、他のKaos番号と同水準に)',
     '終盤の逆転要素を追加：最終2ラウンド(第11・12R)の決戦は得点2倍(リード固定化を緩和、逆転率が約13%→17%に上昇)',
@@ -1897,10 +1937,8 @@ const CHANGELOG = [
   ]}
 ];
 
-function openChangelog(){
-  document.getElementById('versionTagInModal').textContent = GAME_VERSION;
-  const scroll = document.getElementById('changelogScroll');
-  scroll.innerHTML = CHANGELOG.map(entry => `
+function changelogHTML(){
+  return CHANGELOG.map(entry => `
     <div class="hist-row">
       <div class="hr-top"><span style="color:var(--gold-bright);font-weight:600;">${entry.version}</span><span>${entry.date}</span></div>
       <ul style="margin:6px 0 0; padding-left:18px; font-size:11px; color:var(--ink-dim); line-height:1.6;">
@@ -1908,6 +1946,10 @@ function openChangelog(){
       </ul>
     </div>
   `).join('');
+}
+function openChangelog(){
+  document.getElementById('versionTagInModal').textContent = GAME_VERSION;
+  document.getElementById('changelogScroll').innerHTML = changelogHTML();
   document.getElementById('changelogModal').classList.add('show');
 }
 function closeChangelog(){ document.getElementById('changelogModal').classList.remove('show'); }
@@ -2052,6 +2094,10 @@ function endGame(){
 
 initCpuSettingUI(); // 全ての変数・関数定義が済んだ後に呼び出す
 document.getElementById('versionTag').textContent = GAME_VERSION;
+// トップページのバージョン表記と、開閉式「更新履歴」の中身を初期化
+document.getElementById('versionTagTop').textContent = GAME_VERSION;
+document.getElementById('versionTagInline').textContent = GAME_VERSION;
+document.getElementById('changelogInline').innerHTML = changelogHTML();
 </script>
 </body>
 </html>
