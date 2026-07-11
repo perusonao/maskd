@@ -66,6 +66,19 @@
   .hist-result{ margin-left:auto; font-size:11px; }
   .hist-result.win{ color:var(--win); } .hist-result.lose{ color:var(--lose); } .hist-result.draw{ color:var(--ink-dim); }
 
+  /* 対戦ログ一覧 */
+  .ml-item{ border:1px solid var(--line); border-radius:10px; background:var(--bg-panel); margin-bottom:6px; overflow:hidden; }
+  .ml-head{ display:flex; align-items:center; gap:8px; padding:9px 10px; cursor:pointer; font-size:11px; }
+  .ml-badge{ font-size:9px; font-weight:700; padding:2px 7px; border-radius:6px; letter-spacing:0.04em; }
+  .ml-badge.win{ color:var(--win); border:1px solid var(--win); }
+  .ml-badge.lose{ color:var(--lose); border:1px solid var(--lose); }
+  .ml-badge.draw{ color:var(--ink-dim); border:1px solid var(--line); }
+  .ml-score{ font-size:13px; color:var(--ink); }
+  .ml-meta{ font-size:9px; color:var(--ink-dim); }
+  .ml-date{ margin-left:auto; font-size:9px; color:var(--ink-dim); }
+  .ml-caret{ font-size:8px; color:var(--ink-dim); }
+  .ml-detail{ display:flex; flex-direction:column; gap:4px; padding:6px 8px 8px; border-top:1px solid var(--line); }
+
   .tracker-grid{ display:grid; grid-template-columns:44px repeat(6,1fr); gap:3px; }
   .tg-head{ font-size:10px; color:var(--ink-dim); text-align:center; padding:4px 0; }
   .tg-row-label{ font-size:10px; color:var(--gold-dim); display:flex; align-items:center; padding-left:2px; }
@@ -797,7 +810,10 @@
   <div class="overlay" id="overlay">
     <div class="big" id="ovTitle">VICTORY</div>
     <div class="score-final" id="ovScore"></div>
-    <div class="btn" style="flex:none;padding:12px 32px;" onclick="beginMatchSetup()">もう一度</div>
+    <div style="display:flex;gap:8px;">
+      <div class="btn" style="flex:none;padding:12px 28px;" onclick="beginMatchSetup()">もう一度</div>
+      <div class="btn ghost" style="flex:none;padding:12px 22px;" onclick="tryCloseApp()">とじる</div>
+    </div>
   </div>
 
   <div class="history-modal" id="historyModal">
@@ -810,11 +826,21 @@
     <h3>通算統計</h3>
     <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">この端末に保存された全対戦の集計（直近100戦まで）</p>
     <div class="match-summary" id="statsBody" style="margin:10px 0;"></div>
+    <div style="display:flex;gap:6px;margin-bottom:6px;">
+      <div class="btn" style="flex:1;font-size:12px;" onclick="openMatchLog()">対戦ログ一覧を見る</div>
+    </div>
     <div style="display:flex;gap:6px;">
       <div class="btn ghost" style="flex:1;font-size:12px;" onclick="exportStatsJSON()">JSONをコピー</div>
       <div class="btn ghost" style="flex:1;font-size:12px;color:var(--lose);" onclick="clearGameHistory()">記録を削除</div>
     </div>
     <div class="btn-close-modal" onclick="closeStats()">閉じる</div>
+  </div>
+
+  <div class="history-modal" id="matchLogModal">
+    <h3>対戦ログ一覧</h3>
+    <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">この端末に保存された過去の対戦（新しい順・直近100戦）</p>
+    <div class="hist-scroll" id="matchLogBody"></div>
+    <div class="btn-close-modal" onclick="closeMatchLog()">閉じる</div>
   </div>
 
   <div class="history-modal" id="rulesModal">
@@ -891,9 +917,10 @@
   <div class="hd">
     <div class="brand" onclick="openChangelog()">MASKD <span class="version-tag" id="versionTag"></span></div>
     <div class="top-right">
+      <div class="grid-btn" onclick="openRules()">ルール</div>
       <div class="grid-btn" onclick="openTracker()">一覧表</div>
       <div class="grid-btn" onclick="openHistory()">履歴 ↺</div>
-      <div class="round-badge">ラウンド <b id="roundN">1</b> / 12<span class="late-badge" id="lateBadge">決戦×2</span></div>
+      <div class="round-badge">ラウンド <b id="roundN">1</b> / <b id="roundTotal">8</b><span class="late-badge" id="lateBadge">決戦×2</span></div>
     </div>
   </div>
 
@@ -2290,9 +2317,9 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v2.0';
+const GAME_VERSION = 'v0.2.0';
 const CHANGELOG = [
-  { version:'v2.0', date:'2026-07-11', items:[
+  { version:'v0.2.0', date:'2026-07-11', items:[
     'カード構成・配り方をリニューアル。初期手札6枚を「0〜5を1枚ずつ」から【ランダム6枚】に変更し、毎回ちがう展開に（手札の数字構成が1通り→300通り超へ）',
     '配札運を是正：強力な低Kaos（0・1）を必ず両者に1枚ずつ配るように。配札による勝率差を大幅圧縮（約10pt→約3pt）',
     'テンポ改善：全12ラウンド→【全8ラウンド】に短縮（約33%）。終盤2倍は最終2R（第7・8R）に自動追従。接戦化し逆転も増加',
@@ -2524,6 +2551,82 @@ function logConsentControlHTML(){
 }
 function closeStats(){ document.getElementById('statsModal').classList.remove('show'); }
 
+// ===== 過去の対戦ログ一覧(この端末に保存された試合を1試合ずつ閲覧) =====
+const CPU_TYPE_JP={aggressive:'攻撃的',cautious:'慎重',tricky:'トリッキー',random:'おまかせ'};
+const CPU_DIFF_JP={weak:'やさしい',normal:'普通',strong:'強い'};
+function fmtLogDate(ts){
+  const d=new Date(ts), p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+// 保存済みラウンドを履歴と同じ体裁で描画(過去試合の詳細展開に使用)
+function pastRoundRowHTML(r){
+  const dLabel = r.dealerIsYou ? 'あなた(親)' : '相手(親)';
+  const cLabel = r.dealerIsYou ? '相手(子)' : 'あなた(子)';
+  let resultHTML;
+  if(r.passed){ resultHTML=`<span class="hist-result draw">撤退</span>`; }
+  else {
+    const outMark = r.result==='draw' ? '引分' : (r.result==='dealer' ? dLabel+'勝ち' : cLabel+'勝ち');
+    const outCls = r.result==='draw' ? 'draw' : 'win';
+    resultHTML=`<span class="hist-result ${outCls}">${outMark}${r.result!=='draw' ? ` (+${r.dmg}pt)` : ''}</span>`;
+  }
+  return `<div class="hist-row"><div class="hr-top"><span>第${r.round}R</span><span>${r.dealerIsYou?'あなたが親':'相手が親'}</span></div>
+    <div class="hr-cards">
+      <span class="hist-tag ${r.dealerCard.attr}">${dLabel} ${AJP[r.dealerCard.attr]}${r.dealerCard.num}</span>
+      <span style="color:var(--ink-dim);">vs</span>
+      <span class="hist-tag ${r.childCard.attr}">${cLabel} ${AJP[r.childCard.attr]}${r.childCard.num}</span>
+      ${resultHTML}
+    </div></div>`;
+}
+function openMatchLog(){
+  const games=loadGameHistory();
+  const body=document.getElementById('matchLogBody');
+  if(!games.length){
+    body.innerHTML='<div class="hist-empty">まだ対戦記録がありません。<br>対戦を終えると、ここに1試合ずつ残ります。</div>';
+  } else {
+    body.innerHTML=games.map((g,idx)=>({g,idx})).reverse().map(({g,idx})=>{
+      const rc=CPU_TYPE_JP[g.cpuStrategy]||g.cpuStrategy||'?';
+      const rd=CPU_DIFF_JP[g.cpuDifficulty]||g.cpuDifficulty||'';
+      const badge = g.result==='win'?'<span class="ml-badge win">WIN</span>':(g.result==='lose'?'<span class="ml-badge lose">LOSE</span>':'<span class="ml-badge draw">DRAW</span>');
+      return `<div class="ml-item">
+        <div class="ml-head" onclick="toggleMatchLogDetail(${idx})">
+          ${badge}
+          <span class="ml-score"><b>${g.youFinal}</b> - <b>${g.cpuFinal}</b></span>
+          <span class="ml-meta">CPU:${rc}${rd?'/'+rd:''}</span>
+          <span class="ml-date">${fmtLogDate(g.ts)}</span>
+          <span class="ml-caret" id="mlCaret${idx}">▼</span>
+        </div>
+        <div class="ml-detail" id="mlDetail${idx}" style="display:none;"></div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('matchLogModal').classList.add('show');
+}
+function toggleMatchLogDetail(idx){
+  const el=document.getElementById('mlDetail'+idx), caret=document.getElementById('mlCaret'+idx);
+  if(!el) return;
+  if(el.style.display!=='none'){ el.style.display='none'; if(caret)caret.textContent='▼'; return; }
+  const g=loadGameHistory()[idx];
+  const rounds=(g&&g.rounds)||[];
+  el.innerHTML = rounds.length ? rounds.map(pastRoundRowHTML).join('') : '<div class="hist-empty" style="padding:12px;">ラウンド詳細は記録されていません</div>';
+  el.style.display='block'; if(caret)caret.textContent='▲';
+}
+function closeMatchLog(){ document.getElementById('matchLogModal').classList.remove('show'); }
+
+// ===== アプリを閉じる(1試合後の選択肢) =====
+// ブラウザのタブは通常スクリプトから閉じられないため、試みたうえで
+// 閉じられなければ「お別れ画面」を表示してタブを閉じる操作を案内する。
+function tryCloseApp(){
+  try{ window.open('', '_self'); window.close(); }catch(e){}
+  setTimeout(()=>{
+    document.body.innerHTML =
+      `<div style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#0d0b12;color:#e8e2d0;text-align:center;padding:24px;font-family:'Cormorant Garamond',serif;">
+        <div style="font-size:30px;font-style:italic;color:#d9b45a;">また会いましょう</div>
+        <div style="font-size:14px;color:#9a927f;line-height:1.7;">MASKD をプレイしていただきありがとうございました。<br>この画面を閉じて終了できます。</div>
+        <div style="margin-top:10px;padding:10px 26px;border:1px solid #3a3550;border-radius:10px;color:#e8e2d0;cursor:pointer;" onclick="location.reload()">タイトルに戻る</div>
+      </div>`;
+  }, 250);
+}
+
 function exportStatsJSON(){
   const games=loadGameHistory();
   const json=JSON.stringify(games, null, 2);
@@ -2621,7 +2724,8 @@ function endGame(){
     <div class="ms-row"><span>Kaos使用</span><span>あなた${s.youKaos}回 ／ 相手${s.cpuKaos}回</span></div>
   </div>
   <div style="display:flex;gap:6px;margin-top:10px;">
-    <div class="btn" style="flex:1;font-size:12px;" onclick="openHistory()">対戦履歴</div>
+    <div class="btn" style="flex:1;font-size:12px;" onclick="openHistory()">今回の履歴</div>
+    <div class="btn ghost" style="flex:1;font-size:12px;" onclick="openMatchLog()">対戦ログ一覧</div>
     <div class="btn ghost" style="flex:1;font-size:12px;" onclick="openStats()">通算統計</div>
   </div>`;
   if(youFinal>cpuFinal){ t.textContent='VICTORY'; t.className='big win'; }
@@ -2635,6 +2739,7 @@ function endGame(){
 
 initCpuSettingUI(); // 全ての変数・関数定義が済んだ後に呼び出す
 document.getElementById('versionTag').textContent = GAME_VERSION;
+document.getElementById('roundTotal').textContent = TOTAL_ROUNDS; // ラウンド総数をUIに反映
 // トップページのバージョン表記と、開閉式「更新履歴」の中身を初期化
 document.getElementById('versionTagTop').textContent = GAME_VERSION;
 maybeShowTutorialFirstTime(); // 初回訪問時にチュートリアルを自動表示
