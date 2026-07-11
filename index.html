@@ -475,8 +475,8 @@
   .peek b{ color:var(--gold-bright); }
 
   .hint-icon-row{ display:inline-flex; align-items:center; gap:5px; vertical-align:middle; }
-  .hint-icon{ width:18px; height:18px; position:relative; flex-shrink:0; }
-  .hint-icon.tiny{ width:10px; height:10px; }
+  .hint-icon{ width:19px; height:19px; position:relative; flex-shrink:0; filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.65)); }
+  .hint-icon.tiny{ width:12px; height:12px; }
   .hint-icon.confirmed{ box-shadow:0 0 0 2px var(--gold-bright); border-radius:50%; }
   .hint-icon.moon{ border-radius:50%; background:radial-gradient(circle at 35% 30%,#b9cbe6,var(--moon)); box-shadow:0 0 6px rgba(143,169,201,.5); }
   .hint-icon.moon::after{ content:''; position:absolute; top:-15%; left:32%; width:92%; height:92%; border-radius:50%; background:#14151b; }
@@ -486,9 +486,10 @@
       repeating-conic-gradient(from 0deg,var(--sun) 0deg 7deg,transparent 7deg 22.5deg);
     box-shadow:0 0 6px rgba(224,162,61,.6);
   }
+  /* 闇: ハーレクイン(道化)の菱形。混沌の破片と紛れないよう明快な形に */
   .hint-icon.dark{
-    background:radial-gradient(circle at 35% 30%,#b98fd8,var(--dark));
-    clip-path:polygon(50% 2%,60% 22%,78% 8%,74% 32%,96% 30%,80% 50%,94% 68%,70% 64%,72% 90%,50% 74%,28% 90%,30% 64%,6% 68%,20% 50%,4% 30%,26% 32%,22% 8%,40% 22%);
+    background:radial-gradient(circle at 35% 30%,#c9a6e6,var(--dark));
+    clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
   }
   .hint-icon.kaos{
     background:radial-gradient(circle at 35% 30%,#dd7a80,var(--kaos));
@@ -637,6 +638,57 @@
   .rules-body h3:first-child{ margin-top:2px; }
   .rules-body ul{ padding-left:18px; margin:2px 0; }
   .rules-body li{ font-size:12px; color:var(--ink-dim); line-height:1.65; }
+
+  /* ===== チュートリアル(初回ガイド) ===== */
+  .tutorial{
+    position:absolute; inset:0; z-index:30; display:none;
+    align-items:center; justify-content:center; padding:22px;
+    background:rgba(6,5,10,0.92);
+  }
+  .tutorial.show{ display:flex; }
+  .tut-box{
+    width:100%; max-width:360px; background:linear-gradient(180deg,#1b1826,#131019);
+    border:1px solid var(--gold-bright); border-radius:18px; padding:18px 18px 14px;
+    box-shadow:0 24px 70px rgba(0,0,0,.7), 0 0 0 1px rgba(232,200,119,.12);
+    display:flex; flex-direction:column; align-items:center; text-align:center; animation:popIn .25s ease;
+  }
+  .tut-badge{ font-size:9px; letter-spacing:0.2em; color:var(--gold-dim); text-transform:uppercase; }
+  .tut-visual{ min-height:96px; display:flex; align-items:center; justify-content:center; gap:8px; margin:8px 0 4px; flex-wrap:wrap; }
+  .tut-title{ font-family:'Cormorant Garamond',serif; font-style:italic; color:var(--gold-bright); font-size:22px; margin:2px 0 6px; }
+  .tut-body{ font-size:12.5px; color:var(--ink); line-height:1.75; min-height:66px; }
+  .tut-body b{ color:var(--gold-bright); }
+  .tut-body .kaos{ color:var(--kaos); } .tut-body .air{ color:var(--air); }
+  .tut-dots{ display:flex; gap:6px; justify-content:center; margin:12px 0 10px; }
+  .tut-dot{ width:7px; height:7px; border-radius:50%; background:#3a3446; transition:background .2s, transform .2s; }
+  .tut-dot.on{ background:var(--gold-bright); transform:scale(1.25); }
+  .tut-nav{ display:flex; gap:10px; width:100%; }
+  .tut-btn{
+    flex:1; padding:10px 0; border-radius:10px; text-align:center; font-size:12px; font-weight:700;
+    letter-spacing:0.05em; cursor:pointer; user-select:none;
+    background:linear-gradient(160deg,var(--gold-bright),var(--gold-dim)); color:#1a1608; border:none;
+  }
+  .tut-btn:active{ transform:scale(.98); }
+  .tut-btn.ghost{ background:transparent; color:var(--gold); border:1px solid rgba(201,162,74,.4); }
+  .tut-btn.disabled{ opacity:.35; pointer-events:none; }
+  .tut-skip{ margin-top:10px; font-size:11px; color:var(--ink-dim); cursor:pointer; letter-spacing:0.04em; }
+  .tut-skip:hover{ color:var(--ink); }
+  /* チュートリアル内の小さなカード見本 */
+  .tut-card{
+    width:56px; height:78px; border-radius:8px; background-size:cover; background-position:center;
+    background-color:#14121c; position:relative; box-shadow:0 6px 14px rgba(0,0,0,.5); flex-shrink:0;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .tut-card .tc-num{ position:absolute; top:2px; left:3px; font-size:11px; font-weight:700; color:var(--gold-bright);
+    background:rgba(10,9,15,.82); border:1px solid var(--gold-bright); border-radius:8px; min-width:15px; height:15px; line-height:14px; font-family:'Cormorant Garamond',serif; }
+  .tut-card .tc-label{ position:absolute; top:-16px; font-size:9px; color:var(--gold-dim); }
+  .tut-back{ background:var(--card-back) center/cover no-repeat, #14121c; border:1px solid rgba(201,162,74,.4); }
+  .tut-vs{ font-family:'Cormorant Garamond',serif; font-style:italic; color:var(--ink-dim); font-size:13px; }
+  .tut-chip{
+    width:44px; height:58px; border-radius:8px; border:1px solid var(--line); background:rgba(255,255,255,.02);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+  }
+  .tut-chip .tc-n{ font-family:'Cormorant Garamond',serif; font-size:18px; color:var(--ink); }
+  .tut-chip .tc-poss{ display:flex; gap:2px; }
 </style>
 </head>
 <body>
@@ -647,6 +699,7 @@
     <p class="lead">全12ラウンド、<b>毎ラウンド親が交代</b>。親は先に置き、子は後から置く。親だけが「決戦か撤退か」を決められる。</p>
 
     <div class="top-info-btns">
+      <div class="btn" onclick="openTutorial()">遊び方</div>
       <div class="btn ghost" onclick="openRules()">ルール説明</div>
       <div class="btn ghost" onclick="openChangelog()">更新履歴</div>
     </div>
@@ -672,6 +725,21 @@
     <div class="btn-wrap" style="display:flex;gap:8px;">
       <div class="btn" style="flex:2;" onclick="beginMatchSetup()">対戦を始める</div>
       <div class="btn ghost" style="flex:1.2;" onclick="openStats()">通算成績・履歴</div>
+    </div>
+  </div>
+
+  <div class="tutorial" id="tutorialOverlay">
+    <div class="tut-box">
+      <div class="tut-badge">遊び方</div>
+      <div class="tut-visual" id="tutVisual"></div>
+      <div class="tut-title" id="tutTitle"></div>
+      <div class="tut-body" id="tutBody"></div>
+      <div class="tut-dots" id="tutDots"></div>
+      <div class="tut-nav">
+        <div class="tut-btn ghost" id="tutPrev" onclick="tutPrev()">戻る</div>
+        <div class="tut-btn" id="tutNext" onclick="tutNext()">次へ ›</div>
+      </div>
+      <div class="tut-skip" onclick="closeTutorial()">スキップして閉じる</div>
     </div>
   </div>
 
@@ -2067,8 +2135,12 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.5';
+const GAME_VERSION = 'v1.6';
 const CHANGELOG = [
+  { version:'v1.6', date:'2026-07-11', items:[
+    '初回ガイド（チュートリアル）を追加：7ステップで目的・親子・出し方・相性・推理・得点を案内。初回自動表示＋スタート画面の「遊び方」からいつでも再表示',
+    '属性の予想アイコンを見直し：闇をハーレクインの菱形にして混沌と区別、コントラストを強化',
+  ]},
   { version:'v1.5', date:'2026-07-11', items:[
     'カード5属性を、枠まで属性色で統一した新しい仮面デザインに刷新（月=青／空気=緑青／太陽=金／混沌=赤／闇=紫）',
     '英字表記を修正（DARK 等）し、各カードにMASKD見出し・和名・説明を統一',
@@ -2139,6 +2211,57 @@ function openChangelog(){
 }
 function openRules(){ document.getElementById('rulesModal').classList.add('show'); }
 function closeRules(){ document.getElementById('rulesModal').classList.remove('show'); }
+
+// ===== チュートリアル(初回ガイド) =====
+const TUT_KEY='maskd_tut_seen_v1';
+let tutStep=0;
+function tutCard(attr,num,label){
+  const bg = hasCardImg()?`background-image:url(${attrImgUrl(attr)})`:'';
+  return `<div class="tut-card" style="${bg}">${label?`<span class="tc-label">${label}</span>`:''}<span class="tc-num">${num}</span></div>`;
+}
+function tutBack(num,label){
+  return `<div class="tut-card tut-back">${label?`<span class="tc-label">${label}</span>`:''}<span class="tc-num">${num}</span></div>`;
+}
+const TUTORIAL_STEPS=[
+  {t:'ようこそ MASKD へ',
+   v:()=>`${tutCard('sun',3)}${tutBack(2)}`,
+   b:'相手の仮面を読む<b>心理戦・推理カードゲーム</b>。全12ラウンドで、より多くの<b>得点</b>を集めた方が勝ち。'},
+  {t:'親と子（毎ラウンド交代）',
+   v:()=>`${tutBack(4,'親')}<span class="tut-vs">VS</span>${tutBack(2,'子')}`,
+   b:'<b>親</b>が先に伏せて出し、<b>子</b>が数字を見てから出す。親だけが「<b>決戦・撤退・入替</b>」を選べる。'},
+  {t:'カードの出し方',
+   v:()=>`${tutCard('moon',1)}${tutCard('kaos',4)}${tutCard('air',5)}`,
+   b:'手札から1枚タップして場に出す。カードは<b>属性（5種の仮面）</b>と<b>数字0〜5</b>を持つ。'},
+  {t:'相性で勝敗が決まる',
+   v:()=>`<span class="hint-icon sun"></span><span class="hint-icon moon"></span><span class="hint-icon dark"></span><span class="hint-icon kaos"></span><span class="hint-icon air"></span>`,
+   b:'同属性は数字勝負、異属性は<b>3すくみ</b>。<b class="kaos">Kaos</b>は数字勝負＋特殊効果、<b class="air">Air</b>が絡むと引き分け（流れを変える一手）。'},
+  {t:'推理がカギ',
+   v:()=>`<div class="tut-chip"><span class="tc-n">4</span><span class="tc-poss"><span class="hint-icon tiny sun"></span><span class="hint-icon tiny moon"></span><span class="hint-icon tiny air"></span></span></div>`,
+   b:'相手の<b>数字は見える</b>が<b>属性は隠れている</b>。「可能性」アイコンで、相手の仮面がどれかを絞り込もう。'},
+  {t:'戦略カウンターと得点',
+   v:()=>`<div class="lp-bar-wrap" style="width:130px;height:9px;">${'<div class="lp-seg filled"></div>'.repeat(5)}</div>`,
+   b:'各自<b>戦略カウンター5</b>。撤退-1／入替-2／奇襲-2、決戦勝利で+1。<b class="kaos">終盤2ラウンドは得点2倍</b>で最後まで逆転可能。'},
+  {t:'さあ、始めよう',
+   v:()=>`<div class="mask-badge you" style="width:46px;height:46px;"></div>`,
+   b:'まずは1戦してみよう。迷ったら画面下のヒントを読めばOK。詳しいルールは「<b>ルール説明</b>」からいつでも確認できます。'},
+];
+function renderTutStep(){
+  const s=TUTORIAL_STEPS[tutStep];
+  document.getElementById('tutVisual').innerHTML=s.v();
+  document.getElementById('tutTitle').innerHTML=s.t;
+  document.getElementById('tutBody').innerHTML=s.b;
+  document.getElementById('tutDots').innerHTML=TUTORIAL_STEPS.map((_,i)=>`<div class="tut-dot${i===tutStep?' on':''}"></div>`).join('');
+  document.getElementById('tutPrev').classList.toggle('disabled', tutStep===0);
+  document.getElementById('tutNext').textContent = tutStep===TUTORIAL_STEPS.length-1 ? 'はじめる' : '次へ ›';
+}
+function openTutorial(){ tutStep=0; renderTutStep(); document.getElementById('tutorialOverlay').classList.add('show'); }
+function closeTutorial(){ document.getElementById('tutorialOverlay').classList.remove('show'); try{ localStorage.setItem(TUT_KEY,'1'); }catch(e){} }
+function tutNext(){ if(tutStep>=TUTORIAL_STEPS.length-1){ closeTutorial(); return; } tutStep++; renderTutStep(); }
+function tutPrev(){ if(tutStep>0){ tutStep--; renderTutStep(); } }
+function maybeShowTutorialFirstTime(){
+  let seen=false; try{ seen=localStorage.getItem(TUT_KEY)==='1'; }catch(e){}
+  if(!seen) setTimeout(openTutorial, 450);
+}
 function closeChangelog(){ document.getElementById('changelogModal').classList.remove('show'); }
 
 const HISTORY_KEY='maskd_game_history_v1';
@@ -2283,6 +2406,7 @@ initCpuSettingUI(); // 全ての変数・関数定義が済んだ後に呼び出
 document.getElementById('versionTag').textContent = GAME_VERSION;
 // トップページのバージョン表記と、開閉式「更新履歴」の中身を初期化
 document.getElementById('versionTagTop').textContent = GAME_VERSION;
+maybeShowTutorialFirstTime(); // 初回訪問時にチュートリアルを自動表示
 // カード裏面画像をCSS変数に設定(伏せ札・親決めカードに反映)
 if(typeof CARD_IMG!=='undefined' && CARD_IMG.back){
   document.documentElement.style.setProperty('--card-back', `url(${CARD_IMG.back})`);
