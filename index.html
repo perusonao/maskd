@@ -1374,26 +1374,32 @@ function playDealAnimation(done){
   const pileP=(z,i)=>({x:pileC[z].x+i*0.9, y:pileC[z].y-i*0.9});
   const handP=(z,k)=>({x:(k-2)*44, y: z==='cpu'? -168 : 148});
   const jit=()=>(Math.random()-0.5)*24;
-  const stepMsg={1:'①<b>AIR</b>を3枚ずつ 各プレイヤーへ', 2:'②<b>KAOSの0と1</b>を両者に1枚ずつ', 3:'③残りを<b>同じ数字2枚ずつ</b>'};
-  // ①〜③ 配る(ステップ切替でメッセージ＋間)
-  const STEP=18; let t=350, cur=0;
-  seq.forEach(s=>{
-    if(s.step!==cur){ cur=s.step; t+=260; const st=s.step; T(()=>{ cap.innerHTML=stepMsg[st]; }, t-210); }
-    const g=grid(s.z,s.slot); T(()=>setP(s.el,g.x,g.y), t); t+=STEP;
-  });
-  const dealEnd=t+300;
+  const stepMsg={1:'①<b>AIR</b>を3枚ずつ 各プレイヤーへ', 2:'②<b>KAOSの0と1</b>を両者に1枚ずつ', 3:'③残りを<b>同じ数字2枚ずつ</b>配る'};
+  // ①〜③ 各ステップ: メッセージを見せて→配って→読む余韻、を確保(読む時間を作る)
+  const step1=seq.filter(s=>s.step===1), step2=seq.filter(s=>s.step===2), step3=seq.filter(s=>s.step===3);
+  let t=1000; // 導入メッセージ「全30枚を2人に分配します」の表示時間
+  const dealStep=(key, cards, stagger, hold)=>{
+    T(()=>{ cap.innerHTML=stepMsg[key]; }, t);
+    const s0=t+400; // メッセージを一拍見せてから配り始める
+    cards.forEach((s,i)=>{ const g=grid(s.z,s.slot); T(()=>setP(s.el,g.x,g.y), s0+i*stagger); });
+    t += Math.max(hold, 400 + cards.length*stagger + 300);
+  };
+  dealStep(1, step1, 55, 1300);
+  dealStep(2, step2, 55, 1200);
+  dealStep(3, step3, 30, 1500);
+  const dealEnd=t;
   // ④ 裏返して山札に
-  T(()=>{ cap.innerHTML='④<b>裏返して</b>それぞれ<b>山札</b>に'; if(lblCpu)lblCpu.innerHTML='相手 山札'; if(lblYou)lblYou.innerHTML='あなた 山札';
+  T(()=>{ cap.innerHTML='④<b>裏返して</b> それぞれ<b>山札</b>に'; if(lblCpu)lblCpu.innerHTML='相手 山札'; if(lblYou)lblYou.innerHTML='あなた 山札';
     seq.forEach(s=>{ s.el.classList.add('flipped'); const p=pileP(s.z,s.slot); setP(s.el,p.x,p.y); }); }, dealEnd);
   // ⑤ シャッフル(ジッター2回→整列)
-  T(()=>{ cap.innerHTML='⑤それぞれの<b>山札をシャッフル</b>'; seq.forEach(s=>setP(s.el, pileC[s.z].x+jit(), pileC[s.z].y+jit())); }, dealEnd+650);
-  T(()=>{ seq.forEach(s=>setP(s.el, pileC[s.z].x+jit(), pileC[s.z].y+jit())); }, dealEnd+950);
-  T(()=>{ seq.forEach(s=>{ const p=pileP(s.z,s.slot); setP(s.el,p.x,p.y); }); }, dealEnd+1250);
+  T(()=>{ cap.innerHTML='⑤それぞれの<b>山札をシャッフル</b>'; seq.forEach(s=>setP(s.el, pileC[s.z].x+jit(), pileC[s.z].y+jit())); }, dealEnd+1400);
+  T(()=>{ seq.forEach(s=>setP(s.el, pileC[s.z].x+jit(), pileC[s.z].y+jit())); }, dealEnd+1750);
+  T(()=>{ seq.forEach(s=>{ const p=pileP(s.z,s.slot); setP(s.el,p.x,p.y); }); }, dealEnd+2100);
   // ⑥ 山札から5枚引いて手札
   T(()=>{ cap.innerHTML='⑥山札から<b class="hl">5枚引いて手札</b>に（残り10枚が山札）'; if(lblCpu)lblCpu.innerHTML='相手 手札5＋山札10'; if(lblYou)lblYou.innerHTML='あなた 手札5＋山札10';
     seq.forEach(s=>{ if(s.slot<5){ const h=handP(s.z,s.slot); setP(s.el,h.x,h.y); if(s.z==='you') s.el.classList.add('hand'); }
-      else { const p=pileP(s.z,s.slot-5); setP(s.el,p.x,p.y); } }); }, dealEnd+1900);
-  T(doneOnce, dealEnd+3800);
+      else { const p=pileP(s.z,s.slot-5); setP(s.el,p.x,p.y); } }); }, dealEnd+2900);
+  T(doneOnce, dealEnd+4700);
 }
 
 function startGame(initialDealerIsYou){
@@ -2585,8 +2591,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.20.3';
+const GAME_VERSION = 'v0.20.4';
 const CHANGELOG = [
+  { version:'v0.20.4', date:'2026-07-11', items:[
+    '配札演出の各ステップのメッセージ表示時間を長くして、読みやすく調整（各段階を1.2〜1.8秒しっかり表示。タップでスキップ可）',
+  ]},
   { version:'v0.20.3', date:'2026-07-11', items:[
     '配札演出を6段階の手順に：①AIRを3枚ずつ ②KAOSの0と1を1枚ずつ ③残りを同じ数字2枚ずつ配り、④裏返して山札に ⑤シャッフル ⑥5枚引いて手札に、を段階ごとのメッセージ付きで表示（配札ルールが分かるように）',
   ]},
