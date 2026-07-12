@@ -134,11 +134,17 @@
   .dz-label{ font-size:11px; color:var(--ink-dim); } .dz-label b{ color:var(--gold-bright); font-size:13px; }
   .dz-label.cpu{ color:var(--ink-dim); } .dz-label.you{ color:var(--ink); }
   .deal-stage{ position:relative; width:250px; height:420px; }
-  .deal-card{ position:absolute; top:50%; left:50%; width:38px; height:52px; border-radius:6px;
-    background:var(--card-back,#1a1526) center/cover, #14121c; border:1px solid rgba(201,162,74,0.35);
-    transform:translate(-50%,-50%); box-shadow:0 2px 5px rgba(0,0,0,0.6);
-    transition:transform .6s cubic-bezier(.2,.7,.3,1), box-shadow .4s ease, border-color .4s ease; }
-  .deal-card.hand{ box-shadow:0 0 16px 3px var(--gold-bright); border-color:var(--gold-bright); z-index:2; }
+  .deal-card{ position:absolute; top:50%; left:50%; width:38px; height:52px;
+    transform:translate(-50%,-50%); transition:transform .55s cubic-bezier(.2,.7,.3,1), filter .3s ease; }
+  .deal-inner{ position:relative; width:100%; height:100%; transform-style:preserve-3d; transition:transform .5s ease; }
+  .deal-card.flipped .deal-inner{ transform:rotateY(180deg); }
+  .deal-face{ position:absolute; inset:0; border-radius:6px; -webkit-backface-visibility:hidden; backface-visibility:hidden;
+    box-shadow:0 2px 5px rgba(0,0,0,0.6); border:1px solid rgba(201,162,74,0.35); }
+  .df-front{ background-size:cover; background-position:center; }
+  .df-front.moon{ border-color:var(--moon); } .df-front.sun{ border-color:var(--sun); }
+  .df-front.dark{ border-color:var(--dark); } .df-front.kaos{ border-color:var(--kaos); } .df-front.air{ border-color:var(--air); }
+  .df-back{ transform:rotateY(180deg); background:var(--card-back,#1a1526) center/cover, #14121c; }
+  .deal-card.hand{ filter:drop-shadow(0 0 8px var(--gold-bright)); z-index:2; }
   .deal-caption{ font-size:13px; color:var(--ink); margin-top:8px; min-height:22px; }
   .deal-caption b{ color:var(--gold-bright); } .deal-caption .hl{ color:var(--gold-bright); }
   .deal-skip{ font-size:9px; color:var(--ink-dim); opacity:0.6; margin-top:6px; }
@@ -1334,29 +1340,46 @@ function playDealAnimation(done){
   const stage=document.getElementById('dealStage');
   const cap=document.getElementById('dealCaption');
   _dealAnimTimers.forEach(clearTimeout); _dealAnimTimers=[];
-  cap.textContent='全30枚を配ります…';
+  cap.textContent='全30枚を表向きで配ります…';
   stage.innerHTML='';
+  // 演出用の見せ札(全30枚のデッキ)。実際の手札とは別物(表で実配札を見せると相手の札が割れて推理が崩れるため)
+  const deck=[]; ATTRS5.forEach(a=>{ for(let n=0;n<=5;n++) deck.push({attr:a,num:n}); });
+  shuffle(deck);
   const cards=[]; const cols=5, stepx=44, stepy=52;
-  for(let i=0;i<30;i++){ const el=document.createElement('div'); el.className='deal-card'; stage.appendChild(el); cards.push(el); }
+  deck.forEach((c,i)=>{
+    const el=document.createElement('div'); el.className='deal-card';
+    const front = hasCardImg()
+      ? `<div class="deal-face df-front art ${c.attr}" style="background-image:url(${attrImgUrl(c.attr)})">${numBadge(c.num,'sm')}</div>`
+      : `<div class="deal-face df-front ${c.attr}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;color:var(--${c.attr});">${ALABEL[c.attr]}<b style="font-size:15px;">${c.num}</b></div>`;
+    el.innerHTML=`<div class="deal-inner">${front}<div class="deal-face df-back"></div></div>`;
+    stage.appendChild(el); cards.push(el);
+  });
   const posFor=(idx,zone)=>{ const r=Math.floor(idx/cols), c=idx%cols; const x=(c-(cols-1)/2)*stepx;
     const y = zone==='cpu' ? (-60 - r*stepy) : (48 + r*stepy); return {x,y}; };
   cards.forEach((el,i)=>{ const zone=i%2===0?'you':'cpu'; const idx=Math.floor(i/2); const {x,y}=posFor(idx,zone); el.dataset.x=x; el.dataset.y=y; el.dataset.zone=zone; });
   ov.style.display='flex';
   const doneOnce=(()=>{ let called=false; return ()=>{ if(called)return; called=true; _dealAnimTimers.forEach(clearTimeout); _dealAnimTimers=[]; ov.style.display='none'; ov.onclick=null; if(done)done(); }; })();
   ov.onclick=doneOnce; // タップでスキップ
-  const STEP=45, START=400; // ゆっくり配る
+  const STEP=40, START=350;
+  const flyEnd=START+30*STEP; // 全カードが飛び終わる目安
+  // 表向きのまま配る
   requestAnimationFrame(()=>{
     cards.forEach((el,i)=>{ _dealAnimTimers.push(setTimeout(()=>{
       el.style.transform=`translate(calc(-50% + ${el.dataset.x}px), calc(-50% + ${el.dataset.y}px))`;
-      if(i===0) cap.innerHTML='<b>相手</b>と<b>あなた</b>へ 15枚ずつ…';
+      if(i===0) cap.innerHTML='<b>相手</b>と<b>あなた</b>へ 15枚ずつ（表向き）';
     }, START+i*STEP)); });
   });
-  // あなたの15枚のうち5枚を手札としてハイライト＋説明
+  // 全部を裏返す
+  _dealAnimTimers.push(setTimeout(()=>{
+    cards.forEach(el=>el.classList.add('flipped'));
+    cap.innerHTML='<b>裏返して</b>…';
+  }, flyEnd+500));
+  // あなたの5枚を手札としてハイライト
   _dealAnimTimers.push(setTimeout(()=>{
     cards.filter(el=>el.dataset.zone==='you').slice(0,5).forEach(el=>el.classList.add('hand'));
-    cap.innerHTML='各<b>15</b>枚を配札 ／ あなた：光る<b class="hl">5枚が手札</b>、残り10枚が山札';
-  }, START+30*STEP+700));
-  _dealAnimTimers.push(setTimeout(doneOnce, START+30*STEP+2600));
+    cap.innerHTML='あなた：光る<b class="hl">5枚が手札</b>、残り10枚が山札';
+  }, flyEnd+1300));
+  _dealAnimTimers.push(setTimeout(doneOnce, flyEnd+2900));
 }
 
 function startGame(initialDealerIsYou){
@@ -2548,8 +2571,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.20.1';
+const GAME_VERSION = 'v0.20.2';
 const CHANGELOG = [
+  { version:'v0.20.2', date:'2026-07-11', items:[
+    '配札演出を「表向きで配ってから裏返す」形に変更：属性イラストが見える状態で30枚を配り、その後いっせいに裏返して手札5枚が光る（見せ札はデッキ全30枚で、実際の手札は伏せて配られるため相手の札は分かりません）',
+  ]},
   { version:'v0.20.1', date:'2026-07-11', items:[
     '配札演出を見やすく調整：カードを大きく、配るスピードをゆっくりにして、分配の様子が分かりやすいように',
   ]},
