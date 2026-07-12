@@ -418,9 +418,9 @@
   .ohs-cards .opp-card .opp-num{ font-size:18px; }
   .ohs-cards .opp-card .opp-rps-g{ font-size:13px; }
   .ohs-cards .opp-card.facedown .hint-icon.tiny{ width:11px; height:11px; }
-  /* 下部の手札を大きく＋直接タップ */
-  .hcard{ width:70px !important; height:98px !important; }
-  .hand{ gap:8px !important; max-height:none !important; }
+  /* 下部の手札を大きく＋直接タップ(5枚を1行に収め、幅いっぱいまで拡大) */
+  .hand{ gap:6px !important; max-height:none !important; flex-wrap:nowrap !important; overflow:visible !important; align-items:stretch; }
+  .hcard{ width:auto !important; height:auto !important; flex:1 1 0 !important; min-width:0 !important; max-width:76px !important; aspect-ratio:5/7 !important; }
   .hand-wrap.tappable .hcard{ cursor:pointer; }
   .hcard.recommend{ box-shadow:0 0 0 2px var(--win),0 0 12px rgba(126,201,138,.5); }
   .hcard .rec-badge{ position:absolute; top:-7px; right:-6px; z-index:5; font-size:9px; background:var(--win); color:#0d1a10;
@@ -3041,8 +3041,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.31.1';
+const GAME_VERSION = 'v0.31.2';
 const CHANGELOG = [
+  { version:'v0.31.2', date:'2026-07-12', items:[
+    'レイアウト崩れを修正：手札を大きくした際に、狭い画面幅で5枚が2行に折り返し場の表示が欠ける不具合を修正。手札は常に1行で、画面幅いっぱいまで自動で拡大するように調整',
+  ]},
   { version:'v0.31.1', date:'2026-07-12', items:[
     '相手の手札表示を調整（要望を反映）：①上級者向け表示では相手の手札にじゃんけんを出さない（候補属性は小アイコンで表示） ②相手の手札をカード裏面の画像で表示し、その上に数字と候補属性を重ねる ③自分の手札をさらに大きく表示',
   ]},
