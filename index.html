@@ -284,7 +284,29 @@
   .compat-strip .cs-special{ color:var(--kaos); font-size:9px; font-weight:700; }
 
   /* ===== 対戦画面レイアウト刷新(上部ROUND / 下部ヘッダー / 左右レール / メッセージ窓 / 行動モーダル) ===== */
-  .topbar-min{ display:flex; justify-content:center; padding:6px 14px 0; flex-shrink:0; }
+  /* 統一トップバー(相手=左 / ROUND=中央 / あなた=右。得点・戦略カウンター・アバター) */
+  .topbar{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 12px 5px; flex-shrink:0;
+    border-bottom:1px solid var(--line); background:linear-gradient(180deg,rgba(201,162,74,0.06),transparent); }
+  .tb-side{ display:flex; align-items:center; gap:7px; flex:1; min-width:0; position:relative; }
+  .tb-side.you{ justify-content:flex-end; }
+  .tb-av{ width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font-size:16px; flex-shrink:0;
+    background:radial-gradient(circle at 35% 30%,#2a2436,#14111c); border:1px solid var(--line); }
+  .tb-av.cpu{ border-color:rgba(193,75,82,0.5); } .tb-av.you{ border-color:rgba(201,162,74,0.5); }
+  .tb-col{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .tb-col.right{ align-items:flex-end; }
+  .tb-name{ font-size:11px; color:var(--ink-dim); letter-spacing:0.05em; white-space:nowrap; }
+  .tb-side.you .tb-name{ color:var(--gold-bright); }
+  .tb-pt{ font-family:'Cormorant Garamond',serif; font-size:17px; font-weight:700; color:var(--gold); margin:0 1px; }
+  .tb-unit{ font-size:8px; color:var(--gold-dim); }
+  .tb-side .lp-bar-wrap{ width:82px; height:7px; display:flex; gap:2px; margin:0; }
+  .tb-token{ font-size:7px; color:var(--air); line-height:1; }
+  .tb-token:empty{ display:none; }
+  .tb-round{ flex-shrink:0; display:flex; flex-direction:column; align-items:center; }
+  .tb-round-lbl{ font-size:7px; letter-spacing:0.2em; color:var(--gold-dim); }
+  .tb-round-num{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:700; color:var(--gold-bright); line-height:1.05; }
+  .tb-round .late-badge{ margin:2px 0 0; font-size:7px; padding:1px 5px; }
+  /* 戦略カウンターの色分け(相手=赤系 / あなた=金系) */
+  .lp-bar-wrap.cpu .lp-seg.filled{ background:linear-gradient(90deg,#6e2429,var(--kaos)); border-color:rgba(193,75,82,0.9); }
   .hd.bottom{ border-bottom:none; border-top:1px solid var(--line); flex-shrink:0; margin-top:2px; }
   /* メッセージウィンドウ(役割・手番の案内) */
   .msg-window{ flex-shrink:0; margin:3px 14px 1px; padding:7px 30px; border:1px solid var(--line); border-radius:10px;
@@ -295,26 +317,18 @@
   .msg-window.dealer{ border-color:rgba(201,162,74,0.5); color:var(--gold-bright); }
   .msg-window.dealer::before{ color:var(--gold-bright); }
   .msg-window.child{ color:var(--ink-dim); }
-  /* 3カラム: 左=あなた / 中央=場 / 右=相手 */
   .play-area{ flex:1; display:flex; flex-direction:column; min-height:0; padding:0 10px; }
   .play-area .field{ flex:1; margin:4px 0; min-height:0; }
-  /* プレイヤー情報ブロック(相手=場の上 / あなた=場の下) */
-  .pinfo{ flex-shrink:0; position:relative; display:flex; align-items:center; justify-content:center; gap:11px; padding:5px 8px; }
+  /* カードの横の余白に置く情報(親/子・山札・手札) */
+  .slot-line{ display:grid; grid-template-columns:1fr auto 1fr; align-items:center; width:100%; }
+  .pinfo{ position:relative; justify-self:center; display:flex; flex-direction:column; align-items:center; gap:5px; padding:0 4px; }
   .pinfo.cpu{ cursor:pointer; }
-  .pinfo.cpu:active{ transform:scale(0.99); }
-  .pi-role{ flex-shrink:0; font-size:10px; font-weight:700; letter-spacing:0.06em; padding:2px 9px; border-radius:8px; line-height:1.3; }
+  .pinfo.cpu:active{ transform:scale(0.98); }
+  .pi-role{ font-size:11px; font-weight:700; letter-spacing:0.06em; padding:2px 10px; border-radius:8px; line-height:1.3; }
   .pi-role.dealer{ background:linear-gradient(160deg,var(--gold-bright),var(--gold-dim)); color:#1a1608; }
   .pi-role.child{ color:var(--ink-dim); border:1px solid var(--line); }
-  .pi-main{ display:flex; align-items:center; gap:7px; }
-  .pi-who{ font-size:11px; color:var(--ink-dim); letter-spacing:0.08em; }
-  .pinfo.you .pi-who{ color:var(--gold-bright); }
-  .pi-score{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--gold); line-height:1; }
-  .pi-side{ display:flex; flex-direction:column; align-items:flex-start; gap:2px; }
-  .pi-side .lp-bar-wrap{ width:64px; height:7px; display:flex; gap:2px; margin:0; }
-  .pi-token{ font-size:8px; color:var(--air); line-height:1; }
-  .pi-token:empty{ display:none; }
-  .pi-side .deck-chip{ position:static; transform:none; right:auto; left:auto; margin:0; font-size:9px; padding:2px 7px; }
-  .pi-hand{ flex-shrink:0; font-size:8px; color:var(--gold-bright); text-align:center; line-height:1.3;
+  .pinfo .deck-chip{ position:static; transform:none; right:auto; left:auto; margin:0; font-size:9px; padding:2px 7px; }
+  .pi-hand{ font-size:8px; color:var(--gold-bright); text-align:center; line-height:1.3;
     border:1px dashed rgba(201,162,74,0.45); border-radius:7px; padding:3px 6px; }
   .pi-hand b{ font-family:'Cormorant Garamond',serif; font-size:13px; }
   .pi-hand span{ display:block; font-size:7px; color:var(--ink-dim); }
@@ -1292,11 +1306,27 @@
     </div>
   </div>
 
-  <div class="topbar-min">
-    <div class="score-round">
-      <div class="sr-label">ROUND</div>
-      <div class="sr-num"><b id="roundN">1</b><span>/</span><b id="roundTotal">8</b></div>
-      <span class="late-badge" id="lateBadge">決戦×2</span>
+  <div class="topbar">
+    <div class="tb-side cpu" id="cpuCell">
+      <div class="tb-av cpu">🎭</div>
+      <div class="tb-col">
+        <div class="tb-name">相手 <b class="tb-pt" id="cpuLP">0</b><span class="tb-unit">pt</span></div>
+        <div class="lp-bar-wrap cpu" id="cpuBarWrap"></div>
+        <span class="tb-token" id="cpuToken"></span>
+      </div>
+    </div>
+    <div class="tb-round">
+      <div class="tb-round-lbl">ROUND</div>
+      <div class="tb-round-num">[<b id="roundN">1</b>/<b id="roundTotal">8</b>]</div>
+      <span class="late-badge" id="lateBadge">×2</span>
+    </div>
+    <div class="tb-side you" id="youCell">
+      <div class="tb-col right">
+        <div class="tb-name"><b class="tb-pt" id="youLP">0</b><span class="tb-unit">pt</span> あなた</div>
+        <div class="lp-bar-wrap you" id="youBarWrap"></div>
+        <span class="tb-token" id="youToken"></span>
+      </div>
+      <div class="tb-av you">🙂</div>
     </div>
   </div>
 
@@ -1311,22 +1341,26 @@
   </div>
 
   <div class="play-area">
-    <div class="pinfo cpu" id="cpuCell" onclick="openOppHandModal()">
-      <span class="pi-role" id="cpuDealerTag">親</span>
-      <div class="pi-main"><span class="pi-who">相手</span><span class="pi-score" id="cpuLP">0</span></div>
-      <div class="pi-side">
-        <div class="lp-bar-wrap" id="cpuBarWrap"></div>
-        <span class="pi-token" id="cpuToken"></span>
-        <div class="deck-chip opp" id="deckBarOpp" onclick="event.stopPropagation(); openOppDeckModal()"></div>
-      </div>
-      <span class="pi-hand" id="cpuRailHint"></span>
-    </div>
-
     <div class="field">
       <div class="zone-wrap"><div class="zone-hint" id="oppCardHint"></div></div>
-      <div class="slot-row" id="cpuSlot"><div class="empty-slot">待機</div></div>
+      <div class="slot-line">
+        <div class="pinfo cpu" id="cpuPanel" onclick="openOppHandModal()">
+          <span class="pi-role" id="cpuDealerTag">親</span>
+          <div class="deck-chip opp" id="deckBarOpp" onclick="event.stopPropagation(); openOppDeckModal()"></div>
+          <span class="pi-hand" id="cpuRailHint"></span>
+        </div>
+        <div class="slot-row" id="cpuSlot"><div class="empty-slot">待機</div></div>
+        <div class="slot-side"></div>
+      </div>
       <div class="mid-divider"><div class="ln"></div><div class="vs">VS</div><div class="ln"></div></div>
-      <div class="slot-row" id="youSlot"><div class="empty-slot">あなた</div></div>
+      <div class="slot-line">
+        <div class="pinfo you" id="youPanel">
+          <span class="pi-role" id="youDealerTag">子</span>
+          <div class="deck-chip" id="deckBar" onclick="event.stopPropagation(); openDeckModal()"></div>
+        </div>
+        <div class="slot-row" id="youSlot"><div class="empty-slot">あなた</div></div>
+        <div class="slot-side"></div>
+      </div>
       <div class="zone-wrap"><div class="zone-hint" id="youCardHint"></div></div>
       <div class="action-banner" id="actionBanner"><div class="ab-icon"></div><div class="ab-text"></div></div>
       <div class="kaos-flash" id="kaosFlash"><div class="kf-label"></div></div>
@@ -1337,16 +1371,6 @@
           <div class="rtitle"></div><div class="rdetail"></div>
           <div class="btn-next-round" id="btnNextRound" onclick="proceedToNextRound()">次へ ›</div>
         </div>
-      </div>
-    </div>
-
-    <div class="pinfo you" id="youCell">
-      <span class="pi-role" id="youDealerTag">子</span>
-      <div class="pi-main"><span class="pi-who">あなた</span><span class="pi-score" id="youLP">0</span></div>
-      <div class="pi-side">
-        <div class="lp-bar-wrap" id="youBarWrap"></div>
-        <span class="pi-token" id="youToken"></span>
-        <div class="deck-chip" id="deckBar" onclick="event.stopPropagation(); openDeckModal()"></div>
       </div>
     </div>
   </div>
@@ -2894,8 +2918,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.27.0';
+const GAME_VERSION = 'v0.28.0';
 const CHANGELOG = [
+  { version:'v0.28.0', date:'2026-07-12', items:[
+    'サンプル案に沿って対戦画面を再構成：画面上部に「相手（左）｜ROUND [n/8]（中央）｜あなた（右）」の統一バーを新設。各プレイヤーの得点(pt)・戦略カウンター（相手=赤／あなた=金の色分け）・アバターを上部に集約。カード横には親/子・山札・相手手札（タップで推理）のみを配置し、役割案内は場の中央のメッセージウィンドウに表示',
+  ]},
   { version:'v0.27.0', date:'2026-07-12', items:[
     '対戦画面の情報配置を調整（要望を反映）：①左右の柱をやめ、相手の情報を「場の上」・あなたの情報を「場の下」にコンパクト配置 ②山札の表示を各プレイヤーの戦略カウンターの下に移動 ③役割の案内（メッセージウィンドウ）を場の中央に表示',
   ]},
