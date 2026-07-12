@@ -282,6 +282,53 @@
   .compat-strip .cs-gt{ color:var(--gold-dim); font-size:9px; }
   .compat-strip .cs-dot{ color:var(--gold-dim); }
   .compat-strip .cs-special{ color:var(--kaos); font-size:9px; font-weight:700; }
+
+  /* ===== 対戦画面レイアウト刷新(上部ROUND / 下部ヘッダー / 左右レール / メッセージ窓 / 行動モーダル) ===== */
+  .topbar-min{ display:flex; justify-content:center; padding:6px 14px 0; flex-shrink:0; }
+  .hd.bottom{ border-bottom:none; border-top:1px solid var(--line); flex-shrink:0; margin-top:2px; }
+  /* メッセージウィンドウ(役割・手番の案内) */
+  .msg-window{ flex-shrink:0; margin:3px 14px 1px; padding:7px 30px; border:1px solid var(--line); border-radius:10px;
+    background:linear-gradient(180deg,rgba(232,200,119,0.07),rgba(0,0,0,0.12)); font-size:12.5px; color:var(--ink);
+    text-align:center; letter-spacing:0.03em; position:relative; line-height:1.4; }
+  .msg-window:empty{ display:none; }
+  .msg-window::before{ content:'▸'; position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--gold-dim); font-size:11px; }
+  .msg-window.dealer{ border-color:rgba(201,162,74,0.5); color:var(--gold-bright); }
+  .msg-window.dealer::before{ color:var(--gold-bright); }
+  .msg-window.child{ color:var(--ink-dim); }
+  /* 3カラム: 左=あなた / 中央=場 / 右=相手 */
+  .play-area{ flex:1; display:flex; align-items:stretch; gap:6px; padding:2px 8px; min-height:0; }
+  .play-area .field{ flex:1; margin:0; min-width:0; }
+  .side-rail{ width:64px; flex-shrink:0; position:relative; display:flex; flex-direction:column; align-items:center;
+    gap:5px; padding:16px 4px; border:1px solid var(--line); border-radius:12px; background:var(--bg-panel); }
+  .side-rail.cpu{ justify-content:flex-start; cursor:pointer; }
+  .side-rail.you{ justify-content:flex-end; border-color:rgba(201,162,74,0.42); }
+  .rail-ctr .rc-lbl{ display:none; }
+  .side-rail.cpu:active{ transform:scale(0.98); }
+  .rail-role{ font-size:10px; font-weight:700; letter-spacing:0.06em; padding:2px 9px; border-radius:8px; line-height:1.3; }
+  .rail-role.dealer{ background:linear-gradient(160deg,var(--gold-bright),var(--gold-dim)); color:#1a1608; }
+  .rail-role.child{ color:var(--ink-dim); border:1px solid var(--line); }
+  .rail-who{ font-size:10px; color:var(--ink-dim); letter-spacing:0.08em; }
+  .side-rail.you .rail-who{ color:var(--gold-bright); }
+  .rail-score{ font-family:'Cormorant Garamond',serif; font-size:30px; font-weight:700; color:var(--gold); line-height:1; }
+  .rail-ctr{ display:flex; flex-direction:column; align-items:center; gap:2px; width:100%; }
+  .rail-ctr .rc-lbl{ font-size:7px; color:var(--gold-dim); letter-spacing:0.14em; }
+  .side-rail .lp-bar-wrap{ width:46px; height:7px; display:flex; gap:2px; margin:0; }
+  .side-rail .token-line{ font-size:8px; color:var(--air); margin:0; min-height:0; }
+  .side-rail .token-line:empty{ display:none; }
+  .rail-hand{ margin-top:3px; font-size:8px; color:var(--gold-bright); text-align:center; line-height:1.35;
+    border:1px dashed rgba(201,162,74,0.45); border-radius:7px; padding:3px 4px; width:100%; }
+  .rail-hand b{ font-family:'Cormorant Garamond',serif; font-size:13px; }
+  .rail-hand span{ display:block; font-size:7px; color:var(--ink-dim); }
+  .rail-hand:empty{ display:none; }
+  /* 行動選択モーダル */
+  .action-modal-grid{ display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+  .action-modal-grid .btn{ width:100%; }
+  .action-modal-grid .act-btn{ flex-direction:row; justify-content:center; gap:9px; padding:13px 0; }
+  .action-modal-grid .act-btn .act-ic{ font-size:20px; }
+  .action-modal-grid .act-btn .act-lb{ font-size:14px; }
+  .action-modal-grid .act-btn .act-cost{ font-size:10px; }
+  /* 相手の「可能性」チップ(初心者モードのじゃんけん) */
+  .zone-hint .oh-rps{ font-size:15px; line-height:1; filter:drop-shadow(0 1px 1px rgba(0,0,0,.75)); }
   .lp-bar-wrap{
     margin-top:4px; height:7px; display:flex; gap:2px;
   }
@@ -1228,32 +1275,25 @@
     <div class="btn-close-modal" onclick="closePlayedDetail()">閉じる</div>
   </div>
 
-  <div class="hd">
-    <div class="brand" onclick="openChangelog()">MASKD <span class="version-tag" id="versionTag"></span></div>
-    <div class="top-right">
-      <div class="grid-btn" onclick="openRules()">ルール</div>
-      <div class="grid-btn" onclick="openTracker()">一覧表</div>
-      <div class="grid-btn" onclick="openHistory()">履歴 ↺</div>
+  <div class="history-modal" id="oppHandModal">
+    <h3>相手の手札（推理）</h3>
+    <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">数字は分かるが属性は不明。あり得るじゃんけんを表示（Kaos/Airは小アイコン）</p>
+    <div class="hist-scroll" id="oppHandModalBody" style="align-items:center;"></div>
+    <div class="btn-close-modal" onclick="closeOppHandModal()">閉じる</div>
+  </div>
+  <div class="hand-popup-overlay" id="actionModal">
+    <div class="hand-popup-box" style="max-width:340px;">
+      <h3 id="actionModalTitle">親の行動を選ぶ</h3>
+      <div class="hmc-context" id="actionModalContext"></div>
+      <div class="action-modal-grid" id="actionModalGrid"></div>
     </div>
   </div>
 
-  <div class="scoreboard">
-    <div class="score-cell you" id="youCell">
-      <div class="dealer-tag" id="youDealerTag" style="display:none;">親</div>
-      <div class="who">あなた</div><div class="val" id="youLP">13</div>
-      <div class="lp-bar-wrap" id="youBarWrap"></div>
-      <div class="token-line" id="youToken"></div>
-    </div>
+  <div class="topbar-min">
     <div class="score-round">
       <div class="sr-label">ROUND</div>
       <div class="sr-num"><b id="roundN">1</b><span>/</span><b id="roundTotal">8</b></div>
       <span class="late-badge" id="lateBadge">決戦×2</span>
-    </div>
-    <div class="score-cell" id="cpuCell">
-      <div class="dealer-tag" id="cpuDealerTag" style="display:none;">親</div>
-      <div class="who">相手</div><div class="val" id="cpuLP">13</div>
-      <div class="lp-bar-wrap" id="cpuBarWrap"></div>
-      <div class="token-line" id="cpuToken"></div>
     </div>
   </div>
 
@@ -1267,14 +1307,21 @@
     <span class="cs-special">Kaos/Air＝特殊</span>
   </div>
 
-  <div class="role-banner" id="roleBanner"></div>
-  <div class="opp-hand-row" id="oppHandRow"></div>
+  <div class="msg-window" id="roleBanner"></div>
 
-  <div class="field">
-    <div class="zone-wrap">
-      <div class="zone-label"><div class="mask-badge cpu"></div>相手</div>
-      <div class="zone-hint" id="oppCardHint"></div>
+  <div class="play-area">
+    <div class="side-rail you" id="youCell">
+      <div class="rail-role" id="youDealerTag">子</div>
+      <div class="rail-who">あなた</div>
+      <div class="rail-score" id="youLP">0</div>
+      <div class="rail-ctr"><span class="rc-lbl">戦略</span><div class="lp-bar-wrap" id="youBarWrap"></div></div>
+      <div class="token-line" id="youToken"></div>
     </div>
+
+    <div class="field">
+      <div class="zone-wrap">
+        <div class="zone-hint" id="oppCardHint"></div>
+      </div>
     <div class="slot-row" id="cpuSlot"><div class="empty-slot">待機</div></div>
     <div class="mid-divider"><div class="ln"></div><div class="vs">VS</div><div class="ln"></div>
       <div class="deck-chip opp" id="deckBarOpp" onclick="event.stopPropagation(); openOppDeckModal()"></div>
@@ -1283,7 +1330,6 @@
     <div class="slot-row" id="youSlot"><div class="empty-slot">あなた</div></div>
     <div class="zone-wrap">
       <div class="zone-hint" id="youCardHint"></div>
-      <div class="zone-label you"><div class="mask-badge you"></div>あなた</div>
     </div>
     <div class="action-banner" id="actionBanner"><div class="ab-icon"></div><div class="ab-text"></div></div>
     <div class="kaos-flash" id="kaosFlash"><div class="kf-label"></div></div>
@@ -1293,6 +1339,16 @@
         <div class="rtitle"></div><div class="rdetail"></div>
         <div class="btn-next-round" id="btnNextRound" onclick="proceedToNextRound()">次へ ›</div>
       </div>
+    </div>
+    </div>
+
+    <div class="side-rail cpu" id="cpuCell" onclick="openOppHandModal()">
+      <div class="rail-role" id="cpuDealerTag">親</div>
+      <div class="rail-who">相手</div>
+      <div class="rail-score" id="cpuLP">0</div>
+      <div class="rail-ctr"><span class="rc-lbl">戦略</span><div class="lp-bar-wrap" id="cpuBarWrap"></div></div>
+      <div class="token-line" id="cpuToken"></div>
+      <div class="rail-hand" id="cpuRailHint"></div>
     </div>
   </div>
 
@@ -1307,6 +1363,15 @@
   <div class="coach-line" id="coachLine"></div>
   <div class="hint-line" id="hint"></div>
   <div class="actions" id="actions"></div>
+
+  <div class="hd bottom">
+    <div class="brand" onclick="openChangelog()">MASKD <span class="version-tag" id="versionTag"></span></div>
+    <div class="top-right">
+      <div class="grid-btn" onclick="openRules()">ルール</div>
+      <div class="grid-btn" onclick="openTracker()">一覧表</div>
+      <div class="grid-btn" onclick="openHistory()">履歴 ↺</div>
+    </div>
+  </div>
 
 </div>
 
@@ -1661,13 +1726,13 @@ function startRound(){
 
   const banner=document.getElementById('roleBanner');
   if(youIsDealer){
-    banner.className='role-banner dealer';
-    banner.textContent='あなたが親です — 先にカードを置いてください';
+    banner.className='msg-window dealer';
+    banner.textContent='あなたが親です — 手札から1枚選んで、先に置いてください';
     phase='pick';
-    hint('手札から1枚選んで場に出そう');
+    hint('');
     renderHand(); renderActions();
   } else {
-    banner.className='role-banner child';
+    banner.className='msg-window child';
     banner.textContent='相手が親です — 相手が先に置きます…';
     phase='wait';
     renderHand(); renderActions();
@@ -1712,25 +1777,34 @@ function renderScore(){
   if(dY!==0) animateTrustDelta('youCell','youBarWrap',dY);
   if(dC!==0) animateTrustDelta('cpuCell','cpuBarWrap',dC);
   _lastYouTrust=youTrust; _lastCpuTrust=cpuTrust;
-  document.getElementById('youDealerTag').style.display=youIsDealer?'block':'none';
-  document.getElementById('cpuDealerTag').style.display=!youIsDealer?'block':'none';
+  setRoleTag('youDealerTag', youIsDealer);
+  setRoleTag('cpuDealerTag', !youIsDealer);
   document.getElementById('youToken').textContent = `戦略 ${youTrust}`;
   document.getElementById('cpuToken').textContent = `戦略 ${cpuTrust}`;
   document.getElementById('lateBadge').classList.toggle('show', isLateGame());
   renderOppHand();
 }
-function renderOppHand(){
-  const row=document.getElementById('oppHandRow');
-  row.innerHTML='';
-  const cpuAll=[...cpuHand]; // 表示するのは実働手札(最大5枚)のみ
-  const label=document.createElement('div'); label.className='opp-hand-label';
-  label.innerHTML=`相手の手札 <b style="color:var(--gold-bright);font-family:'Cormorant Garamond',serif;font-size:14px;">${cpuAll.length}</b><span style="opacity:.7;font-size:7px;"> ・推理</span>`;
-  row.appendChild(label);
-  const chips=document.createElement('div');
-  chips.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;';
-  chips.innerHTML=[...cpuAll].sort((a,b)=>a.num-b.num).map(c=>oppCardHTML(c.num)).join('');
-  row.appendChild(chips);
+function setRoleTag(id, isDealer){
+  const el=document.getElementById(id); if(!el) return;
+  el.textContent = isDealer ? '親' : '子';
+  el.className = 'rail-role '+(isDealer?'dealer':'child');
 }
+// 相手の手札(推理): 右レールに枚数、詳細はタップでモーダル表示(デフォルト非表示)
+function renderOppHand(){
+  const cpuAll=[...cpuHand];
+  const hint=document.getElementById('cpuRailHint');
+  if(hint) hint.innerHTML=`手札<b>${cpuAll.length}</b><span>タップで推理</span>`;
+  const body=document.getElementById('oppHandModalBody');
+  if(body){
+    body.innerHTML='';
+    const chips=document.createElement('div');
+    chips.style.cssText='display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:8px 0;';
+    chips.innerHTML=[...cpuAll].sort((a,b)=>a.num-b.num).map(c=>oppCardHTML(c.num)).join('');
+    body.appendChild(chips);
+  }
+}
+function openOppHandModal(){ renderOppHand(); document.getElementById('oppHandModal').classList.add('show'); }
+function closeOppHandModal(){ document.getElementById('oppHandModal').classList.remove('show'); }
 
 // 自分がこれまでに場に出したカード(常に自分には見える)
 function renderYouPlayed(){
@@ -1934,25 +2008,36 @@ function closeHandModal(){ document.getElementById('handModal').classList.remove
 function renderActions(){
   const actions=document.getElementById('actions');
   actions.innerHTML='';
-  if(phase==='decide' && youIsDealer){
-    const fightBtn=document.createElement('div');
-    fightBtn.className='btn act-btn'; fightBtn.innerHTML=actIcon('⚔','決戦');
-    fightBtn.onclick=()=>resolveFight(true);
-    const passBtn=document.createElement('div');
-    const canPass = youTrust>=PASS_TRUST_COST;
-    passBtn.className='btn ghost act-btn'+(canPass?'':' disabled');
-    passBtn.innerHTML = actIcon('🏳', canPass ? `撤退 <span class="act-cost">戦略-${PASS_TRUST_COST}</span>` : `撤退 <span class="act-cost">不足</span>`);
-    passBtn.onclick=()=>{ if(canPass) resolveFight(false); };
-    const swapBtn=document.createElement('div');
-    const canSwap = youTrust>=SWAP_COST && youHand.length>0 && !youSwapUsedThisRound;
-    swapBtn.className='btn ghost act-btn'+(canSwap?'':' disabled');
-    swapBtn.innerHTML = actIcon('🔄', youSwapUsedThisRound ? '入替 <span class="act-cost">使用済</span>' : (canSwap ? `入替 <span class="act-cost">戦略-${SWAP_COST}</span>` : '入替 <span class="act-cost">不可</span>'));
-    swapBtn.onclick=()=>{ if(canSwap) openSwapModal(); };
-    actions.appendChild(passBtn); actions.appendChild(swapBtn); actions.appendChild(fightBtn);
-  }
+  // 親の決断は普段は非表示。決断フェーズになったらモーダルで選ばせる
+  if(phase==='decide' && youIsDealer){ openActionModal(); }
+  else { closeActionModal(); }
 }
 // アクションボタン用: アイコン＋ラベル
 function actIcon(icon, label){ return `<span class="act-ic">${icon}</span><span class="act-lb">${label}</span>`; }
+// ===== 親の行動選択モーダル(決戦・撤退・入替) =====
+function openActionModal(){
+  const grid=document.getElementById('actionModalGrid');
+  const ctx=document.getElementById('actionModalContext');
+  if(!grid) return;
+  ctx.innerHTML = childCard ? `<div style="text-align:center;font-size:12px;color:var(--ink-dim);margin-bottom:2px;">子の数字は <b style="color:var(--gold-bright);font-family:'Cormorant Garamond',serif;font-size:15px;">${childCard.num}</b>。どうする？</div>` : '';
+  grid.innerHTML='';
+  const canPass = youTrust>=PASS_TRUST_COST;
+  const canSwap = youTrust>=SWAP_COST && youHand.length>0 && !youSwapUsedThisRound;
+  const fightBtn=document.createElement('div');
+  fightBtn.className='btn act-btn'; fightBtn.innerHTML=actIcon('⚔','決戦');
+  fightBtn.onclick=()=>{ closeActionModal(); resolveFight(true); };
+  const passBtn=document.createElement('div');
+  passBtn.className='btn ghost act-btn'+(canPass?'':' disabled');
+  passBtn.innerHTML=actIcon('🏳', canPass ? `撤退 <span class="act-cost">戦略-${PASS_TRUST_COST}</span>` : `撤退 <span class="act-cost">戦略不足</span>`);
+  passBtn.onclick=()=>{ if(canPass){ closeActionModal(); resolveFight(false); } };
+  const swapBtn=document.createElement('div');
+  swapBtn.className='btn ghost act-btn'+(canSwap?'':' disabled');
+  swapBtn.innerHTML=actIcon('🔄', youSwapUsedThisRound ? '入替 <span class="act-cost">使用済</span>' : (canSwap ? `入替 <span class="act-cost">戦略-${SWAP_COST}</span>` : '入替 <span class="act-cost">不可</span>'));
+  swapBtn.onclick=()=>{ if(canSwap){ closeActionModal(); openSwapModal(); } };
+  grid.appendChild(fightBtn); grid.appendChild(passBtn); grid.appendChild(swapBtn);
+  document.getElementById('actionModal').classList.add('show');
+}
+function closeActionModal(){ const m=document.getElementById('actionModal'); if(m) m.classList.remove('show'); }
 
 // ===== 親の特権「入替」: 子の数字を見てから、自分のカードを手札の別の1枚と交換できる(1ラウンド1回まで) =====
 function openSwapModal(){
@@ -2173,10 +2258,17 @@ function showAttrHint(num){
   const el=document.getElementById('oppCardHint');
   const {pool} = remainingPossibleForNum(num);
   const options = pool;
+  if(options.length===0){ el.innerHTML=`可能性：<b style="color:var(--gold-bright)">全て公開済み</b>`; return; }
+  // 初心者モード: あり得るじゃんけん(月/闇/太陽)を大きく＋Kaos/Airは小アイコン(属性は確定させない)
+  if(cardStyle==='beginner'){
+    const rps = options.filter(a=>RPS_GLYPH[a]).map(a=>`<span class="oh-rps">${BEG_RPS[a]}</span>`).join('');
+    const special = options.filter(a=>!RPS_GLYPH[a]).map(a=>`<div class="hint-icon tiny ${a}"></div>`).join('');
+    const conf = options.length===1 ? ' <b style="color:var(--gold-bright)">で確定</b>' : '';
+    el.innerHTML=`可能性: <span class="hint-icon-row" style="align-items:center;gap:3px;">${rps}${special}</span>${conf}`;
+    return;
+  }
   const iconsHTML = options.map(a=>`<div class="hint-icon ${a}${options.length===1?' confirmed':''}"></div>`).join('');
-  if(options.length===0){
-    el.innerHTML=`可能性：<b style="color:var(--gold-bright)">全て公開済み</b>`;
-  } else if(options.length===1){
+  if(options.length===1){
     el.innerHTML=`<span class="hint-icon-row">${iconsHTML}</span> <b style="color:var(--gold-bright)">で確定</b>`;
   } else {
     el.innerHTML=`可能性: <span class="hint-icon-row">${iconsHTML}</span>`;
@@ -2803,8 +2895,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.25.0';
+const GAME_VERSION = 'v0.26.0';
 const CHANGELOG = [
+  { version:'v0.26.0', date:'2026-07-12', items:[
+    '対戦画面を大きくレイアウト刷新（要望を反映）：①得点・親/子・戦略カウンターを場の左右に配置（自分=左／相手=右） ②タイトル・バージョン・各ボタンを画面最下部へ移動 ③相手の手札はデフォルト非表示にし、右側「相手」エリアのタップでモーダル表示 ④相手の可能性表示を初心者モードでは「あり得るじゃんけん」に ⑤「あなたが親です…」等の案内をメッセージウィンドウで表示 ⑥決戦・撤退・入替を専用モーダルで選択（普段は非表示）',
+  ]},
   { version:'v0.25.0', date:'2026-07-12', items:[
     '対戦画面をさらに整理（UIモック案を反映）：①上部を「あなたの得点｜中央ROUND｜相手の得点」の1行バーに集約（ラウンドを中央に移動、ヘッダーをすっきり） ②決戦・撤退・入替・奇襲をアイコン＋ラベルのボタンに ③選べるとき手札を光らせて操作場所を明確化 ④対戦画面にも属性相性（月✊＞闇✌＞太陽✋、Kaos/Airは特殊）を常時表示。得点の仕組み（0から加点）は変更なし',
   ]},
