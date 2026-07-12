@@ -371,10 +371,11 @@
   .you-played-row{ display:none !important; }
   /* #4 メッセージを不透明にして背後(VS/カード)と重ならないよう */
   .field > .msg-window{ background:linear-gradient(180deg,#1a1626,#12101a); }
-  /* #5 場の余白を整理: カードを上下の端に寄せ、空きを中央(案内/行動/結果の場所)に集約 */
-  .play-area .field{ margin:4px 0; }
-  .field{ grid-template-rows:auto auto 1fr auto auto !important; row-gap:4px; }
-  .field .mid-divider{ min-height:100px; justify-content:center; }
+  /* #5 場の余白を整理: 内容の高さに合わせ、中央に案内/行動/結果の余白を確保 */
+  .play-area{ justify-content:center; }
+  .play-area .field{ flex:0 1 auto; margin:4px 0; max-height:100%; }
+  .field{ grid-template-rows:auto auto auto auto auto !important; row-gap:4px; }
+  .field .mid-divider{ min-height:112px; justify-content:center; }
   /* #6 場に表示する各プレイヤーの得点 */
   .pi-pt{ font-size:10px; color:var(--ink-dim); letter-spacing:0.04em; white-space:nowrap; }
   .pinfo.you .pi-pt{ color:var(--gold-bright); }
@@ -390,6 +391,27 @@
   #oppHandModalBody .opp-card{ width:100%; height:auto; aspect-ratio:60/84; }
   #oppHandModalBody .opp-card .opp-num{ font-size:20px; }
   #oppHandModalBody .opp-rps-g{ font-size:17px; }
+  /* v0.31: トップバーはラウンドのみ */
+  .topbar.round-only{ justify-content:center; padding:5px 12px; }
+  .topbar.round-only .tb-round{ flex-direction:row; align-items:baseline; gap:6px; }
+  .topbar.round-only .tb-round-lbl{ font-size:9px; letter-spacing:0.22em; color:var(--gold-dim); }
+  .topbar.round-only .tb-round-num{ font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:700; color:var(--gold-bright); }
+  .topbar.round-only .late-badge{ margin-left:4px; }
+  /* 相手の手札を画面上部に(裏面・候補じゃんけん・数字) */
+  .opp-hand-strip{ flex-shrink:0; padding:3px 10px 1px; text-align:center; }
+  .opp-hand-strip .ohs-label{ font-size:9px; color:var(--gold-dim); letter-spacing:0.04em; margin-bottom:3px; }
+  .opp-hand-strip .ohs-label b{ font-family:'Cormorant Garamond',serif; color:var(--gold-bright); font-size:12px; }
+  .ohs-cards{ display:flex; gap:6px; justify-content:center; }
+  .ohs-cards .opp-card{ width:46px; height:60px; }
+  .ohs-cards .opp-card .opp-num{ font-size:17px; }
+  .ohs-cards .opp-card .opp-rps-g{ font-size:14px; }
+  /* 下部の手札を大きく＋直接タップ */
+  .hcard{ width:60px !important; height:84px !important; }
+  .hand{ gap:7px !important; max-height:none !important; }
+  .hand-wrap.tappable .hcard{ cursor:pointer; }
+  .hcard.recommend{ box-shadow:0 0 0 2px var(--win),0 0 12px rgba(126,201,138,.5); }
+  .hcard .rec-badge{ position:absolute; top:-7px; right:-6px; z-index:5; font-size:9px; background:var(--win); color:#0d1a10;
+    border-radius:8px; padding:0 4px; font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,.5); }
   /* メッセージウィンドウ: 場の中央にオーバーレイ表示 */
   .field > .msg-window{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
     width:calc(100% - 24px); max-width:320px; margin:0; z-index:8; pointer-events:none;
@@ -1349,12 +1371,6 @@
     <div class="btn-close-modal" onclick="closePlayedDetail()">閉じる</div>
   </div>
 
-  <div class="history-modal" id="oppHandModal">
-    <h3>相手の手札（推理）</h3>
-    <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">数字は分かるが属性は不明。あり得るじゃんけんを表示（Kaos/Airは小アイコン）</p>
-    <div class="hist-scroll" id="oppHandModalBody" style="align-items:center;"></div>
-    <div class="btn-close-modal" onclick="closeOppHandModal()">閉じる</div>
-  </div>
   <div class="hand-popup-overlay" id="actionModal">
     <div class="hand-popup-box" style="max-width:340px;">
       <h3 id="actionModalTitle">親の行動を選ぶ</h3>
@@ -1363,23 +1379,11 @@
     </div>
   </div>
 
-  <div class="topbar">
-    <div class="tb-side you">
-      <div class="tb-av you">🙂</div>
-      <div class="tb-col">
-        <div class="tb-name">あなた <b class="tb-pt" id="youLP">0</b><span class="tb-unit">pt</span></div>
-      </div>
-    </div>
+  <div class="topbar round-only">
     <div class="tb-round">
-      <div class="tb-round-lbl">ROUND</div>
-      <div class="tb-round-num"><b id="roundN">1</b>/<b id="roundTotal">8</b></div>
+      <span class="tb-round-lbl">ROUND</span>
+      <span class="tb-round-num"><b id="roundN">1</b>/<b id="roundTotal">8</b></span>
       <span class="late-badge" id="lateBadge">×2</span>
-    </div>
-    <div class="tb-side cpu">
-      <div class="tb-col right">
-        <div class="tb-name"><b class="tb-pt" id="cpuLP">0</b><span class="tb-unit">pt</span> 相手</div>
-      </div>
-      <div class="tb-av cpu">🎭</div>
     </div>
   </div>
 
@@ -1393,27 +1397,31 @@
     <span class="cs-special">Kaos/Air＝特殊</span>
   </div>
 
+  <div class="opp-hand-strip">
+    <div class="ohs-label">相手の手札 <b id="oppHandCount">5</b>（裏面・推理）</div>
+    <div class="ohs-cards" id="oppHandStrip"></div>
+  </div>
+
   <div class="play-area">
     <div class="field">
-      <div class="zone-wrap"><div class="zone-hint" id="oppCardHint"></div></div>
       <div class="slot-line">
         <div class="slot-side"></div>
         <div class="slot-row" id="cpuSlot"><div class="empty-slot">待機</div></div>
-        <div class="pinfo cpu" id="cpuCell" onclick="openOppHandModal()">
+        <div class="pinfo cpu" id="cpuCell">
           <span class="pi-role" id="cpuDealerTag">親</span>
-          <span class="pi-pt">相手 <b id="cpuLP2">0</b>pt</span>
+          <span class="pi-pt">相手 <b id="cpuLP">0</b>pt</span>
           <div class="deck-chip opp" id="deckBarOpp" onclick="event.stopPropagation(); openOppDeckModal()"></div>
           <div class="pi-ctr"><div class="lp-bar-wrap cpu" id="cpuBarWrap"></div></div>
           <span class="pi-token" id="cpuToken"></span>
           <div class="pi-used" id="cpuUsed"></div>
-          <span class="pi-hand" id="cpuRailHint"></span>
         </div>
       </div>
-      <div class="mid-divider"><div class="ln"></div></div>
+      <div class="zone-wrap"><div class="zone-hint" id="oppCardHint"></div></div>
+      <div class="mid-divider"></div>
       <div class="slot-line">
         <div class="pinfo you" id="youCell">
           <span class="pi-role" id="youDealerTag">子</span>
-          <span class="pi-pt">あなた <b id="youLP2">0</b>pt</span>
+          <span class="pi-pt">あなた <b id="youLP">0</b>pt</span>
           <div class="deck-chip" id="deckBar" onclick="event.stopPropagation(); openDeckModal()"></div>
           <div class="pi-ctr"><div class="lp-bar-wrap you" id="youBarWrap"></div></div>
           <span class="pi-token" id="youToken"></span>
@@ -1441,7 +1449,7 @@
   <div class="peek" id="peek"></div>
   <div class="you-played-row" id="youPlayedRow"></div>
 
-  <div class="hand-wrap" id="handWrap" onclick="openHandModalIfReady()">
+  <div class="hand-wrap" id="handWrap">
     <div class="hand-title" id="handTitle">あなたの手札</div>
     <div class="hand" id="hand"></div>
   </div>
@@ -1861,8 +1869,6 @@ function renderScore(){
   document.getElementById('roundN').textContent=round;
   document.getElementById('youLP').textContent=youLP;
   document.getElementById('cpuLP').textContent=cpuLP;
-  const y2=document.getElementById('youLP2'); if(y2) y2.textContent=youLP;
-  const c2=document.getElementById('cpuLP2'); if(c2) c2.textContent=cpuLP;
   // 戦略カウンターの増減を検出して演出(前回描画時との差分)
   const dY=youTrust-_lastYouTrust, dC=cpuTrust-_lastCpuTrust;
   renderTrustSegs('youBarWrap', youTrust);
@@ -1902,21 +1908,13 @@ function setRoleTag(id, isDealer){
   el.className = 'pi-role '+(isDealer?'dealer':'child');
 }
 // 相手の手札(推理): 右レールに枚数、詳細はタップでモーダル表示(デフォルト非表示)
+// 相手の手札(推理): 画面上部に、裏面＋候補じゃんけん＋数字の行として常時表示
 function renderOppHand(){
   const cpuAll=[...cpuHand];
-  const hint=document.getElementById('cpuRailHint');
-  if(hint) hint.innerHTML=`手札<b>${cpuAll.length}</b><span>タップで推理</span>`;
-  const body=document.getElementById('oppHandModalBody');
-  if(body){
-    body.innerHTML='';
-    const chips=document.createElement('div');
-    chips.style.cssText='display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:8px 0;';
-    chips.innerHTML=[...cpuAll].sort((a,b)=>a.num-b.num).map(c=>oppCardHTML(c.num)).join('');
-    body.appendChild(chips);
-  }
+  const cnt=document.getElementById('oppHandCount'); if(cnt) cnt.textContent=cpuAll.length;
+  const strip=document.getElementById('oppHandStrip');
+  if(strip) strip.innerHTML=[...cpuAll].sort((a,b)=>a.num-b.num).map(c=>oppCardHTML(c.num)).join('');
 }
-function openOppHandModal(){ renderOppHand(); document.getElementById('oppHandModal').classList.add('show'); }
-function closeOppHandModal(){ document.getElementById('oppHandModal').classList.remove('show'); }
 
 // 自分がこれまでに場に出したカード(常に自分には見える)
 function renderYouPlayed(){
@@ -2072,52 +2070,35 @@ function renderHand(){
   const indexed = youHand.map((c,i)=>({c,i}));
   indexed.sort((a,b)=> a.c.num-b.c.num || a.c.attr.localeCompare(b.c.attr));
 
-  const modalGrid=document.getElementById('handModalGrid');
-  const handWrap=document.getElementById('handWrap');
+  const canPick = (phase==='pick');
+  // 初心者ヒント: 子のとき、相手の数字に有利な札を「おすすめ」判定
+  const canRecommend = hintsEnabled && !youIsDealer && dealerCard && canPick;
+  document.getElementById('handWrap').classList.toggle('tappable', canPick);
 
-  if(phase==='pick'){
-    // 選択可能な状態: モーダルの中身を準備しておく(表示はタップされた時)
-    document.getElementById('handModalTitle').textContent = youIsDealer? '手札から選ぼう（親）':'手札から選ぼう（子）';
-    renderHandModalContext();
-    modalGrid.innerHTML='';
-    // 初心者ヒント: 子のとき、相手の数字に有利な札を「おすすめ」判定
-    const canRecommend = hintsEnabled && !youIsDealer && dealerCard;
-    indexed.forEach(({c,i})=>{
-      const el=document.createElement('div');
-      el.className='hmg-card '+c.attr+(useRichCards()?' art':' bcard');
-      let recBadge='';
-      if(canRecommend){
-        const est=playerEstimate(c, dealerCard.num, false);
-        if(est.win>=0.6 && est.win>est.lose){ el.classList.add('recommend'); recBadge='<span class="rec-badge">おすすめ</span>'; }
-      }
-      if(useRichCards()){ el.style.backgroundImage=`url(${attrImgUrl(c.attr)})`; el.innerHTML=numBadge(c.num)+rpsBadge(c.attr)+recBadge; }
-      else el.innerHTML=beginnerInner(c)+recBadge;
-      el.onclick=(e)=>{ e.stopPropagation(); if(busy)return; closeHandModal(); playYouCard(i); };
-      modalGrid.appendChild(el);
-    });
-    handWrap.classList.add('tappable');
-  } else {
-    document.getElementById('handModal').classList.remove('show');
-    handWrap.classList.remove('tappable');
-  }
-
-  // 下部の簡易表示(プレビューのみ。タップは親のhandWrapが受けてモーダルを開く)
+  // 下部の手札を直接タップして選ぶ(モーダルは廃止)
   indexed.forEach(({c,i})=>{
     const el=document.createElement('div');
-    el.className='hcard '+c.attr+(useRichCards()?' art':' bcard mini');
+    el.className='hcard '+c.attr+(useRichCards()?' art':' bcard');
     if(youJustDrawnKey && c.attr+c.num===youJustDrawnKey){ el.classList.add('just-drawn'); }
-    if(useRichCards()){ el.style.backgroundImage=`url(${attrImgUrl(c.attr)})`; el.innerHTML=numBadge(c.num,'sm'); }
-    else el.innerHTML=beginnerInner(c, true);
-    if(phase!=='pick'){ el.style.opacity='0.5'; }
-    el.style.cursor='default'; el.style.pointerEvents='none';
+    let recBadge='';
+    if(canRecommend){
+      const est=playerEstimate(c, dealerCard.num, false);
+      if(est.win>=0.6 && est.win>est.lose){ el.classList.add('recommend'); recBadge='<span class="rec-badge">おすすめ</span>'; }
+    }
+    if(useRichCards()){ el.style.backgroundImage=`url(${attrImgUrl(c.attr)})`; el.innerHTML=numBadge(c.num)+rpsBadge(c.attr)+recBadge; }
+    else el.innerHTML=beginnerInner(c)+recBadge;
+    if(canPick){
+      el.style.cursor='pointer';
+      el.onclick=()=>{ if(busy)return; playYouCard(i); };
+    } else {
+      el.style.opacity='0.5'; el.style.pointerEvents='none';
+    }
     h.appendChild(el);
   });
   youJustDrawnKey=null; // 光らせるのは補充直後の最初の描画1回だけ
 }
-function openHandModalIfReady(){
-  if(phase==='pick') document.getElementById('handModal').classList.add('show');
-}
-function closeHandModal(){ document.getElementById('handModal').classList.remove('show'); }
+function openHandModalIfReady(){ /* 手札モーダルは廃止(下部の手札を直接タップ) */ }
+function closeHandModal(){ const m=document.getElementById('handModal'); if(m) m.classList.remove('show'); }
 
 // 親の決断(決戦・撤退・入替)は、選べる時だけ場の中央に表示する
 function renderActions(){
@@ -3041,8 +3022,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.30.0';
+const GAME_VERSION = 'v0.31.0';
 const CHANGELOG = [
+  { version:'v0.31.0', date:'2026-07-12', items:[
+    '対戦画面の改善（要望を反映）：①場の中央の仕切り線を削除 ②相手の手札を画面上部に表示（裏面・属性候補と数字／自分の手札と同じ形式）—「相手の手札を見る」ボタンは廃止 ③手札選択モーダルを廃止し、画面下部の手札を直接タップして選べるように（カードも大きく） ④相手が出した場のカードの候補属性を少し下に表示 ⑤画面最上部はラウンド数のみ表示',
+  ]},
   { version:'v0.30.0', date:'2026-07-12', items:[
     '対戦画面の改善（要望を反映）：①結果表示と行動ボタン・メッセージが重ならないよう修正 ②重複していた「出した札」表示を削除（使用済みは場に表示済み） ③相手の情報を場の右側に配置 ④中央の「VS」を消してメッセージと重ならないように ⑤場の余白を整理（カードを上下の端に寄せ、中央を案内/行動の場所に） ⑥各プレイヤーの得点(pt)を場にも表示 ⑦手札選択モーダル上部の重複情報を削除 ⑧手札選択を1列5枚に ⑨相手の手札モーダルを手札選択と同様のレイアウトに',
   ]},
