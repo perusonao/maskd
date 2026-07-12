@@ -418,6 +418,30 @@
   .card.win-glow{ box-shadow:0 0 22px 3px rgba(126,201,138,.65); transform:translateY(-3px) scale(1.04); }
   .card.lose-dim{ opacity:0.5; }
   .card.air-neutral{ box-shadow:0 0 16px 2px rgba(111,191,160,.4); }
+
+  /* ===== 初心者向けカード表示(じゃんけん・数字・属性色を大きく) ===== */
+  .bcard{ position:relative; overflow:hidden; container-type:size; padding:0 !important; }
+  .card.faceup.bcard::before, .card.faceup.bcard::after{ display:none; }
+  .bcard.moon{ background:linear-gradient(160deg,#2a3852,#151d2c) !important; }
+  .bcard.sun{  background:linear-gradient(160deg,#5a3f16,#241a0c) !important; }
+  .bcard.dark{ background:linear-gradient(160deg,#3a2450,#1a1026) !important; }
+  .bcard.kaos{ background:linear-gradient(160deg,#5a1f24,#240c10) !important; }
+  .bcard.air{  background:linear-gradient(160deg,#1d4a40,#0c211c) !important; }
+  .bcard .bc-num{ position:absolute; top:3%; left:7%; z-index:3; font-family:'Cormorant Garamond',serif; font-weight:700;
+    font-size:26cqh; line-height:1; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.85); }
+  .bcard .bc-glyph{ position:absolute; top:4%; right:8%; z-index:3; font-size:15cqh; opacity:.8; }
+  .bcard .bc-big{ position:absolute; top:45%; left:50%; transform:translate(-50%,-50%); z-index:2;
+    font-size:46cqh; line-height:1; filter:drop-shadow(0 2px 3px rgba(0,0,0,.6)); }
+  .bcard .bc-big.sym{ font-family:serif; font-weight:700; }
+  .bcard .bc-role{ position:absolute; left:0; right:0; bottom:22%; z-index:3; text-align:center; font-size:10cqh; color:rgba(255,255,255,.72); }
+  .bcard .bc-name{ position:absolute; left:0; right:0; bottom:0; z-index:3; text-align:center; font-size:13cqh; font-weight:700;
+    padding:4% 0; background:rgba(8,7,12,.5); letter-spacing:.06em; }
+  .bcard.moon .bc-name{ color:#cdddf0; } .bcard.sun .bc-name{ color:#f4cf8f; } .bcard.dark .bc-name{ color:#c9a6e6; }
+  .bcard.kaos .bc-name{ color:#e79a8f; } .bcard.air .bc-name{ color:#a7e0cf; }
+  /* プレビュー(小札): 名前・補足を省き、数字とじゃんけんを大きく */
+  .bcard.mini .bc-name, .bcard.mini .bc-role, .bcard.mini .bc-glyph{ display:none; }
+  .bcard.mini .bc-num{ font-size:36cqh; top:4%; left:9%; }
+  .bcard.mini .bc-big{ top:52%; font-size:56cqh; }
   /* Kaos特殊ルール発動時、勝者カードを混沌色で強く脈動させる */
   .card.kaos-special{ animation:kaosSpecialPulse 1.1s ease; }
   @keyframes kaosSpecialPulse{
@@ -1001,6 +1025,13 @@
       </div>
     </div>
     <div class="cpu-setting-row">
+      <div class="cpu-setting-label">カード表示（じゃんけん・数字を大きく／リッチな絵）</div>
+      <div class="cpu-setting-opts" id="cardStyleOpts">
+        <div class="cpu-opt" data-val="beginner">初心者向け</div>
+        <div class="cpu-opt" data-val="rich">上級者向け</div>
+      </div>
+    </div>
+    <div class="cpu-setting-row">
       <div class="cpu-setting-label">初心者ヒント（有利/不利・おすすめ札・特殊ルール）</div>
       <div class="cpu-setting-opts" id="hintOpts">
         <div class="cpu-opt" data-val="on">ON</div>
@@ -1341,6 +1372,23 @@ function initCpuSettingUI(){
     };
     if((el.dataset.val==='on')===hintsEnabled) el.classList.add('selected');
   });
+  document.querySelectorAll('#cardStyleOpts .cpu-opt').forEach(el=>{
+    el.onclick=()=>{
+      document.querySelectorAll('#cardStyleOpts .cpu-opt').forEach(x=>x.classList.remove('selected'));
+      el.classList.add('selected'); cardStyle=el.dataset.val;
+      try{ localStorage.setItem('maskd_cardstyle', cardStyle); }catch(e){}
+      refreshCardsIfPlaying();
+    };
+    if(el.dataset.val===cardStyle) el.classList.add('selected');
+  });
+}
+// カード表示モードの切り替え時、対戦中なら見えている札を再描画する
+function refreshCardsIfPlaying(){
+  try{
+    if(typeof renderHand==='function' && typeof phase!=='undefined' && phase){ renderHand(); }
+    if(typeof renderYouPlayed==='function'){ renderYouPlayed(); }
+    if(typeof dealerCard!=='undefined' && dealerCard && typeof youIsDealer!=='undefined' && youIsDealer && typeof renderYouSlot==='function'){ renderYouSlot(dealerCard); }
+  }catch(e){}
 }
 // (initCpuSettingUI()はスクリプト末尾で呼び出す。変数宣言より先に実行されるのを防ぐため)
 
@@ -1644,9 +1692,9 @@ function renderYouPlayed(){
   const icons=document.createElement('div'); icons.className='you-played-icons';
   youPlayedCards.forEach(c=>{
     const el=document.createElement('div');
-    el.className='you-mini-card '+c.attr+(hasCardImg()?' art':'');
-    if(hasCardImg()){ el.style.backgroundImage=`url(${attrImgUrl(c.attr)})`; el.innerHTML=numBadge(c.num,'xs'); }
-    else el.innerHTML=`<span class="ymc-a">${ALABEL[c.attr]}</span><span>${c.num}</span>`;
+    el.className='you-mini-card '+c.attr+(useRichCards()?' art':' bcard mini');
+    if(useRichCards()){ el.style.backgroundImage=`url(${attrImgUrl(c.attr)})`; el.innerHTML=numBadge(c.num,'xs'); }
+    else el.innerHTML=beginnerInner(c, true);
     el.style.cursor='pointer';
     el.onclick=openPlayedDetail;
     icons.appendChild(el);
@@ -1661,9 +1709,9 @@ let youCardPeeking=false; // 場に出した自分のカードを表向きで見
 function renderYouSlot(card){
   const slot=document.getElementById('youSlot');
   if(youCardPeeking){
-    slot.innerHTML = hasCardImg()
-      ? `<div class="card art faceup ${card.attr}" style="cursor:pointer;background-image:url(${attrImgUrl(card.attr)})">${numBadge(card.num)}</div>`
-      : `<div class="card faceup ${card.attr}" style="cursor:pointer;"><div class="attr">${ALABEL[card.attr]}</div><div class="glyph">${GLYPH[card.attr]}</div><div class="num">${card.num}</div></div>`;
+    slot.innerHTML = useRichCards()
+      ? `<div class="card art faceup ${card.attr}" style="cursor:pointer;background-image:url(${attrImgUrl(card.attr)})">${numBadge(card.num)}${rpsBadge(card.attr)}</div>`
+      : `<div class="card faceup bcard ${card.attr}" style="cursor:pointer;">${beginnerInner(card)}</div>`;
   } else {
     slot.innerHTML=`<div class="card facedown" style="cursor:pointer;"><div class="fd-top">あなた</div><div class="num">${card.num}</div></div>`;
   }
@@ -1795,14 +1843,14 @@ function renderHand(){
     const canRecommend = hintsEnabled && !youIsDealer && dealerCard;
     indexed.forEach(({c,i})=>{
       const el=document.createElement('div');
-      el.className='hmg-card '+c.attr+(hasCardImg()?' art':'');
+      el.className='hmg-card '+c.attr+(useRichCards()?' art':' bcard');
       let recBadge='';
       if(canRecommend){
         const est=playerEstimate(c, dealerCard.num, false);
         if(est.win>=0.6 && est.win>est.lose){ el.classList.add('recommend'); recBadge='<span class="rec-badge">おすすめ</span>'; }
       }
-      if(hasCardImg()){ el.style.backgroundImage=`url(${attrImgUrl(c.attr)})`; el.innerHTML=numBadge(c.num)+rpsBadge(c.attr)+recBadge; }
-      else el.innerHTML=`<div class="ha">${ALABEL[c.attr]}</div><div class="hg"></div><div class="hn">${c.num}</div>`+rpsBadge(c.attr)+recBadge;
+      if(useRichCards()){ el.style.backgroundImage=`url(${attrImgUrl(c.attr)})`; el.innerHTML=numBadge(c.num)+rpsBadge(c.attr)+recBadge; }
+      else el.innerHTML=beginnerInner(c)+recBadge;
       el.onclick=(e)=>{ e.stopPropagation(); if(busy)return; closeHandModal(); playYouCard(i); };
       modalGrid.appendChild(el);
     });
@@ -1815,10 +1863,10 @@ function renderHand(){
   // 下部の簡易表示(プレビューのみ。タップは親のhandWrapが受けてモーダルを開く)
   indexed.forEach(({c,i})=>{
     const el=document.createElement('div');
-    el.className='hcard '+c.attr+(hasCardImg()?' art':'');
+    el.className='hcard '+c.attr+(useRichCards()?' art':' bcard mini');
     if(youJustDrawnKey && c.attr+c.num===youJustDrawnKey){ el.classList.add('just-drawn'); }
-    if(hasCardImg()){ el.style.backgroundImage=`url(${attrImgUrl(c.attr)})`; el.innerHTML=numBadge(c.num,'sm'); }
-    else el.innerHTML=`<div class="ha">${ALABEL[c.attr]}</div><div class="hg"></div><div class="hn">${c.num}</div>`;
+    if(useRichCards()){ el.style.backgroundImage=`url(${attrImgUrl(c.attr)})`; el.innerHTML=numBadge(c.num,'sm'); }
+    else el.innerHTML=beginnerInner(c, true);
     if(phase!=='pick'){ el.style.opacity='0.5'; }
     el.style.cursor='default'; el.style.pointerEvents='none';
     h.appendChild(el);
@@ -1859,9 +1907,9 @@ function openSwapModal(){
   document.getElementById('handModalContext').innerHTML =
     `<div style="color:var(--gold-bright);font-size:12px;margin-bottom:4px;">入替先を選んでください（戦略-${SWAP_COST}）</div>`;
   youHand.forEach((c,i)=>{
-    const el=document.createElement('div'); el.className='hmg-card '+c.attr+(hasCardImg()?' art':'');
-    if(hasCardImg()){ el.style.backgroundImage=`url(${attrImgUrl(c.attr)})`; el.innerHTML=numBadge(c.num)+rpsBadge(c.attr); }
-    else el.innerHTML=`<div class="ha">${AJP[c.attr]}</div><div class="hn">${c.num}</div>`+rpsBadge(c.attr);
+    const el=document.createElement('div'); el.className='hmg-card '+c.attr+(useRichCards()?' art':' bcard');
+    if(useRichCards()){ el.style.backgroundImage=`url(${attrImgUrl(c.attr)})`; el.innerHTML=numBadge(c.num)+rpsBadge(c.attr); }
+    else el.innerHTML=beginnerInner(c);
     el.onclick=()=>{ executeSwap(i); };
     grid.appendChild(el);
   });
@@ -1888,10 +1936,25 @@ function executeSwap(idx){
 function attrImgUrl(attr){ return (typeof CARD_IMG!=='undefined' && CARD_IMG[attr]) ? CARD_IMG[attr] : ''; }
 function hasCardImg(){ return typeof CARD_IMG!=='undefined' && CARD_IMG.sun; }
 function numBadge(num, sz){ return `<span class="cnum-badge ${sz||''}">${num}</span>`; }
-// 表向き画像カード(属性が分かる自分の札・公開後の札)
+// ===== カード表示モード(初心者向け=beginner / 上級者向け=rich) =====
+let cardStyle='beginner';
+try{ cardStyle=(localStorage.getItem('maskd_cardstyle')||'beginner')==='rich'?'rich':'beginner'; }catch(e){}
+function useRichCards(){ return hasCardImg() && cardStyle==='rich'; }
+const BEG_RPS={moon:'✊',dark:'✌️',sun:'✋'};   // 大きく表示するじゃんけん(絵文字表現)
+const ROLE_LABEL={kaos:'特殊', air:'引分'};      // じゃんけん外の属性の役割
+// 初心者向けカードの中身(属性色・大きなじゃんけん・大きな数字・属性名)
+function beginnerInner(c, mini){
+  const rps=BEG_RPS[c.attr];
+  const center = rps ? `<span class="bc-big">${rps}</span>`
+                     : `<span class="bc-big sym" style="color:var(--${c.attr})">${GLYPH[c.attr]}</span>`;
+  if(mini) return `<span class="bc-num">${c.num}</span>${center}`;
+  const role = ROLE_LABEL[c.attr] ? `<span class="bc-role">${ROLE_LABEL[c.attr]}</span>` : '';
+  return `<span class="bc-num">${c.num}</span><span class="bc-glyph">${GLYPH[c.attr]}</span>${center}${role}<span class="bc-name">${AJP[c.attr]}</span>`;
+}
+// 表向きカード(属性が分かる自分の札・公開後の札)
 function faceCardHTML(c, extra){
-  if(!hasCardImg()) return `<div class="card faceup ${c.attr} flip-in ${extra||''}"><div class="attr">${ALABEL[c.attr]}</div><div class="glyph">${GLYPH[c.attr]}</div><div class="num">${c.num}</div>${rpsBadge(c.attr)}</div>`;
-  return `<div class="card art faceup ${c.attr} flip-in ${extra||''}" style="background-image:url(${attrImgUrl(c.attr)})">${numBadge(c.num)}${rpsBadge(c.attr)}</div>`;
+  if(useRichCards()) return `<div class="card art faceup ${c.attr} flip-in ${extra||''}" style="background-image:url(${attrImgUrl(c.attr)})">${numBadge(c.num)}${rpsBadge(c.attr)}</div>`;
+  return `<div class="card faceup bcard ${c.attr} flip-in ${extra||''}">${beginnerInner(c)}</div>`;
 }
 function cardHTML(c, faceDown, ownerLabel){
   if(faceDown){
@@ -2685,8 +2748,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.22.0';
+const GAME_VERSION = 'v0.23.0';
 const CHANGELOG = [
+  { version:'v0.23.0', date:'2026-07-12', items:[
+    'カード表示モードを追加：「初心者向け」（属性色・大きなじゃんけん✊✌✋・大きな数字・属性名。KaosとAirは役割を明記）と「上級者向け」（従来のリッチな絵）を設定で切り替え可能に。初期値は初心者向け。手札・場・プレビュー・チュートリアルすべてに反映（相手の非公開情報の推理はそのまま維持）',
+  ]},
   { version:'v0.22.0', date:'2026-07-12', items:[
     'ルール説明を全面刷新：実際のカード画像を使った図解ガイド（仮面騎士テーマ・全7幕＋細則）に。属性一覧・配札図・じゃんけん三竦み図・Kaos/Airの対戦例・終盤×2・戦略カウンター・得点式を、ゲーム内の本物のカードで視覚的に解説',
   ]},
@@ -2999,8 +3065,12 @@ function closeRules(){ document.getElementById('rulesModal').classList.remove('s
 const TUT_KEY='maskd_tut_seen_v1';
 let tutStep=0;
 function tutCard(attr,num,label){
-  const bg = hasCardImg()?`background-image:url(${attrImgUrl(attr)})`:'';
-  return `<div class="tut-card" style="${bg}">${label?`<span class="tc-label">${label}</span>`:''}<span class="tc-num">${num}</span></div>`;
+  const lbl = label?`<span class="tc-label">${label}</span>`:'';
+  if(useRichCards()){
+    const bg = attrImgUrl(attr)?`background-image:url(${attrImgUrl(attr)})`:'';
+    return `<div class="tut-card" style="${bg}">${lbl}<span class="tc-num">${num}</span></div>`;
+  }
+  return `<div class="tut-card bcard ${attr}">${lbl}${beginnerInner({attr,num})}</div>`;
 }
 function tutBack(num,label){
   return `<div class="tut-card tut-back">${label?`<span class="tc-label">${label}</span>`:''}<span class="tc-num">${num}</span></div>`;
