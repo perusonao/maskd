@@ -133,13 +133,13 @@
   .deal-stage-wrap{ display:flex; flex-direction:column; align-items:center; gap:6px; margin:14px 0; }
   .dz-label{ font-size:11px; color:var(--ink-dim); } .dz-label b{ color:var(--gold-bright); font-size:13px; }
   .dz-label.cpu{ color:var(--ink-dim); } .dz-label.you{ color:var(--ink); }
-  .deal-stage{ position:relative; width:280px; height:230px; }
-  .deal-card{ position:absolute; top:50%; left:50%; width:24px; height:33px; border-radius:4px;
-    background:var(--card-back,#1a1526) center/cover, #14121c; border:1px solid rgba(201,162,74,0.3);
-    transform:translate(-50%,-50%); box-shadow:0 1px 3px rgba(0,0,0,0.6);
-    transition:transform .5s cubic-bezier(.2,.7,.3,1), box-shadow .3s ease, border-color .3s ease; }
-  .deal-card.hand{ box-shadow:0 0 9px 1px var(--gold-bright); border-color:var(--gold-bright); z-index:2; }
-  .deal-caption{ font-size:12px; color:var(--ink-dim); margin-top:4px; min-height:20px; }
+  .deal-stage{ position:relative; width:250px; height:420px; }
+  .deal-card{ position:absolute; top:50%; left:50%; width:38px; height:52px; border-radius:6px;
+    background:var(--card-back,#1a1526) center/cover, #14121c; border:1px solid rgba(201,162,74,0.35);
+    transform:translate(-50%,-50%); box-shadow:0 2px 5px rgba(0,0,0,0.6);
+    transition:transform .6s cubic-bezier(.2,.7,.3,1), box-shadow .4s ease, border-color .4s ease; }
+  .deal-card.hand{ box-shadow:0 0 16px 3px var(--gold-bright); border-color:var(--gold-bright); z-index:2; }
+  .deal-caption{ font-size:13px; color:var(--ink); margin-top:8px; min-height:22px; }
   .deal-caption b{ color:var(--gold-bright); } .deal-caption .hl{ color:var(--gold-bright); }
   .deal-skip{ font-size:9px; color:var(--ink-dim); opacity:0.6; margin-top:6px; }
   .dd-front .dd-a{ font-size:8px; letter-spacing:0.04em; }
@@ -1336,25 +1336,27 @@ function playDealAnimation(done){
   _dealAnimTimers.forEach(clearTimeout); _dealAnimTimers=[];
   cap.textContent='全30枚を配ります…';
   stage.innerHTML='';
-  const cards=[]; const cols=5, stepx=30, stepy=22;
+  const cards=[]; const cols=5, stepx=44, stepy=52;
   for(let i=0;i<30;i++){ const el=document.createElement('div'); el.className='deal-card'; stage.appendChild(el); cards.push(el); }
   const posFor=(idx,zone)=>{ const r=Math.floor(idx/cols), c=idx%cols; const x=(c-(cols-1)/2)*stepx;
-    const y = zone==='cpu' ? (-58 - r*stepy) : (36 + r*stepy); return {x,y}; };
+    const y = zone==='cpu' ? (-60 - r*stepy) : (48 + r*stepy); return {x,y}; };
   cards.forEach((el,i)=>{ const zone=i%2===0?'you':'cpu'; const idx=Math.floor(i/2); const {x,y}=posFor(idx,zone); el.dataset.x=x; el.dataset.y=y; el.dataset.zone=zone; });
   ov.style.display='flex';
   const doneOnce=(()=>{ let called=false; return ()=>{ if(called)return; called=true; _dealAnimTimers.forEach(clearTimeout); _dealAnimTimers=[]; ov.style.display='none'; ov.onclick=null; if(done)done(); }; })();
   ov.onclick=doneOnce; // タップでスキップ
+  const STEP=45, START=400; // ゆっくり配る
   requestAnimationFrame(()=>{
     cards.forEach((el,i)=>{ _dealAnimTimers.push(setTimeout(()=>{
       el.style.transform=`translate(calc(-50% + ${el.dataset.x}px), calc(-50% + ${el.dataset.y}px))`;
-    }, 250+i*16)); });
+      if(i===0) cap.innerHTML='<b>相手</b>と<b>あなた</b>へ 15枚ずつ…';
+    }, START+i*STEP)); });
   });
   // あなたの15枚のうち5枚を手札としてハイライト＋説明
   _dealAnimTimers.push(setTimeout(()=>{
     cards.filter(el=>el.dataset.zone==='you').slice(0,5).forEach(el=>el.classList.add('hand'));
-    cap.innerHTML='各<b>15</b>枚ずつ配札 ／ あなた：<b class="hl">手札5</b>＋山札10';
-  }, 250+30*16+300));
-  _dealAnimTimers.push(setTimeout(doneOnce, 250+30*16+1700));
+    cap.innerHTML='各<b>15</b>枚を配札 ／ あなた：光る<b class="hl">5枚が手札</b>、残り10枚が山札';
+  }, START+30*STEP+700));
+  _dealAnimTimers.push(setTimeout(doneOnce, START+30*STEP+2600));
 }
 
 function startGame(initialDealerIsYou){
@@ -2546,8 +2548,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.20.0';
+const GAME_VERSION = 'v0.20.1';
 const CHANGELOG = [
+  { version:'v0.20.1', date:'2026-07-11', items:[
+    '配札演出を見やすく調整：カードを大きく、配るスピードをゆっくりにして、分配の様子が分かりやすいように',
+  ]},
   { version:'v0.20.0', date:'2026-07-11', items:[
     '親決めの後に「配札」の演出を追加：全30枚が相手・あなたへ15枚ずつ配られ、あなたの手札5枚が光る様子を表示（タップでスキップ可）',
     '残り手札ボーナスを「手札のみ」に変更（山札は対象外に）。引き運を得点に持ち込まない設計にし、名前と実装のズレも解消。シミュレータで配札運が下がり実力・戦闘重視になることを確認',
