@@ -128,6 +128,20 @@
   .dd-back{ background:var(--card-back) center/cover no-repeat, #14121c; }
   .dd-front{ transform:rotateY(180deg); background:var(--bg-panel); }
   .dd-front.art{ background-size:cover; background-position:center; }
+
+  /* 配札演出(30枚→各15枚→手札5/山札10) */
+  .deal-stage-wrap{ display:flex; flex-direction:column; align-items:center; gap:6px; margin:14px 0; }
+  .dz-label{ font-size:11px; color:var(--ink-dim); } .dz-label b{ color:var(--gold-bright); font-size:13px; }
+  .dz-label.cpu{ color:var(--ink-dim); } .dz-label.you{ color:var(--ink); }
+  .deal-stage{ position:relative; width:280px; height:230px; }
+  .deal-card{ position:absolute; top:50%; left:50%; width:24px; height:33px; border-radius:4px;
+    background:var(--card-back,#1a1526) center/cover, #14121c; border:1px solid rgba(201,162,74,0.3);
+    transform:translate(-50%,-50%); box-shadow:0 1px 3px rgba(0,0,0,0.6);
+    transition:transform .5s cubic-bezier(.2,.7,.3,1), box-shadow .3s ease, border-color .3s ease; }
+  .deal-card.hand{ box-shadow:0 0 9px 1px var(--gold-bright); border-color:var(--gold-bright); z-index:2; }
+  .deal-caption{ font-size:12px; color:var(--ink-dim); margin-top:4px; min-height:20px; }
+  .deal-caption b{ color:var(--gold-bright); } .deal-caption .hl{ color:var(--gold-bright); }
+  .deal-skip{ font-size:9px; color:var(--ink-dim); opacity:0.6; margin-top:6px; }
   .dd-front .dd-a{ font-size:8px; letter-spacing:0.04em; }
   .dd-front .dd-n{ font-size:20px; font-weight:700; font-family:'Cormorant Garamond',serif; }
   .dd-front.moon{ color:var(--moon); border-color:var(--moon); }
@@ -903,6 +917,18 @@
     <div id="dealerDrawResult" style="font-size:14px;color:var(--gold-bright);min-height:40px;"></div>
   </div>
 
+  <div class="overlay" id="dealAnimOverlay" style="display:none;">
+    <div class="big" style="font-size:24px;">配札</div>
+    <p style="font-size:11px;color:var(--ink-dim);">全30枚を2人へ分配</p>
+    <div class="deal-stage-wrap">
+      <div class="dz-label cpu">相手 <b>15</b>枚</div>
+      <div class="deal-stage" id="dealStage"></div>
+      <div class="dz-label you">あなた <b>15</b>枚</div>
+    </div>
+    <div class="deal-caption" id="dealCaption"></div>
+    <div class="deal-skip">タップでスキップ</div>
+  </div>
+
   <div class="overlay" id="overlay">
     <div class="big" id="ovTitle">VICTORY</div>
     <div class="score-final" id="ovScore"></div>
@@ -993,7 +1019,7 @@
         <li>初期値0。<b>勝った側は、相手が出した仮面の数字ぶん得点を獲得</b>する（負けた側の得点は減らない）</li>
         <li><b style="color:var(--kaos)">終盤決戦</b>：最終2ラウンド（第7・8R）の決戦は<b>得点が2倍</b>。逆転の最後のチャンス。強いカードを終盤まで温存する戦略も有効</li>
         <li>8ラウンド後、<b>得点＋残り戦略カウンター＋残り手札ボーナス</b>の合計が多い方の勝ち</li>
-        <li><b>残り手札ボーナス</b>：使わずに残ったカードの数字を加算（<b style="color:var(--air)">Airは数字を2倍</b>にして計算）</li>
+        <li><b>残り手札ボーナス</b>：<b>手札に残ったカード</b>の数字を加算（<b style="color:var(--air)">Airは数字を2倍</b>にして計算）。山札は対象外</li>
       </ul>
       <h3>戦略カウンター（初期値5、各自個別）</h3>
       <table class="trust-table">
@@ -1297,8 +1323,38 @@ function resolveDealerDraw(youAttr, cpuAttr){
   resultEl.innerHTML = `${AJP[winAttr]}0 が ${AJP[loseAttr]}0 に勝利<br><b style="color:var(--gold-bright)">✦ ${youWins?'あなた':'相手'}が第1ラウンドの親！ ✦</b>`;
   setTimeout(()=>{
     document.getElementById('dealerDrawOverlay').classList.remove('show');
-    startGame(youWins);
+    playDealAnimation(()=>startGame(youWins)); // 親決め後に配札演出→ゲーム開始
   }, 1700);
+}
+
+// 配札演出: 30枚の裏札が中央から相手/あなたへ15枚ずつ飛び、あなたの5枚が手札としてハイライト
+let _dealAnimTimers=[];
+function playDealAnimation(done){
+  const ov=document.getElementById('dealAnimOverlay');
+  const stage=document.getElementById('dealStage');
+  const cap=document.getElementById('dealCaption');
+  _dealAnimTimers.forEach(clearTimeout); _dealAnimTimers=[];
+  cap.textContent='全30枚を配ります…';
+  stage.innerHTML='';
+  const cards=[]; const cols=5, stepx=30, stepy=22;
+  for(let i=0;i<30;i++){ const el=document.createElement('div'); el.className='deal-card'; stage.appendChild(el); cards.push(el); }
+  const posFor=(idx,zone)=>{ const r=Math.floor(idx/cols), c=idx%cols; const x=(c-(cols-1)/2)*stepx;
+    const y = zone==='cpu' ? (-58 - r*stepy) : (36 + r*stepy); return {x,y}; };
+  cards.forEach((el,i)=>{ const zone=i%2===0?'you':'cpu'; const idx=Math.floor(i/2); const {x,y}=posFor(idx,zone); el.dataset.x=x; el.dataset.y=y; el.dataset.zone=zone; });
+  ov.style.display='flex';
+  const doneOnce=(()=>{ let called=false; return ()=>{ if(called)return; called=true; _dealAnimTimers.forEach(clearTimeout); _dealAnimTimers=[]; ov.style.display='none'; ov.onclick=null; if(done)done(); }; })();
+  ov.onclick=doneOnce; // タップでスキップ
+  requestAnimationFrame(()=>{
+    cards.forEach((el,i)=>{ _dealAnimTimers.push(setTimeout(()=>{
+      el.style.transform=`translate(calc(-50% + ${el.dataset.x}px), calc(-50% + ${el.dataset.y}px))`;
+    }, 250+i*16)); });
+  });
+  // あなたの15枚のうち5枚を手札としてハイライト＋説明
+  _dealAnimTimers.push(setTimeout(()=>{
+    cards.filter(el=>el.dataset.zone==='you').slice(0,5).forEach(el=>el.classList.add('hand'));
+    cap.innerHTML='各<b>15</b>枚ずつ配札 ／ あなた：<b class="hl">手札5</b>＋山札10';
+  }, 250+30*16+300));
+  _dealAnimTimers.push(setTimeout(doneOnce, 250+30*16+1700));
 }
 
 function startGame(initialDealerIsYou){
@@ -2490,8 +2546,12 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.19.1';
+const GAME_VERSION = 'v0.20.0';
 const CHANGELOG = [
+  { version:'v0.20.0', date:'2026-07-11', items:[
+    '親決めの後に「配札」の演出を追加：全30枚が相手・あなたへ15枚ずつ配られ、あなたの手札5枚が光る様子を表示（タップでスキップ可）',
+    '残り手札ボーナスを「手札のみ」に変更（山札は対象外に）。引き運を得点に持ち込まない設計にし、名前と実装のズレも解消。シミュレータで配札運が下がり実力・戦闘重視になることを確認',
+  ]},
   { version:'v0.19.1', date:'2026-07-11', items:[
     '結果画面のボタンのサイズを統一：上段3つ（履歴・対戦ログ・通算統計）を同幅・1行に、下段（もう一度・とじる）を同幅に揃えて、折り返しや不揃いを解消',
   ]},
@@ -3042,16 +3102,14 @@ function showLogConsent(send){
 
 function endGame(){
   const ov=document.getElementById('overlay'), t=document.getElementById('ovTitle');
-  // 残り手札ボーナス: 使わなかったカードの数字を加算(Airは2倍)
-  const calcLeftoverBonus=(hand, drawPile)=>{
+  // 残り手札ボーナス: 手札に残ったカードの数字を加算(Airは2倍)。山札は対象外(引き運を得点に持ち込まないため)
+  const calcLeftoverBonus=(hand)=>{
     let bonus=0;
-    [...hand, ...drawPile].forEach(c=>{
-      bonus += c.attr==='air' ? c.num*AIR_LEFTOVER_MULTIPLIER : c.num;
-    });
+    hand.forEach(c=>{ bonus += c.attr==='air' ? c.num*AIR_LEFTOVER_MULTIPLIER : c.num; });
     return bonus;
   };
-  const youLeftoverBonus = calcLeftoverBonus(youHand, youDrawPile);
-  const cpuLeftoverBonus = calcLeftoverBonus(cpuHand, cpuDrawPile);
+  const youLeftoverBonus = calcLeftoverBonus(youHand);
+  const cpuLeftoverBonus = calcLeftoverBonus(cpuHand);
   // 戦略カウンターの残りと、残り手札ボーナスを得点に加算
   const youFinal = youLP + youTrust + youLeftoverBonus;
   const cpuFinal = cpuLP + cpuTrust + cpuLeftoverBonus;
@@ -3083,12 +3141,12 @@ function endGame(){
       `<div class="rp-v">${val}</div></div>`;
   }).join('');
   const roundSection=`<div class="round-points"><div class="rp-title">各ラウンドの対戦と獲得ポイント（決戦の得点の内訳）<span class="rp-legend"><b class="you">■</b>あなた <b class="cpu">■</b>相手</span></div><div class="rp-grid">${rpCells}</div></div>`;
-  // 最終的な残り手札(残り手札ボーナスの内訳)
-  const remainSort=(h,d)=>[...h,...d].sort((a,b)=>a.num-b.num || a.attr.localeCompare(b.attr));
+  // 最終的な残り手札(残り手札ボーナスの内訳。山札は対象外)
+  const remainSort=h=>[...h].sort((a,b)=>a.num-b.num || a.attr.localeCompare(b.attr));
   const tagList=cards=>cards.length?cards.map(cardTag).join(' '):'<span class="rs-none">なし</span>';
-  const remainSection=`<div class="round-points"><div class="rp-title">最終的な残り手札（残り手札ボーナスの内訳・Air×2）</div>
-    <div class="rs-hand"><span class="rs-who you">あなた +${youLeftoverBonus}</span><span class="rs-cards">${tagList(remainSort(youHand,youDrawPile))}</span></div>
-    <div class="rs-hand"><span class="rs-who cpu">相手 +${cpuLeftoverBonus}</span><span class="rs-cards">${tagList(remainSort(cpuHand,cpuDrawPile))}</span></div></div>`;
+  const remainSection=`<div class="round-points"><div class="rp-title">最終的な残り手札（残り手札ボーナスの内訳・Air×2／山札は対象外）</div>
+    <div class="rs-hand"><span class="rs-who you">あなた +${youLeftoverBonus}</span><span class="rs-cards">${tagList(remainSort(youHand))}</span></div>
+    <div class="rs-hand"><span class="rs-who cpu">相手 +${cpuLeftoverBonus}</span><span class="rs-cards">${tagList(remainSort(cpuHand))}</span></div></div>`;
   const extra=`<div id="ovExtra">
     ${roundSection}
     ${remainSection}
