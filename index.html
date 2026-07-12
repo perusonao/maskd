@@ -127,6 +127,7 @@
     border-radius:9px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; border:1px solid var(--line); }
   .dd-back{ background:var(--card-back) center/cover no-repeat, #14121c; }
   .dd-front{ transform:rotateY(180deg); background:var(--bg-panel); }
+  .dd-front.art{ background-size:cover; background-position:center; }
   .dd-front .dd-a{ font-size:8px; letter-spacing:0.04em; }
   .dd-front .dd-n{ font-size:20px; font-weight:700; font-family:'Cormorant Garamond',serif; }
   .dd-front.moon{ color:var(--moon); border-color:var(--moon); }
@@ -714,14 +715,22 @@
   .rp-legend{ white-space:nowrap; flex-shrink:0; }
   .rp-legend b{ font-size:8px; margin:0 2px 0 6px; }
   .rp-legend b.you{ color:var(--gold-bright); } .rp-legend b.cpu{ color:var(--lose); }
-  .rp-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
-  .rp-cell{ border:1px solid var(--line); border-radius:8px; padding:5px 2px; text-align:center; display:flex; flex-direction:column; gap:2px; background:var(--bg-panel); }
+  .rp-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:5px; }
+  .rp-cell{ border:1px solid var(--line); border-radius:8px; padding:6px 6px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:3px; background:var(--bg-panel); }
   .rp-r{ font-size:8px; color:var(--ink-dim); }
   .rp-x2{ color:var(--kaos); font-size:7px; margin-left:2px; }
-  .rp-v{ font-size:15px; font-weight:700; font-family:'Cormorant Garamond',serif; color:var(--ink); }
+  .rp-cards{ display:flex; align-items:center; gap:4px; }
+  .rp-vs{ font-size:8px; color:var(--ink-dim); }
+  .rp-v{ font-size:14px; font-weight:700; font-family:'Cormorant Garamond',serif; color:var(--ink); }
   .rp-cell.you{ border-color:rgba(217,180,90,0.5); } .rp-cell.you .rp-v{ color:var(--gold-bright); }
   .rp-cell.cpu{ border-color:rgba(193,75,82,0.45); } .rp-cell.cpu .rp-v{ color:var(--lose); }
   .rp-cell.none .rp-v{ color:var(--ink-dim); font-size:10px; }
+  /* 最終的な残り手札 */
+  .rs-hand{ display:flex; align-items:flex-start; gap:8px; margin-top:6px; }
+  .rs-who{ flex-shrink:0; font-size:10px; padding-top:2px; white-space:nowrap; }
+  .rs-who.you{ color:var(--gold-bright); } .rs-who.cpu{ color:var(--lose); }
+  .rs-cards{ display:flex; flex-wrap:wrap; gap:3px; }
+  .rs-none{ color:var(--ink-dim); font-size:10px; }
   .btn-close-modal{
     align-self:center; padding:8px 28px; border-radius:10px; font-size:11px;
     color:var(--gold); border:1px solid rgba(201,162,74,0.4); cursor:pointer; letter-spacing:0.05em;
@@ -1241,10 +1250,10 @@ function setupDealerDraw(){
   _ddState.available.forEach(attr=>{
     const el=document.createElement('div');
     el.className='dd-card'; el.dataset.attr=attr;
-    el.innerHTML=`<div class="dd-inner">
-      <div class="dd-face dd-back"></div>
-      <div class="dd-face dd-front ${attr}"><span class="dd-a">${ALABEL[attr]}</span><span class="dd-n">0</span></div>
-    </div><div class="dd-label"></div>`;
+    const front = hasCardImg()
+      ? `<div class="dd-face dd-front art ${attr}" style="background-image:url(${attrImgUrl(attr)})">${numBadge(0)}</div>`
+      : `<div class="dd-face dd-front ${attr}"><span class="dd-a">${ALABEL[attr]}</span><span class="dd-n">0</span></div>`;
+    el.innerHTML=`<div class="dd-inner"><div class="dd-face dd-back"></div>${front}</div><div class="dd-label"></div>`;
     el.onclick=()=>playerPickDealer(attr);
     cont.appendChild(el);
   });
@@ -2481,8 +2490,13 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.18.0';
+const GAME_VERSION = 'v0.19.0';
 const CHANGELOG = [
+  { version:'v0.19.0', date:'2026-07-11', items:[
+    '親決めのカード表面も、ゲーム本編と同じ属性イラスト＋数字バッジで表示するように統一',
+    '結果画面の各ラウンド欄に対戦カード（親札 vs 子札）を表示。獲得ポイントと合わせて一目で分かるように',
+    '結果画面に「最終的な残り手札」を追加。両者の使い残しカードと残り手札ボーナスの内訳を表示',
+  ]},
   { version:'v0.18.0', date:'2026-07-11', items:[
     '結果画面に「ラウンド別 獲得ポイント」を追加。各ラウンドで誰が何点取ったか（引分・撤退も）を一覧表示し、色でどちらの得点かを区別（決戦の得点の内訳）。終盤2倍のラウンドには×2表示',
   ]},
@@ -3052,7 +3066,8 @@ function endGame(){
     ${rowHTML('残り手札ボーナス','Air×2',youLeftoverBonus,cpuLeftoverBonus,'+','sb-row')}
     ${rowHTML('合計','',youFinal,cpuFinal,'','sb-total')}
   </div>`;
-  // ラウンド別の獲得ポイント(決戦の得点の内訳)
+  // 各ラウンドの対戦カードと獲得ポイント(決戦の得点の内訳)
+  const cardTag=c=>`<span class="hist-tag ${c.attr}">${AJP[c.attr]}${c.num}</span>`;
   const rpCells=roundLog.map(r=>{
     const passed=!!r.passed, draw=r.result==='draw';
     const pts=(passed||draw)?0:(r.dmg||0);
@@ -3060,11 +3075,20 @@ function endGame(){
     if(!passed && !draw) who=((r.result==='dealer')===r.dealerIsYou)?'you':'cpu';
     const late = !passed && !draw && r.round>=LATE_GAME_START;
     const val = who==='none' ? (passed?'撤退':'引分') : `+${pts}`;
-    return `<div class="rp-cell ${who}"><span class="rp-r">R${r.round}${late?'<span class="rp-x2">×2</span>':''}</span><span class="rp-v">${val}</span></div>`;
+    return `<div class="rp-cell ${who}"><div class="rp-r">R${r.round}${late?'<span class="rp-x2">×2</span>':''}</div>`+
+      `<div class="rp-cards">${cardTag(r.dealerCard)}<span class="rp-vs">vs</span>${cardTag(r.childCard)}</div>`+
+      `<div class="rp-v">${val}</div></div>`;
   }).join('');
-  const roundSection=`<div class="round-points"><div class="rp-title">ラウンド別 獲得ポイント（決戦の得点の内訳）<span class="rp-legend"><b class="you">■</b>あなた <b class="cpu">■</b>相手</span></div><div class="rp-grid">${rpCells}</div></div>`;
+  const roundSection=`<div class="round-points"><div class="rp-title">各ラウンドの対戦と獲得ポイント（決戦の得点の内訳）<span class="rp-legend"><b class="you">■</b>あなた <b class="cpu">■</b>相手</span></div><div class="rp-grid">${rpCells}</div></div>`;
+  // 最終的な残り手札(残り手札ボーナスの内訳)
+  const remainSort=(h,d)=>[...h,...d].sort((a,b)=>a.num-b.num || a.attr.localeCompare(b.attr));
+  const tagList=cards=>cards.length?cards.map(cardTag).join(' '):'<span class="rs-none">なし</span>';
+  const remainSection=`<div class="round-points"><div class="rp-title">最終的な残り手札（残り手札ボーナスの内訳・Air×2）</div>
+    <div class="rs-hand"><span class="rs-who you">あなた +${youLeftoverBonus}</span><span class="rs-cards">${tagList(remainSort(youHand,youDrawPile))}</span></div>
+    <div class="rs-hand"><span class="rs-who cpu">相手 +${cpuLeftoverBonus}</span><span class="rs-cards">${tagList(remainSort(cpuHand,cpuDrawPile))}</span></div></div>`;
   const extra=`<div id="ovExtra">
     ${roundSection}
+    ${remainSection}
     <div class="match-summary">
       <div class="ms-row"><span>勝敗</span><span>あなた${s.youWins}勝 － ${s.cpuWins}勝相手 （引分${s.draws}）</span></div>
       <div class="ms-row"><span>撤退回数</span><span>${s.passes}回</span></div>
