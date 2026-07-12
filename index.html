@@ -367,6 +367,29 @@
   .deck-card.facedown{ background:var(--card-back) center/cover no-repeat, linear-gradient(160deg,#241a33,#140e1f); }
   /* 上級者モードでは相性ストリップ(じゃんけん)を隠す */
   .app.rich-mode .compat-strip{ display:none; }
+  /* #2 出した札の重複表示を削除(使用済みは場に表示済み) */
+  .you-played-row{ display:none !important; }
+  /* #4 メッセージを不透明にして背後(VS/カード)と重ならないよう */
+  .field > .msg-window{ background:linear-gradient(180deg,#1a1626,#12101a); }
+  /* #5 場の余白を整理: カードを上下の端に寄せ、空きを中央(案内/行動/結果の場所)に集約 */
+  .play-area .field{ margin:4px 0; }
+  .field{ grid-template-rows:auto auto 1fr auto auto !important; row-gap:4px; }
+  .field .mid-divider{ min-height:100px; justify-content:center; }
+  /* #6 場に表示する各プレイヤーの得点 */
+  .pi-pt{ font-size:10px; color:var(--ink-dim); letter-spacing:0.04em; white-space:nowrap; }
+  .pinfo.you .pi-pt{ color:var(--gold-bright); }
+  .pi-pt b{ font-family:'Cormorant Garamond',serif; font-size:15px; font-weight:700; color:var(--gold); margin:0 1px; }
+  /* #7 空になった上部コンテキスト枠を消す */
+  .hmc-context:empty{ display:none; }
+  /* #8 手札選択モーダル: 1列で5枚 */
+  .hand-modal-grid{ display:grid !important; grid-template-columns:repeat(5,1fr); gap:5px; flex-wrap:nowrap; align-items:end; }
+  .hand-modal-grid .hmg-card{ width:100%; height:auto; aspect-ratio:64/88; }
+  /* #9 相手の手札モーダル: 手札選択と同様のレイアウト(1列・大きめ) */
+  #oppHandModalBody{ display:block; }
+  #oppHandModalBody > div{ display:grid !important; grid-template-columns:repeat(5,1fr); gap:6px; justify-content:center; padding:8px 0 !important; }
+  #oppHandModalBody .opp-card{ width:100%; height:auto; aspect-ratio:60/84; }
+  #oppHandModalBody .opp-card .opp-num{ font-size:20px; }
+  #oppHandModalBody .opp-rps-g{ font-size:17px; }
   /* メッセージウィンドウ: 場の中央にオーバーレイ表示 */
   .field > .msg-window{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
     width:calc(100% - 24px); max-width:320px; margin:0; z-index:8; pointer-events:none;
@@ -1374,21 +1397,23 @@
     <div class="field">
       <div class="zone-wrap"><div class="zone-hint" id="oppCardHint"></div></div>
       <div class="slot-line">
+        <div class="slot-side"></div>
+        <div class="slot-row" id="cpuSlot"><div class="empty-slot">待機</div></div>
         <div class="pinfo cpu" id="cpuCell" onclick="openOppHandModal()">
           <span class="pi-role" id="cpuDealerTag">親</span>
+          <span class="pi-pt">相手 <b id="cpuLP2">0</b>pt</span>
           <div class="deck-chip opp" id="deckBarOpp" onclick="event.stopPropagation(); openOppDeckModal()"></div>
           <div class="pi-ctr"><div class="lp-bar-wrap cpu" id="cpuBarWrap"></div></div>
           <span class="pi-token" id="cpuToken"></span>
           <div class="pi-used" id="cpuUsed"></div>
           <span class="pi-hand" id="cpuRailHint"></span>
         </div>
-        <div class="slot-row" id="cpuSlot"><div class="empty-slot">待機</div></div>
-        <div class="slot-side"></div>
       </div>
-      <div class="mid-divider"><div class="ln"></div><div class="vs">VS</div><div class="ln"></div></div>
+      <div class="mid-divider"><div class="ln"></div></div>
       <div class="slot-line">
         <div class="pinfo you" id="youCell">
           <span class="pi-role" id="youDealerTag">子</span>
+          <span class="pi-pt">あなた <b id="youLP2">0</b>pt</span>
           <div class="deck-chip" id="deckBar" onclick="event.stopPropagation(); openDeckModal()"></div>
           <div class="pi-ctr"><div class="lp-bar-wrap you" id="youBarWrap"></div></div>
           <span class="pi-token" id="youToken"></span>
@@ -1836,6 +1861,8 @@ function renderScore(){
   document.getElementById('roundN').textContent=round;
   document.getElementById('youLP').textContent=youLP;
   document.getElementById('cpuLP').textContent=cpuLP;
+  const y2=document.getElementById('youLP2'); if(y2) y2.textContent=youLP;
+  const c2=document.getElementById('cpuLP2'); if(c2) c2.textContent=cpuLP;
   // 戦略カウンターの増減を検出して演出(前回描画時との差分)
   const dY=youTrust-_lastYouTrust, dC=cpuTrust-_lastCpuTrust;
   renderTrustSegs('youBarWrap', youTrust);
@@ -1960,6 +1987,8 @@ function clearCoach(){ document.getElementById('coachLine').innerHTML=''; }
 function renderHandModalContext(){
   const ctx=document.getElementById('handModalContext');
   ctx.innerHTML='';
+  return; // 上部の情報(使用済み・山札・相手手札)は場に表示済みのため非表示にする
+  /* eslint-disable no-unreachable */
 
   // 自分の使用済み
   const row1=document.createElement('div'); row1.className='hmc-row';
@@ -2735,6 +2764,7 @@ function finishPassReveal(){
 function resolveFight(doFight, isCpuDealer){
   if(busy) return; busy=true;
   document.getElementById('actions').innerHTML='';
+  const fa=document.getElementById('fieldActions'); if(fa){ fa.classList.remove('show'); fa.innerHTML=''; } // 決着に入るので行動ボタンを隠す
 
   if(!doFight){
     // --- 子が戦略カウンターを払って撤退を無効化できる ---
@@ -3011,8 +3041,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.29.0';
+const GAME_VERSION = 'v0.30.0';
 const CHANGELOG = [
+  { version:'v0.30.0', date:'2026-07-12', items:[
+    '対戦画面の改善（要望を反映）：①結果表示と行動ボタン・メッセージが重ならないよう修正 ②重複していた「出した札」表示を削除（使用済みは場に表示済み） ③相手の情報を場の右側に配置 ④中央の「VS」を消してメッセージと重ならないように ⑤場の余白を整理（カードを上下の端に寄せ、中央を案内/行動の場所に） ⑥各プレイヤーの得点(pt)を場にも表示 ⑦手札選択モーダル上部の重複情報を削除 ⑧手札選択を1列5枚に ⑨相手の手札モーダルを手札選択と同様のレイアウトに',
+  ]},
   { version:'v0.29.0', date:'2026-07-12', items:[
     '対戦画面の改善（要望を反映）：①メッセージと結果表示が重ならないよう調整 ②ラウンド表記の[ ]を削除 ③上部バーを「あなた=左／相手=右」に変更 ④戦略カウンターを山札の下に移動（相手=赤／あなた=金） ⑤決戦・撤退・入替を場の中央に表示（選べる時だけ・モーダル廃止で入替後に進まなくなる不具合も解消） ⑥上級者向け表示ではじゃんけん記号と相性バーを非表示 ⑦自分の山札は「次に引く数字」は分かるが属性は伏せる ⑧お互いの使用済みカードを山札の下に表示 ⑨手札補充を画面中央のメッセージ＋山札を光らせる演出に',
   ]},
