@@ -130,7 +130,7 @@
   .dd-front.art{ background-size:cover; background-position:center; }
 
   /* 配札演出(30枚→各15枚→手札5/山札10) */
-  .deal-stage-wrap{ display:flex; flex-direction:column; align-items:center; gap:6px; margin:14px 0; }
+  .deal-stage-wrap{ display:flex; flex-direction:column; align-items:center; gap:6px; margin:14px 0; position:relative; }
   .dz-label{ font-size:11px; color:var(--ink-dim); } .dz-label b{ color:var(--gold-bright); font-size:13px; }
   .dz-label.cpu{ color:var(--ink-dim); } .dz-label.you{ color:var(--ink); }
   .deal-stage{ position:relative; width:250px; height:420px; }
@@ -145,8 +145,12 @@
   .df-front.dark{ border-color:var(--dark); } .df-front.kaos{ border-color:var(--kaos); } .df-front.air{ border-color:var(--air); }
   .df-back{ transform:rotateY(180deg); background:var(--card-back,#1a1526) center/cover, #14121c; }
   .deal-card.hand{ filter:drop-shadow(0 0 8px var(--gold-bright)); z-index:2; }
-  .deal-caption{ font-size:13px; color:var(--ink); margin-top:8px; min-height:22px; }
-  .deal-caption b{ color:var(--gold-bright); } .deal-caption .hl{ color:var(--gold-bright); }
+  /* ステップメッセージ: ステージ中央(相手とあなたの間)に大きく表示 */
+  .deal-caption{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:92%; max-width:330px; text-align:center; font-size:17px; font-weight:600; line-height:1.5;
+    color:var(--ink); background:rgba(8,7,12,0.8); border:1px solid rgba(201,162,74,0.28);
+    border-radius:12px; padding:10px 14px; z-index:6; pointer-events:none; box-shadow:0 4px 16px rgba(0,0,0,0.5); }
+  .deal-caption b{ color:var(--gold-bright); font-size:18px; } .deal-caption .hl{ color:var(--gold-bright); }
   .deal-skip{ font-size:9px; color:var(--ink-dim); opacity:0.6; margin-top:6px; }
   .dd-front .dd-a{ font-size:8px; letter-spacing:0.04em; }
   .dd-front .dd-n{ font-size:20px; font-weight:700; font-family:'Cormorant Garamond',serif; }
@@ -930,8 +934,8 @@
       <div class="dz-label cpu">相手 <b>15</b>枚</div>
       <div class="deal-stage" id="dealStage"></div>
       <div class="dz-label you">あなた <b>15</b>枚</div>
+      <div class="deal-caption" id="dealCaption"></div>
     </div>
-    <div class="deal-caption" id="dealCaption"></div>
     <div class="deal-skip">タップでスキップ</div>
   </div>
 
@@ -2591,8 +2595,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.20.4';
+const GAME_VERSION = 'v0.20.5';
 const CHANGELOG = [
+  { version:'v0.20.5', date:'2026-07-11', items:[
+    '配札演出のステップメッセージを、画面中央（相手とあなたの間）に大きな文字で表示するようにして読みやすく',
+  ]},
   { version:'v0.20.4', date:'2026-07-11', items:[
     '配札演出の各ステップのメッセージ表示時間を長くして、読みやすく調整（各段階を1.2〜1.8秒しっかり表示。タップでスキップ可）',
   ]},
