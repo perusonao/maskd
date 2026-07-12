@@ -2444,8 +2444,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.15.0';
+const GAME_VERSION = 'v0.16.0';
 const CHANGELOG = [
+  { version:'v0.16.0', date:'2026-07-11', items:[
+    'みんなの統計に「蓄積レコード数（総数）」を追加。Firestoreのサーバー側集計(getCountFromServer)で、全件をダウンロードせず正確な総数を取得（2000件を超えても総数は正確、以降の集計は直近サンプル）',
+  ]},
   { version:'v0.15.0', date:'2026-07-11', items:[
     '対戦ログ一覧で試合をタップすると、全ラウンドの詳細を専用モーダルで表示するように変更（インライン展開で全部見えなかった問題を解消）',
   ]},
@@ -2850,8 +2853,12 @@ async function openGlobalStats(){
   }
   body.innerHTML='<p style="text-align:center;color:var(--ink-dim);font-size:12px;">クラウドから読み込み中…</p>';
   try{
-    const logs=await window.__maskdFetchLogs();
-    if(!logs.length){
+    // 総レコード数はサーバー側集計で取得(全件DL不要)。集計統計は最大2000件のサンプルで算出。
+    const [logs, totalCount] = await Promise.all([
+      window.__maskdFetchLogs(),
+      window.__maskdFetchCount ? window.__maskdFetchCount().catch(()=>null) : Promise.resolve(null)
+    ]);
+    if(!logs.length && !totalCount){
       body.innerHTML='<p style="color:var(--ink-dim);text-align:center;font-size:12px;">まだクラウドに蓄積されたデータがありません。<br>「送って協力する」を選んだ対戦が集まると、ここに表示されます。</p>';
       return;
     }
@@ -2864,10 +2871,13 @@ async function openGlobalStats(){
       sumP+=(g.playerFinal||0); sumC+=(g.cpuFinal||0);
     });
     const N=logs.length, pct=x=>(x/N*100).toFixed(1)+'%';
+    const total=(totalCount!=null)?totalCount:N;
+    const sampledNote=(totalCount!=null && totalCount>N)?`<div class="ms-row"><span style="font-size:10px;color:var(--ink-dim);">※以下の集計は直近${N}件のサンプル</span><span></span></div>`:'';
     const diffStr=Object.keys(diff).sort().map(k=>`${DIFF_JP_G[k]||k} ${diff[k]}`).join(' ／ ')||'-';
     const verStr=Object.keys(vers).sort().reverse().slice(0,3).map(k=>`${k}:${vers[k]}`).join(' ／ ')||'-';
     body.innerHTML=`
-      <div class="ms-row"><span>蓄積プレイ数</span><span><b style="color:var(--gold-bright)">${N}</b> 戦</span></div>
+      <div class="ms-row"><span>蓄積レコード数（総数）</span><span><b style="color:var(--gold-bright)">${total}</b> 件</span></div>
+      ${sampledNote}
       <div class="ms-row"><span>参加プレイヤー数(概算)</span><span>${players.size} 人</span></div>
       <div class="ms-row"><span>プレイヤー勝率</span><span>${pct(pw)}（勝${pw}）</span></div>
       <div class="ms-row"><span>CPU勝率</span><span>${pct(cw)}（勝${cw}）</span></div>
@@ -3046,7 +3056,7 @@ if(typeof CARD_IMG!=='undefined' && CARD_IMG.back){
   if (firebaseConfig && firebaseConfig.projectId) {
     try {
       const { initializeApp } = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js");
-      const { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, limit } =
+      const { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, limit, getCountFromServer } =
         await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js");
       const app = initializeApp(firebaseConfig);
       const db = getFirestore(app);
@@ -3058,6 +3068,11 @@ if(typeof CARD_IMG!=='undefined' && CARD_IMG.back){
       window.__maskdFetchLogs = async () => {
         const snap = await getDocs(query(collection(db, "logs"), limit(2000)));
         const out = []; snap.forEach(d => out.push(d.data())); return out;
+      };
+      // 格納レコード数だけをサーバー側集計で取得(ドキュメント本体はダウンロードしない=低コスト)。
+      window.__maskdFetchCount = async () => {
+        const snap = await getCountFromServer(collection(db, "logs"));
+        return snap.data().count;
       };
       window.__maskdLoggingReady = true;
       // アクセス状況の把握(任意): Firebase Analytics
