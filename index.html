@@ -1339,47 +1339,61 @@ function playDealAnimation(done){
   const ov=document.getElementById('dealAnimOverlay');
   const stage=document.getElementById('dealStage');
   const cap=document.getElementById('dealCaption');
+  const lblCpu=document.querySelector('#dealAnimOverlay .dz-label.cpu');
+  const lblYou=document.querySelector('#dealAnimOverlay .dz-label.you');
   _dealAnimTimers.forEach(clearTimeout); _dealAnimTimers=[];
-  cap.textContent='全30枚を表向きで配ります…';
   stage.innerHTML='';
-  // 演出用の見せ札(全30枚のデッキ)。実際の手札とは別物(表で実配札を見せると相手の札が割れて推理が崩れるため)
-  const deck=[]; ATTRS5.forEach(a=>{ for(let n=0;n<=5;n++) deck.push({attr:a,num:n}); });
-  shuffle(deck);
-  const cards=[]; const cols=5, stepx=44, stepy=52;
-  deck.forEach((c,i)=>{
-    const el=document.createElement('div'); el.className='deal-card';
-    const front = hasCardImg()
-      ? `<div class="deal-face df-front art ${c.attr}" style="background-image:url(${attrImgUrl(c.attr)})">${numBadge(c.num,'sm')}</div>`
-      : `<div class="deal-face df-front ${c.attr}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;color:var(--${c.attr});">${ALABEL[c.attr]}<b style="font-size:15px;">${c.num}</b></div>`;
-    el.innerHTML=`<div class="deal-inner">${front}<div class="deal-face df-back"></div></div>`;
-    stage.appendChild(el); cards.push(el);
-  });
-  const posFor=(idx,zone)=>{ const r=Math.floor(idx/cols), c=idx%cols; const x=(c-(cols-1)/2)*stepx;
-    const y = zone==='cpu' ? (-60 - r*stepy) : (48 + r*stepy); return {x,y}; };
-  cards.forEach((el,i)=>{ const zone=i%2===0?'you':'cpu'; const idx=Math.floor(i/2); const {x,y}=posFor(idx,zone); el.dataset.x=x; el.dataset.y=y; el.dataset.zone=zone; });
+  if(lblCpu) lblCpu.innerHTML='相手'; if(lblYou) lblYou.innerHTML='あなた';
+  cap.innerHTML='<b>全30枚</b>を2人に分配します';
+  // 演出用の見せ札(実際の手札とは別。表で実配札を見せると相手の札が割れて推理が崩れるため)
+  const sh=a=>shuffle(a.slice());
+  const air=sh([0,1,2,3,4,5].map(n=>({attr:'air',num:n})));
+  const kl=sh([{attr:'kaos',num:0},{attr:'kaos',num:1}]);
+  const rest=sh([].concat(
+    [0,1,2,3,4,5].flatMap(n=>['moon','sun','dark'].map(a=>({attr:a,num:n}))),
+    [2,3,4,5].map(n=>({attr:'kaos',num:n}))
+  ));
+  // 配る順(ステップごと・両ゾーン交互)。slot=ゾーン内の到着順(0..14)
+  const seq=[];
+  for(let i=0;i<3;i++){ seq.push({c:air[i],z:'you',slot:i,step:1}); seq.push({c:air[3+i],z:'cpu',slot:i,step:1}); }
+  seq.push({c:kl[0],z:'you',slot:3,step:2}); seq.push({c:kl[1],z:'cpu',slot:3,step:2});
+  for(let i=0;i<11;i++){ seq.push({c:rest[i],z:'you',slot:4+i,step:3}); seq.push({c:rest[11+i],z:'cpu',slot:4+i,step:3}); }
+  const mkFront=c=> hasCardImg()
+    ? `<div class="deal-face df-front art ${c.attr}" style="background-image:url(${attrImgUrl(c.attr)})">${numBadge(c.num,'sm')}</div>`
+    : `<div class="deal-face df-front ${c.attr}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;color:var(--${c.attr});">${ALABEL[c.attr]}<b style="font-size:15px;">${c.num}</b></div>`;
+  seq.forEach(s=>{ const el=document.createElement('div'); el.className='deal-card';
+    el.innerHTML=`<div class="deal-inner">${mkFront(s.c)}<div class="deal-face df-back"></div></div>`;
+    s.el=el; stage.appendChild(el); });
   ov.style.display='flex';
   const doneOnce=(()=>{ let called=false; return ()=>{ if(called)return; called=true; _dealAnimTimers.forEach(clearTimeout); _dealAnimTimers=[]; ov.style.display='none'; ov.onclick=null; if(done)done(); }; })();
   ov.onclick=doneOnce; // タップでスキップ
-  const STEP=40, START=350;
-  const flyEnd=START+30*STEP; // 全カードが飛び終わる目安
-  // 表向きのまま配る
-  requestAnimationFrame(()=>{
-    cards.forEach((el,i)=>{ _dealAnimTimers.push(setTimeout(()=>{
-      el.style.transform=`translate(calc(-50% + ${el.dataset.x}px), calc(-50% + ${el.dataset.y}px))`;
-      if(i===0) cap.innerHTML='<b>相手</b>と<b>あなた</b>へ 15枚ずつ（表向き）';
-    }, START+i*STEP)); });
+  const T=(fn,ms)=>_dealAnimTimers.push(setTimeout(fn,ms));
+  const setP=(el,x,y)=>{ el.style.transform=`translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`; };
+  const grid=(z,slot)=>{ const r=Math.floor(slot/5),c=slot%5; return {x:(c-2)*44, y: z==='cpu'? -58-r*50 : 46+r*50}; };
+  const pileC={cpu:{x:0,y:-92}, you:{x:0,y:70}};
+  const pileP=(z,i)=>({x:pileC[z].x+i*0.9, y:pileC[z].y-i*0.9});
+  const handP=(z,k)=>({x:(k-2)*44, y: z==='cpu'? -168 : 148});
+  const jit=()=>(Math.random()-0.5)*24;
+  const stepMsg={1:'①<b>AIR</b>を3枚ずつ 各プレイヤーへ', 2:'②<b>KAOSの0と1</b>を両者に1枚ずつ', 3:'③残りを<b>同じ数字2枚ずつ</b>'};
+  // ①〜③ 配る(ステップ切替でメッセージ＋間)
+  const STEP=18; let t=350, cur=0;
+  seq.forEach(s=>{
+    if(s.step!==cur){ cur=s.step; t+=260; const st=s.step; T(()=>{ cap.innerHTML=stepMsg[st]; }, t-210); }
+    const g=grid(s.z,s.slot); T(()=>setP(s.el,g.x,g.y), t); t+=STEP;
   });
-  // 全部を裏返す
-  _dealAnimTimers.push(setTimeout(()=>{
-    cards.forEach(el=>el.classList.add('flipped'));
-    cap.innerHTML='<b>裏返して</b>…';
-  }, flyEnd+500));
-  // あなたの5枚を手札としてハイライト
-  _dealAnimTimers.push(setTimeout(()=>{
-    cards.filter(el=>el.dataset.zone==='you').slice(0,5).forEach(el=>el.classList.add('hand'));
-    cap.innerHTML='あなた：光る<b class="hl">5枚が手札</b>、残り10枚が山札';
-  }, flyEnd+1300));
-  _dealAnimTimers.push(setTimeout(doneOnce, flyEnd+2900));
+  const dealEnd=t+300;
+  // ④ 裏返して山札に
+  T(()=>{ cap.innerHTML='④<b>裏返して</b>それぞれ<b>山札</b>に'; if(lblCpu)lblCpu.innerHTML='相手 山札'; if(lblYou)lblYou.innerHTML='あなた 山札';
+    seq.forEach(s=>{ s.el.classList.add('flipped'); const p=pileP(s.z,s.slot); setP(s.el,p.x,p.y); }); }, dealEnd);
+  // ⑤ シャッフル(ジッター2回→整列)
+  T(()=>{ cap.innerHTML='⑤それぞれの<b>山札をシャッフル</b>'; seq.forEach(s=>setP(s.el, pileC[s.z].x+jit(), pileC[s.z].y+jit())); }, dealEnd+650);
+  T(()=>{ seq.forEach(s=>setP(s.el, pileC[s.z].x+jit(), pileC[s.z].y+jit())); }, dealEnd+950);
+  T(()=>{ seq.forEach(s=>{ const p=pileP(s.z,s.slot); setP(s.el,p.x,p.y); }); }, dealEnd+1250);
+  // ⑥ 山札から5枚引いて手札
+  T(()=>{ cap.innerHTML='⑥山札から<b class="hl">5枚引いて手札</b>に（残り10枚が山札）'; if(lblCpu)lblCpu.innerHTML='相手 手札5＋山札10'; if(lblYou)lblYou.innerHTML='あなた 手札5＋山札10';
+    seq.forEach(s=>{ if(s.slot<5){ const h=handP(s.z,s.slot); setP(s.el,h.x,h.y); if(s.z==='you') s.el.classList.add('hand'); }
+      else { const p=pileP(s.z,s.slot-5); setP(s.el,p.x,p.y); } }); }, dealEnd+1900);
+  T(doneOnce, dealEnd+3800);
 }
 
 function startGame(initialDealerIsYou){
@@ -2571,8 +2585,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.20.2';
+const GAME_VERSION = 'v0.20.3';
 const CHANGELOG = [
+  { version:'v0.20.3', date:'2026-07-11', items:[
+    '配札演出を6段階の手順に：①AIRを3枚ずつ ②KAOSの0と1を1枚ずつ ③残りを同じ数字2枚ずつ配り、④裏返して山札に ⑤シャッフル ⑥5枚引いて手札に、を段階ごとのメッセージ付きで表示（配札ルールが分かるように）',
+  ]},
   { version:'v0.20.2', date:'2026-07-11', items:[
     '配札演出を「表向きで配ってから裏返す」形に変更：属性イラストが見える状態で30枚を配り、その後いっせいに裏返して手札5枚が光る（見せ札はデッキ全30枚で、実際の手札は伏せて配られるため相手の札は分かりません）',
   ]},
