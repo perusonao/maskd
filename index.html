@@ -16,16 +16,16 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap');
   :root{
-    --bg-void:#0d0c14; --bg-panel:#17151f;
-    --gold:#c9a24a; --gold-bright:#e8c877; --gold-dim:#8a7238;
-    --ink:#ece6d8; --ink-dim:#a49d95; --line:rgba(201,162,74,0.2);
+    --bg-void:#171525; --bg-panel:#221f30;
+    --gold:#d4ad57; --gold-bright:#f0d087; --gold-dim:#8a7238;
+    --ink:#f2ede2; --ink-dim:#b3ab9f; --line:rgba(201,162,74,0.26);
     --moon:#8fa9c9; --sun:#e0a23d; --dark:#8a5cae; --kaos:#c14b52; --air:#6fbfa0;
     --win:#7ec98a; --lose:#c96b6b;
     --card-back:none; /* JSでカード裏面画像に差し替え */
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{
-    background:radial-gradient(ellipse at 50% -10%, #1a1725 0%, #08070c 70%);
+    background:radial-gradient(ellipse at 50% -10%, #2a2438 0%, #12101c 72%);
     font-family:'Zen Kaku Gothic New',sans-serif; color:var(--ink);
     min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px;
   }
@@ -220,12 +220,14 @@
   .hmc-none{ font-size:9px; color:#4a4556; }
 
   .opp-card{
-    width:32px; height:42px; border-radius:6px; flex-shrink:0;
+    width:42px; height:56px; border-radius:7px; flex-shrink:0;
     display:flex; flex-direction:column; align-items:center; justify-content:space-between;
-    padding:3px 2px; border:1px solid var(--line); background:rgba(255,255,255,0.02);
+    padding:3px 2px; border:1px solid var(--line); background:rgba(255,255,255,0.03);
   }
-  .opp-card .opp-num{ font-family:'Cormorant Garamond',serif; font-size:15px; font-weight:600; color:var(--ink); }
-  .opp-card .opp-poss{ display:flex; gap:1px; flex-wrap:wrap; justify-content:center; }
+  .opp-card .opp-num{ font-family:'Cormorant Garamond',serif; font-size:16px; font-weight:600; color:var(--ink); line-height:1; }
+  .opp-card .opp-rps-row{ display:flex; gap:1px; justify-content:center; align-items:center; line-height:1; min-height:14px; }
+  .opp-card .opp-rps-g{ font-size:13px; line-height:1; filter:drop-shadow(0 1px 1px rgba(0,0,0,.75)); }
+  .opp-card .opp-poss{ display:flex; gap:2px; flex-wrap:wrap; justify-content:center; min-height:10px; }
   .hmg-card{
     width:64px; height:88px; border-radius:9px; cursor:pointer; position:relative;
     display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:7px 4px;
@@ -251,12 +253,13 @@
   .pd-row .pd-round{ color:var(--ink-dim); font-size:10px; }
   .pd-row .pd-card{ font-family:'Cormorant Garamond',serif; font-weight:600; }
 
-  .scoreboard{ display:flex; align-items:stretch; padding:5px 14px 2px; gap:8px; flex-shrink:0; }
-  .score-cell{ flex:1; text-align:center; padding:4px 4px 3px; border-radius:9px; border:1px solid var(--line); background:var(--bg-panel); position:relative; }
+  .scoreboard{ display:flex; align-items:center; padding:4px 14px 2px; gap:8px; flex-shrink:0; }
+  .score-cell{ flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:4px 9px; border-radius:9px; border:1px solid var(--line); background:var(--bg-panel); position:relative; }
   .score-cell.you{ border-color:rgba(201,162,74,0.45); }
-  .score-cell .who{ font-size:9px; letter-spacing:0.12em; color:var(--ink-dim); }
+  .score-cell .who{ font-size:10px; letter-spacing:0.1em; color:var(--ink-dim); flex-shrink:0; }
   .score-cell.you .who{ color:var(--gold-bright); }
-  .score-cell .val{ font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:600; color:var(--gold); line-height:1.15; }
+  .score-cell .val{ font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:600; color:var(--gold); line-height:1; flex-shrink:0; }
+  .score-cell .score-info{ display:flex; flex-direction:column; gap:2px; flex:1; min-width:0; }
   .dealer-tag{
     position:absolute; top:-8px; right:6px; font-size:8px; letter-spacing:0.05em;
     background:var(--gold-bright); color:#1a1608; padding:1px 7px; border-radius:8px; font-weight:700;
@@ -274,6 +277,10 @@
     border-color:var(--gold-bright);
   }
   .token-line{ font-size:8px; color:var(--air); margin-top:1px; min-height:0; line-height:1.3; }
+  /* スコアパネル薄型化: バーを横いっぱいに、トークン行は右端に小さく */
+  .score-cell .lp-bar-wrap{ flex:1; margin-top:0; min-width:36px; height:8px; }
+  .score-cell .token-line{ flex-shrink:0; margin-top:0; max-width:70px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .score-cell .token-line:empty{ display:none; }
 
   .field{
     flex:1; margin:5px 14px; border:1px solid var(--line); border-radius:16px;
@@ -679,11 +686,11 @@
   .hand-wrap.tappable .hand-title{ color:var(--gold-bright); }
   .hand-wrap.tappable .hand-title::after{ content:' (タップして選択)'; font-size:8px; color:var(--ink-dim); }
   .hand-title{ font-size:8px; letter-spacing:0.08em; color:var(--gold-dim); text-align:center; margin-bottom:2px; }
-  .hand{ display:flex; justify-content:center; gap:3px; flex-wrap:wrap; max-height:84px; overflow-y:auto; }
+  .hand{ display:flex; justify-content:center; gap:6px; flex-wrap:wrap; max-height:170px; overflow-y:auto; }
   .hcard{
-    width:31px; height:44px; border-radius:6px;
-    display:flex;flex-direction:column;align-items:center;justify-content:space-between; padding:3px 2px;
-    background:linear-gradient(160deg,#221e2c,#171420); border:1px solid var(--line);
+    width:52px; height:72px; border-radius:9px;
+    display:flex;flex-direction:column;align-items:center;justify-content:space-between; padding:4px 3px;
+    background:linear-gradient(160deg,#2a2536,#1b1826); border:1.5px solid var(--line);
     cursor:pointer; transition:transform .15s, border-color .15s, opacity .3s; position:relative;
   }
   .hcard:hover{ transform:translateY(-5px); }
@@ -1322,8 +1329,13 @@ function remainingPossibleForNum(n){
 // 相手の手札1枚を、数字+可能性アイコン付きの大きめカードとして描画
 function oppCardHTML(num){
   const {pool}=remainingPossibleForNum(num);
-  const iconsHTML = pool.map(a=>`<div class="hint-icon tiny ${a}"></div>`).join('');
-  return `<div class="opp-card"><div class="opp-num">${num}</div><div class="opp-poss">${iconsHTML}</div></div>`;
+  // 3すくみ(月/闇/太陽)の候補は「あり得るじゃんけん」として大きめに表示(属性は確定させない)
+  const rps = pool.filter(a=>RPS_GLYPH[a]).map(a=>`<span class="opp-rps-g">${BEG_RPS[a]}</span>`).join('');
+  // Kaos/Air の候補は小さなアイコンで(じゃんけん外)
+  const special = pool.filter(a=>!RPS_GLYPH[a]).map(a=>`<div class="hint-icon tiny ${a}"></div>`).join('');
+  return `<div class="opp-card"><div class="opp-num">${num}</div>`+
+         `<div class="opp-rps-row">${rps}</div>`+
+         `<div class="opp-poss">${special}</div></div>`;
 }
 
 function dealHands(){
@@ -1673,7 +1685,7 @@ function renderOppHand(){
   row.innerHTML='';
   const cpuAll=[...cpuHand]; // 表示するのは実働手札(最大5枚)のみ
   const label=document.createElement('div'); label.className='opp-hand-label';
-  label.innerHTML=`相手の残り手札：<b style="color:var(--gold-bright);font-family:'Cormorant Garamond',serif;font-size:14px;">${cpuAll.length}</b>枚`;
+  label.innerHTML=`相手の手札 <b style="color:var(--gold-bright);font-family:'Cormorant Garamond',serif;font-size:14px;">${cpuAll.length}</b><span style="opacity:.7;font-size:7px;"> ・推理</span>`;
   row.appendChild(label);
   const chips=document.createElement('div');
   chips.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;';
@@ -1686,8 +1698,10 @@ function renderYouPlayed(){
   const row=document.getElementById('youPlayedRow');
   if(!row) return;
   row.innerHTML='';
+  if(youPlayedCards.length===0){ row.style.display='none'; return; }
+  row.style.display='';
   const label=document.createElement('span'); label.className='you-played-label';
-  label.textContent=`あなたが場に出した札：${youPlayedCards.length}枚（長押しで詳細）`;
+  label.textContent='出した札';
   row.appendChild(label);
   const icons=document.createElement('div'); icons.className='you-played-icons';
   youPlayedCards.forEach(c=>{
@@ -2748,8 +2762,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.23.0';
+const GAME_VERSION = 'v0.24.0';
 const CHANGELOG = [
+  { version:'v0.24.0', date:'2026-07-12', items:[
+    '対戦画面のUIを改善（テスターの意見を反映）：①スコア表示を横長スリムな1行にまとめて余白を削減 ②手札を大きく表示 ③画面全体を明るく調整 ④相手の手札に「あり得るじゃんけん」を表示（属性は伏せたまま、月/闇/太陽の候補✊✌✋を表示し推理は維持。Kaos/Airは小アイコン）。ラベルや説明文も簡潔化',
+  ]},
   { version:'v0.23.0', date:'2026-07-12', items:[
     'カード表示モードを追加：「初心者向け」（属性色・大きなじゃんけん✊✌✋・大きな数字・属性名。KaosとAirは役割を明記）と「上級者向け」（従来のリッチな絵）を設定で切り替え可能に。初期値は初心者向け。手札・場・プレビュー・チュートリアルすべてに反映（相手の非公開情報の推理はそのまま維持）',
   ]},
