@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MASKD 管理ダッシュボード</title>
+<style>
+  :root{
+    --bg:#0d0b12; --panel:#161320; --line:#2c2740; --ink:#e8e2d0; --dim:#9a927f;
+    --gold:#c9a24a; --goldb:#e8c877; --win:#7dc99a; --lose:#d97a86; --draw:#8a8496;
+    --moon:#8fa9c9; --sun:#e0a23d; --dark:#8a5cae; --kaos:#c14b52; --air:#6fbfa0;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Hiragino Kaku Gothic ProN',sans-serif; font-size:14px; }
+  h1{ font-size:20px; margin:0; letter-spacing:0.04em; }
+  h2{ font-size:14px; color:var(--gold); margin:0 0 10px; font-weight:600; letter-spacing:0.03em; }
+  h3{ font-size:12px; color:var(--dim); margin:0 0 8px; font-weight:600; }
+  a{ color:var(--goldb); }
+  code{ background:#0a0810; padding:1px 5px; border-radius:4px; font-size:12px; }
+
+  /* ゲート */
+  #gate{ min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:24px; }
+  #gate .box{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:28px 24px; max-width:360px; width:100%; text-align:center; }
+  #gate input{ width:100%; padding:11px 12px; margin-top:14px; background:#0a0810; border:1px solid var(--line); border-radius:9px; color:var(--ink); font-size:15px; }
+  #gate .err{ color:var(--lose); font-size:12px; min-height:16px; margin-top:8px; }
+  .btn{ display:inline-block; background:linear-gradient(180deg,#2a2540,#1c1830); border:1px solid var(--line); color:var(--ink);
+    padding:9px 18px; border-radius:9px; cursor:pointer; font-size:13px; user-select:none; }
+  .btn:hover{ border-color:var(--gold); }
+  .btn.primary{ background:linear-gradient(180deg,#7a5f22,#5c4718); border-color:var(--gold); color:#fff; }
+
+  /* ダッシュボード */
+  #dash{ display:none; max-width:1000px; margin:0 auto; padding:18px 16px 60px; }
+  header.top{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+  header.top .sp{ flex:1; }
+  .muted{ color:var(--dim); font-size:12px; }
+  .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:14px 0; }
+  .kpi{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .kpi .v{ font-size:26px; font-weight:700; color:var(--goldb); }
+  .kpi .l{ font-size:11px; color:var(--dim); margin-top:3px; }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:12px; }
+  .cols{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media(max-width:640px){ .cols{ grid-template-columns:1fr; } }
+
+  .bar-row{ display:flex; align-items:center; gap:8px; margin:5px 0; font-size:12px; }
+  .bar-label{ width:120px; flex-shrink:0; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bar-track{ flex:1; height:14px; background:#0a0810; border-radius:7px; overflow:hidden; }
+  .bar-fill{ height:100%; background:linear-gradient(90deg,var(--gold),var(--goldb)); border-radius:7px; }
+  .bar-val{ width:96px; flex-shrink:0; text-align:right; color:var(--dim); font-variant-numeric:tabular-nums; }
+  .a-moon{ background:var(--moon)!important; } .a-sun{ background:var(--sun)!important; }
+  .a-dark{ background:var(--dark)!important; } .a-kaos{ background:var(--kaos)!important; } .a-air{ background:var(--air)!important; }
+
+  table{ width:100%; border-collapse:collapse; font-size:12px; }
+  th,td{ padding:6px 8px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; }
+  th{ color:var(--dim); font-weight:600; cursor:pointer; user-select:none; position:sticky; top:0; background:var(--panel); }
+  th:hover{ color:var(--gold); }
+  tr.row{ cursor:pointer; }
+  tr.row:hover td{ background:#1c1830; }
+  .tag{ padding:1px 7px; border-radius:6px; font-size:11px; border:1px solid; }
+  .tag.win{ color:var(--win); border-color:var(--win); }
+  .tag.lose{ color:var(--lose); border-color:var(--lose); }
+  .tag.draw{ color:var(--draw); border-color:var(--draw); }
+  .tbl-wrap{ max-height:440px; overflow:auto; border:1px solid var(--line); border-radius:10px; }
+  .filters{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+  .filters select,.filters input{ background:#0a0810; border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:6px 9px; font-size:12px; }
+
+  /* 詳細モーダル */
+  .modal{ position:fixed; inset:0; background:rgba(6,5,9,0.85); display:none; align-items:center; justify-content:center; padding:18px; z-index:50; }
+  .modal.show{ display:flex; }
+  .modal .inner{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; max-width:520px; width:100%; max-height:86vh; overflow:auto; }
+  .rrow{ border:1px solid var(--line); border-radius:8px; padding:6px 9px; margin-bottom:5px; font-size:12px; }
+  .rrow .rt{ display:flex; justify-content:space-between; color:var(--dim); font-size:10px; }
+  .ctag{ padding:1px 6px; border-radius:5px; border:1px solid; font-size:11px; }
+  .c-moon{ color:var(--moon); border-color:var(--moon); } .c-sun{ color:var(--sun); border-color:var(--sun); }
+  .c-dark{ color:var(--dark); border-color:var(--dark); } .c-kaos{ color:var(--kaos); border-color:var(--kaos); } .c-air{ color:var(--air); border-color:var(--air); }
+  .banner{ background:#3a1518; border:1px solid var(--lose); color:#f0c0c4; padding:12px 14px; border-radius:10px; font-size:12px; line-height:1.7; }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="box">
+    <h1>MASKD 管理ダッシュボード</h1>
+    <p class="muted" style="margin-top:10px;">パスフレーズを入力してください</p>
+    <input id="pass" type="password" placeholder="パスフレーズ" autocomplete="off">
+    <div class="err" id="gateErr"></div>
+    <div class="btn primary" id="unlockBtn" style="margin-top:10px;width:100%;">開く</div>
+    <p class="muted" style="margin-top:14px;font-size:10px;line-height:1.6;">
+      ※このゲートは目隠しであり、真のセキュリティではありません。データは匿名です。
+    </p>
+  </div>
+</div>
+
+<div id="dash">
+  <header class="top">
+    <h1>MASKD ダッシュボード</h1>
+    <span class="sp"></span>
+    <span class="btn" id="reloadBtn">再読み込み</span>
+    <span class="btn" id="csvBtn">CSV</span>
+    <span class="btn" id="jsonBtn">JSON</span>
+    <span class="btn" id="lockBtn">ロック</span>
+  </header>
+  <div class="muted" id="meta"></div>
+  <div id="content"><p class="muted" style="margin-top:20px;">読み込み中…</p></div>
+</div>
+
+<div class="modal" id="detailModal"><div class="inner" id="detailInner"></div></div>
+
+<script type="module">
+// Firebaseは動的importで読み込む（CDN到達不可でもゲート/描画は動くようにするため）
+
+// ▼ このプロジェクトのFirebase設定（ゲーム本体と同じ）
+const firebaseConfig = {
+  apiKey: "AIzaSyCH6JF6VL4OnYL2mR8N3V1LUZ920QADuvc",
+  authDomain: "maskd-8eafb.firebaseapp.com",
+  projectId: "maskd-8eafb",
+  storageBucket: "maskd-8eafb.firebasestorage.app",
+  messagingSenderId: "138967847579",
+  appId: "1:138967847579:web:866ddf9bac4af567f76c3e",
+  measurementId: "G-3Q429M5PXD"
+};
+
+// ▼ パスフレーズ（SHA-256）。変更するには新しい合言葉のsha256を下記に貼る。
+//    現在の合言葉: "maskd-admin"
+//    生成: node -e "console.log(require('crypto').createHash('sha256').update('新しい合言葉').digest('hex'))"
+const PASS_SHA256 = "c8ba6a0556451eb3b8b2a233332d3f31ae7df18cb1a4fa7b7d2f0cc9e878844f";
+const UNLOCK_KEY = "maskd_admin_unlocked";
+
+const AJP={moon:'月',sun:'太陽',dark:'闇',kaos:'混沌',air:'空気'};
+const DIFF={weak:'やさしい',normal:'普通',strong:'強い'};
+const TYPE={aggressive:'攻撃的',cautious:'慎重',tricky:'トリッキー',random:'おまかせ'};
+const ATTRS=['moon','sun','dark','kaos','air'];
+
+let fb=null, allLogs=[], totalCount=null;
+let tableState={ sortKey:'ts', sortDir:-1, fWinner:'', fDiff:'', fVer:'', q:'' };
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pctOf=(a,b)=>b?(a/b*100).toFixed(1)+'%':'-';
+
+async function sha256hex(str){
+  const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ===== ゲート =====
+async function tryUnlock(){
+  const v=$('pass').value;
+  const h=await sha256hex(v);
+  if(h===PASS_SHA256){
+    try{ sessionStorage.setItem(UNLOCK_KEY,'1'); }catch(e){}
+    showDash();
+  } else {
+    $('gateErr').textContent='パスフレーズが違います';
+  }
+}
+function lock(){ try{ sessionStorage.removeItem(UNLOCK_KEY); }catch(e){} location.reload(); }
+function showDash(){
+  $('gate').style.display='none';
+  $('dash').style.display='block';
+  init();
+}
+
+// ===== データ取得 =====
+async function init(){
+  if(!fb){
+    $('content').innerHTML='<p class="muted" style="margin-top:20px;">Firebaseを読み込み中…</p>';
+    try{
+      const appMod=await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js");
+      const fsMod=await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js");
+      const app=appMod.initializeApp(firebaseConfig);
+      fb={ db:fsMod.getFirestore(app), collection:fsMod.collection, getDocs:fsMod.getDocs,
+        query:fsMod.query, limit:fsMod.limit, getCountFromServer:fsMod.getCountFromServer };
+    }catch(e){ $('content').innerHTML=banner('Firebaseの読み込みに失敗しました（ネットワーク/CDN）。<br><span style="font-size:10px;">'+esc(e&&e.message)+'</span>'); return; }
+  }
+  await loadData();
+}
+async function loadData(){
+  if(!fb){ return init(); }
+  $('content').innerHTML='<p class="muted" style="margin-top:20px;">クラウドから読み込み中…</p>';
+  try{
+    const [snap, count] = await Promise.all([
+      fb.getDocs(fb.query(fb.collection(fb.db,"logs"), fb.limit(5000))),
+      fb.getCountFromServer(fb.collection(fb.db,"logs")).then(s=>s.data().count).catch(()=>null)
+    ]);
+    allLogs=[]; snap.forEach(d=>allLogs.push(d.data()));
+    totalCount=count;
+    render();
+  }catch(e){
+    const code=(e&&(e.code||e.message))||'';
+    $('content').innerHTML=banner(
+      'クラウドからの読み取りに失敗しました。<br>Firestoreのセキュリティルールで <code>logs</code> の<b>読み取り</b>を許可してください：<br>'+
+      '<code>match /logs/{doc} { allow create: if true; allow read: if true; }</code><br>'+
+      '<span style="font-size:10px;">詳細: '+esc(code)+'</span>');
+  }
+}
+function banner(html){ return '<div class="banner">'+html+'</div>'; }
+
+// ===== 集計＆描画 =====
+function render(){
+  const N=allLogs.length;
+  const total=(totalCount!=null)?totalCount:N;
+  const sampled=(totalCount!=null && totalCount>N);
+  $('meta').innerHTML=`総レコード数(サーバー集計): <b style="color:var(--goldb)">${total}</b> 件`+
+    (sampled?`　／　集計は直近 ${N} 件のサンプル`:``)+`　／　取得 ${N} 件`;
+
+  if(!N){ $('content').innerHTML=banner('データがまだありません。'); return; }
+
+  // 基本集計
+  let pw=0,cw=0,dr=0,sumP=0,sumC=0,sumTime=0,timeCount=0;
+  const players=new Set(), days={}, diffAgg={}, typeAgg={}, verAgg={};
+  const marginBins={}, scoreBins={};
+  let fdWon=0, fdDecided=0;               // 先手(第1親)勝率
+  let rDealer=0,rChild=0,rDraw=0,rPass=0; // ラウンド結果
+  const attrPlay={}, attrWin={};          // 属性ごとの出現/勝利
+  ATTRS.forEach(a=>{attrPlay[a]=0;attrWin[a]=0;});
+
+  allLogs.forEach(g=>{
+    if(g.winner==='player')pw++; else if(g.winner==='cpu')cw++; else dr++;
+    sumP+=(g.playerFinal||0); sumC+=(g.cpuFinal||0);
+    if(typeof g.playTimeMs==='number'){ sumTime+=g.playTimeMs; timeCount++; }
+    if(g.playerId) players.add(g.playerId);
+    const day=(g.ts||'').slice(0,10); if(day) days[day]=(days[day]||0)+1;
+    agg(diffAgg, g.cpuDifficulty, g.winner);
+    agg(typeAgg, g.cpuStrategy, g.winner);
+    agg(verAgg, g.version, g.winner);
+    const m=Math.abs((g.playerFinal||0)-(g.cpuFinal||0)); const mb=Math.min(5,Math.floor(m/5))*5; marginBins[mb]=(marginBins[mb]||0)+1;
+    const sb=Math.min(11,Math.floor((g.playerFinal||0)/10))*10; scoreBins[sb]=(scoreBins[sb]||0)+1;
+    const log=Array.isArray(g.log)?g.log:[];
+    if(log.length && g.winner!=='draw'){
+      const firstDealerIsPlayer=!!log[0].dealerIsYou;
+      const fdWinner=firstDealerIsPlayer?'player':'cpu';
+      fdDecided++; if(g.winner===fdWinner) fdWon++;
+    }
+    log.forEach(r=>{
+      if(r.passed){ rPass++; }
+      else if(r.result==='draw'){ rDraw++; }
+      else if(r.result==='dealer'){ rDealer++; }
+      else if(r.result==='child'){ rChild++; }
+      [r.dealerCard,r.childCard].forEach((c,i)=>{
+        if(!c||!c.attr)return; attrPlay[c.attr]=(attrPlay[c.attr]||0)+1;
+        const isDealer=(i===0);
+        const won=(!r.passed)&&((isDealer&&r.result==='dealer')||(!isDealer&&r.result==='child'));
+        if(won) attrWin[c.attr]=(attrWin[c.attr]||0)+1;
+      });
+    });
+  });
+  const decided=pw+cw;
+  const avgTime=timeCount?(sumTime/timeCount/1000):null;
+
+  // KPI
+  let html=`<div class="grid">
+    ${kpi(total,'総レコード数')}
+    ${kpi(players.size,'参加プレイヤー数')}
+    ${kpi(pctOf(pw,decided),'プレイヤー勝率')}
+    ${kpi(pctOf(fdWon,fdDecided),'先手(第1親)勝率')}
+    ${kpi((sumP/N).toFixed(1)+' / '+(sumC/N).toFixed(1),'平均スコア P/C')}
+    ${kpi(avgTime!=null?avgTime.toFixed(0)+'秒':'-','平均対戦時間')}
+  </div>`;
+
+  // バランス分析
+  html+=`<h2>バランス分析</h2><div class="cols">`;
+  html+=`<div class="card"><h3>勝敗の内訳</h3>`+bars([
+    {label:'プレイヤー勝ち',value:pw,sub:`${pw} (${pctOf(pw,N)})`},
+    {label:'CPU勝ち',value:cw,sub:`${cw} (${pctOf(cw,N)})`},
+    {label:'引き分け',value:dr,sub:`${dr} (${pctOf(dr,N)})`},
+  ])+`</div>`;
+  html+=`<div class="card"><h3>難易度別 プレイヤー勝率</h3>`+aggBars(diffAgg,DIFF)+`</div>`;
+  html+=`<div class="card"><h3>CPU性格別 プレイヤー勝率</h3>`+aggBars(typeAgg,TYPE)+`</div>`;
+  html+=`<div class="card"><h3>バージョン別 プレイヤー勝率</h3>`+aggBars(verAgg,{})+`</div>`;
+  html+=`<div class="card"><h3>ラウンド結果の内訳</h3>`+bars([
+    {label:'親の勝ち',value:rDealer,sub:`${rDealer} (${pctOf(rDealer,rDealer+rChild+rDraw+rPass)})`},
+    {label:'子の勝ち',value:rChild,sub:`${rChild} (${pctOf(rChild,rDealer+rChild+rDraw+rPass)})`},
+    {label:'引き分け',value:rDraw,sub:`${rDraw}`},
+    {label:'撤退',value:rPass,sub:`${rPass}`},
+  ])+`</div>`;
+  html+=`<div class="card"><h3>属性別 出現数と決戦勝率</h3>`+bars(ATTRS.map(a=>({
+    label:AJP[a], value:attrPlay[a], cls:'a-'+a, sub:`出${attrPlay[a]} / 勝率${pctOf(attrWin[a],attrPlay[a])}`
+  })))+`</div>`;
+  html+=`<div class="card"><h3>最終スコア差の分布</h3>`+binBars(marginBins,'差')+`</div>`;
+  html+=`<div class="card"><h3>プレイヤー最終スコアの分布</h3>`+binBars(scoreBins,'pt')+`</div>`;
+  html+=`</div>`;
+
+  // 日別
+  const dayKeys=Object.keys(days).sort();
+  html+=`<h2>日別プレイ数</h2><div class="card">`+bars(dayKeys.map(d=>({label:d,value:days[d],sub:String(days[d])})))+`</div>`;
+
+  // 生データ
+  html+=`<h2>生データ（対戦ログ）</h2>`+tableUI();
+  $('content').innerHTML=html;
+  bindTable();
+}
+function kpi(v,l){ return `<div class="kpi"><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`; }
+function agg(obj,key,winner){ key=key||'?'; obj[key]=obj[key]||{games:0,pw:0}; obj[key].games++; if(winner==='player')obj[key].pw++; }
+function bars(rows){
+  const max=Math.max(1,...rows.map(r=>r.value||0));
+  return rows.map(r=>`<div class="bar-row"><div class="bar-label">${esc(r.label)}</div>
+    <div class="bar-track"><div class="bar-fill ${r.cls||''}" style="width:${(r.value||0)/max*100}%"></div></div>
+    <div class="bar-val">${esc(r.sub!=null?r.sub:r.value)}</div></div>`).join('');
+}
+function aggBars(obj,labelMap){
+  const keys=Object.keys(obj).sort();
+  if(!keys.length) return '<div class="muted">データなし</div>';
+  return bars(keys.map(k=>({ label:(labelMap[k]||k), value:obj[k].games, sub:`${pctOf(obj[k].pw,obj[k].games)}（${obj[k].games}戦）` })));
+}
+function binBars(bins,unit){
+  const keys=Object.keys(bins).map(Number).sort((a,b)=>a-b);
+  return bars(keys.map(k=>({ label:`${k}〜${k+ (unit==='pt'?9:4)}${unit}`, value:bins[k], sub:String(bins[k]) })));
+}
+
+// ===== 生データテーブル =====
+function filtered(){
+  const s=tableState;
+  let rows=allLogs.filter(g=>{
+    if(s.fWinner && g.winner!==s.fWinner) return false;
+    if(s.fDiff && g.cpuDifficulty!==s.fDiff) return false;
+    if(s.fVer && g.version!==s.fVer) return false;
+    if(s.q){ const hay=(g.playerId||'')+' '+(g.version||''); if(!hay.toLowerCase().includes(s.q.toLowerCase())) return false; }
+    return true;
+  });
+  const k=s.sortKey, dir=s.sortDir;
+  rows.sort((a,b)=>{ let x=a[k],y=b[k]; if(k==='margin'){x=(a.playerFinal||0)-(a.cpuFinal||0);y=(b.playerFinal||0)-(b.cpuFinal||0);}
+    if(x==null)x=''; if(y==null)y=''; return (x>y?1:x<y?-1:0)*dir; });
+  return rows;
+}
+function tableUI(){
+  const vers=[...new Set(allLogs.map(g=>g.version).filter(Boolean))].sort().reverse();
+  const opt=(arr,cur,map)=>arr.map(v=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(map?(map[v]||v):v)}</option>`).join('');
+  return `<div class="filters">
+    <select id="fWinner"><option value="">勝者:すべて</option>${opt(['player','cpu','draw'],tableState.fWinner,{player:'プレイヤー',cpu:'CPU',draw:'引分'})}</select>
+    <select id="fDiff"><option value="">難易度:すべて</option>${opt(['weak','normal','strong'],tableState.fDiff,DIFF)}</select>
+    <select id="fVer"><option value="">バージョン:すべて</option>${opt(vers,tableState.fVer)}</select>
+    <input id="fq" placeholder="ID/ver 検索" value="${esc(tableState.q)}">
+    <span class="muted" id="rowCount"></span>
+  </div>
+  <div class="tbl-wrap"><table><thead><tr>
+    ${th('ts','日時')}${th('version','ver')}${th('winner','勝者')}${th('playerFinal','P')}${th('cpuFinal','C')}${th('margin','差')}
+    ${th('cpuDifficulty','難易度')}${th('cpuStrategy','性格')}${th('playTimeMs','時間')}<th>ID</th>
+  </tr></thead><tbody id="tbody"></tbody></table></div>`;
+}
+function th(key,label){ const s=tableState; const ar=s.sortKey===key?(s.sortDir<0?' ▼':' ▲'):''; return `<th data-k="${key}">${esc(label)}${ar}</th>`; }
+function renderRows(){
+  const rows=filtered();
+  $('rowCount').textContent=`${rows.length} 件`;
+  $('tbody').innerHTML=rows.slice(0,500).map((g,i)=>{
+    const wl=g.winner==='player'?'win':(g.winner==='cpu'?'lose':'draw');
+    const wt=g.winner==='player'?'P勝':(g.winner==='cpu'?'C勝':'分');
+    const idx=allLogs.indexOf(g);
+    const t=(g.ts||'').replace('T',' ').slice(0,16);
+    const tm=typeof g.playTimeMs==='number'?Math.round(g.playTimeMs/1000)+'s':'-';
+    return `<tr class="row" data-i="${idx}">
+      <td>${esc(t)}</td><td>${esc(g.version||'')}</td><td><span class="tag ${wl}">${wt}</span></td>
+      <td>${esc(g.playerFinal)}</td><td>${esc(g.cpuFinal)}</td><td>${esc((g.playerFinal||0)-(g.cpuFinal||0))}</td>
+      <td>${esc(DIFF[g.cpuDifficulty]||g.cpuDifficulty||'')}</td><td>${esc(TYPE[g.cpuStrategy]||g.cpuStrategy||'')}</td>
+      <td>${tm}</td><td>${esc((g.playerId||'').slice(0,8))}</td></tr>`;
+  }).join('') || '<tr><td colspan="10" class="muted" style="text-align:center;padding:16px;">該当なし</td></tr>';
+  document.querySelectorAll('#tbody .row').forEach(tr=>tr.onclick=()=>showDetail(Number(tr.dataset.i)));
+}
+function setHead(){
+  const tb=$('tbody'); if(!tb) return;
+  const head=tb.closest('table').querySelector('thead');
+  head.innerHTML=`<tr>${th('ts','日時')}${th('version','ver')}${th('winner','勝者')}${th('playerFinal','P')}${th('cpuFinal','C')}${th('margin','差')}${th('cpuDifficulty','難易度')}${th('cpuStrategy','性格')}${th('playTimeMs','時間')}<th>ID</th></tr>`;
+  head.querySelectorAll('th[data-k]').forEach(el=>{
+    el.onclick=()=>{ const k=el.dataset.k; if(tableState.sortKey===k)tableState.sortDir*=-1; else {tableState.sortKey=k;tableState.sortDir=-1;} setHead(); renderRows(); };
+  });
+}
+function bindTable(){
+  const bind=(id,key)=>{ const el=$(id); if(el)el.onchange=()=>{ tableState[key]=el.value; renderRows(); }; };
+  bind('fWinner','fWinner'); bind('fDiff','fDiff'); bind('fVer','fVer');
+  const q=$('fq'); if(q)q.oninput=()=>{ tableState.q=q.value; renderRows(); };
+  setHead();
+  renderRows();
+}
+
+// ===== 詳細モーダル =====
+function showDetail(i){
+  const g=allLogs[i]; if(!g) return;
+  const log=Array.isArray(g.log)?g.log:[];
+  const rounds=log.map(r=>{
+    const dl=r.dealerIsYou?'あなた(親)':'相手(親)', cl=r.dealerIsYou?'相手(子)':'あなた(子)';
+    let res=r.passed?'撤退':(r.result==='draw'?'引分':(r.result==='dealer'?dl+'勝ち':cl+'勝ち'));
+    if(!r.passed&&r.result!=='draw') res+=` (+${r.dmg||0})`;
+    return `<div class="rrow"><div class="rt"><span>第${r.round}R</span><span>${r.dealerIsYou?'あなたが親':'相手が親'}</span></div>
+      <div style="margin-top:3px;">
+        <span class="ctag c-${r.dealerCard.attr}">${dl} ${AJP[r.dealerCard.attr]}${r.dealerCard.num}</span>
+        <span class="muted"> vs </span>
+        <span class="ctag c-${r.childCard.attr}">${cl} ${AJP[r.childCard.attr]}${r.childCard.num}</span>
+        <span style="float:right;color:var(--dim);">${esc(res)}</span></div></div>`;
+  }).join('') || '<div class="muted">ラウンド詳細なし</div>';
+  $('detailInner').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <h2 style="margin:0;">対戦詳細</h2><span class="btn" id="closeDetail">閉じる</span></div>
+    <div class="muted" style="font-size:12px;margin-bottom:10px;">
+      ${esc((g.ts||'').replace('T',' ').slice(0,19))} ／ ${esc(g.version||'')} ／ CPU:${esc(TYPE[g.cpuStrategy]||g.cpuStrategy)}/${esc(DIFF[g.cpuDifficulty]||g.cpuDifficulty)}<br>
+      最終 P<b style="color:var(--goldb)">${esc(g.playerFinal)}</b> - C<b style="color:var(--goldb)">${esc(g.cpuFinal)}</b>
+      ／ ID ${esc((g.playerId||'').slice(0,12))}
+    </div>${rounds}`;
+  $('detailModal').classList.add('show');
+  $('closeDetail').onclick=()=>$('detailModal').classList.remove('show');
+}
+
+// ===== エクスポート =====
+function download(name,text,type){
+  const blob=new Blob([text],{type}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function exportJSON(){ download('maskd-logs.json', JSON.stringify(allLogs,null,2), 'application/json'); }
+function exportCSV(){
+  const cols=['ts','version','playerId','winner','playerFinal','cpuFinal','playerScore','cpuScore','rounds','cpuStrategy','cpuDifficulty','youWins','cpuWins','draws','passes','youAir','cpuAir','youKaos','cpuKaos','playTimeMs'];
+  const head=cols.join(',');
+  const body=allLogs.map(g=>cols.map(c=>{ let v=g[c]; if(v==null)v=''; v=String(v).replace(/"/g,'""'); return /[",\n]/.test(v)?`"${v}"`:v; }).join(',')).join('\n');
+  download('maskd-logs.csv', head+'\n'+body, 'text/csv');
+}
+
+// テスト用フック(モックデータで描画を確認する。害はない)
+window.__adminMock=(logs,count)=>{ allLogs=logs; totalCount=count; render(); };
+
+// ===== 起動 =====
+$('unlockBtn').onclick=tryUnlock;
+$('pass').addEventListener('keydown',e=>{ if(e.key==='Enter')tryUnlock(); });
+$('reloadBtn').onclick=loadData;
+$('csvBtn').onclick=exportCSV;
+$('jsonBtn').onclick=exportJSON;
+$('lockBtn').onclick=lock;
+$('detailModal').onclick=e=>{ if(e.target===$('detailModal'))$('detailModal').classList.remove('show'); };
+try{ if(sessionStorage.getItem(UNLOCK_KEY)==='1') showDash(); }catch(e){}
+</script>
+</body>
+</html>
