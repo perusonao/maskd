@@ -906,9 +906,9 @@
   <div class="overlay" id="overlay">
     <div class="big" id="ovTitle">VICTORY</div>
     <div class="score-final" id="ovScore"></div>
-    <div style="display:flex;gap:8px;">
-      <div class="btn" style="flex:none;padding:12px 28px;" onclick="beginMatchSetup()">もう一度</div>
-      <div class="btn ghost" style="flex:none;padding:12px 22px;" onclick="tryCloseApp()">とじる</div>
+    <div style="display:flex;gap:8px;width:100%;max-width:300px;">
+      <div class="btn" style="padding:13px 0;" onclick="beginMatchSetup()">もう一度</div>
+      <div class="btn ghost" style="padding:13px 0;" onclick="tryCloseApp()">とじる</div>
     </div>
   </div>
 
@@ -2490,8 +2490,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.19.0';
+const GAME_VERSION = 'v0.19.1';
 const CHANGELOG = [
+  { version:'v0.19.1', date:'2026-07-11', items:[
+    '結果画面のボタンのサイズを統一：上段3つ（履歴・対戦ログ・通算統計）を同幅・1行に、下段（もう一度・とじる）を同幅に揃えて、折り返しや不揃いを解消',
+  ]},
   { version:'v0.19.0', date:'2026-07-11', items:[
     '親決めのカード表面も、ゲーム本編と同じ属性イラスト＋数字バッジで表示するように統一',
     '結果画面の各ラウンド欄に対戦カード（親札 vs 子札）を表示。獲得ポイントと合わせて一目で分かるように',
@@ -3095,10 +3098,10 @@ function endGame(){
       <div class="ms-row"><span>Air使用</span><span>あなた${s.youAir}回 ／ 相手${s.cpuAir}回</span></div>
       <div class="ms-row"><span>Kaos使用</span><span>あなた${s.youKaos}回 ／ 相手${s.cpuKaos}回</span></div>
     </div>
-    <div style="display:flex;gap:6px;margin-top:10px;">
-      <div class="btn" style="flex:1;font-size:12px;" onclick="openHistory()">今回の履歴</div>
-      <div class="btn ghost" style="flex:1;font-size:12px;" onclick="openMatchLog()">対戦ログ一覧</div>
-      <div class="btn ghost" style="flex:1;font-size:12px;" onclick="openStats()">通算統計</div>
+    <div style="display:flex;gap:6px;margin-top:12px;width:100%;max-width:300px;">
+      <div class="btn ghost" style="white-space:nowrap;padding:10px 4px;" onclick="openHistory()">今回の履歴</div>
+      <div class="btn ghost" style="white-space:nowrap;padding:10px 4px;" onclick="openMatchLog()">対戦ログ一覧</div>
+      <div class="btn ghost" style="white-space:nowrap;padding:10px 4px;" onclick="openStats()">通算統計</div>
     </div>
   </div>`;
   document.getElementById('ovScore').innerHTML=tbl+extra;
