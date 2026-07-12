@@ -685,6 +685,29 @@
   .ms-row{ display:flex; justify-content:space-between; font-size:11px; color:var(--ink-dim); gap:8px; }
   .ms-row span:first-child{ color:var(--gold-dim); white-space:nowrap; }
   .ms-row span:last-child{ text-align:right; }
+
+  /* 結果画面: 得点内訳テーブル(上からカウントアップ) */
+  .score-tbl{ width:100%; max-width:300px; margin:6px auto 2px; }
+  .sb-head,.sb-row,.sb-total{ display:grid; grid-template-columns:1.5fr 1fr 1fr; align-items:center; gap:8px; padding:6px 10px; }
+  .sb-head{ font-size:10px; color:var(--ink-dim); padding-bottom:2px; }
+  .sb-head .you{ color:var(--gold-bright); text-align:right; }
+  .sb-head .cpu{ color:var(--ink-dim); text-align:right; }
+  .sb-row{ border-top:1px solid var(--line); }
+  .sb-l{ text-align:left; font-size:12px; color:var(--ink); }
+  .sb-sub{ font-size:9px; color:var(--ink-dim); margin-left:5px; }
+  .sb-n{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; font-size:15px; color:var(--ink); font-family:'Cormorant Garamond',serif; }
+  .sb-n.cpu{ color:var(--ink-dim); }
+  .sb-pre{ font-family:inherit; font-size:12px; color:var(--ink-dim); margin-right:1px; }
+  .sb-total{ border-top:2px solid var(--gold); margin-top:3px; padding-top:9px; }
+  .sb-total .sb-l{ color:var(--gold-bright); font-size:15px; font-weight:700; }
+  .sb-total .sb-n{ font-size:24px; font-weight:700; color:var(--gold-bright); }
+  .sb-total .sb-n.cpu{ color:var(--ink); }
+  .sb-row,.sb-total{ opacity:0; transform:translateY(-8px); }
+  .sb-row.reveal,.sb-total.reveal{ opacity:1; transform:translateY(0); transition:opacity .35s ease, transform .35s ease; }
+  .sb-total.pop{ animation:sbPop .5s ease; }
+  @keyframes sbPop{ 0%{transform:translateY(0) scale(0.9);} 55%{transform:translateY(0) scale(1.07);} 100%{transform:translateY(0) scale(1);} }
+  #ovExtra{ opacity:0; transition:opacity .5s ease; display:flex; flex-direction:column; align-items:center; }
+  #ovExtra.show{ opacity:1; }
   .btn-close-modal{
     align-self:center; padding:8px 28px; border-radius:10px; font-size:11px;
     color:var(--gold); border:1px solid rgba(201,162,74,0.4); cursor:pointer; letter-spacing:0.05em;
@@ -2444,8 +2467,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.16.0';
+const GAME_VERSION = 'v0.17.0';
 const CHANGELOG = [
+  { version:'v0.17.0', date:'2026-07-11', items:[
+    '結果画面を刷新：得点の内訳（決戦の得点／戦略カウンター／残り手札ボーナス→合計）を表で表示し、上の行から順に数字がカウントアップする演出を追加。加点の内訳が分かりやすくなった',
+  ]},
   { version:'v0.16.0', date:'2026-07-11', items:[
     'みんなの統計に「蓄積レコード数（総数）」を追加。Firestoreのサーバー側集計(getCountFromServer)で、全件をダウンロードせず正確な総数を取得（2000件を超えても総数は正確、以降の集計は直近サンプル）',
   ]},
@@ -2996,28 +3022,63 @@ function endGame(){
   const youFinal = youLP + youTrust + youLeftoverBonus;
   const cpuFinal = cpuLP + cpuTrust + cpuLeftoverBonus;
   const s=computeMatchSummary();
-  const bonusLine=`<div style="font-size:11px;color:var(--ink-dim);margin-top:6px;">
-    戦略カウンター加算: あなた +${youTrust} ／ 相手 +${cpuTrust}<br>
-    残り手札ボーナス（Air2倍）: あなた +${youLeftoverBonus} ／ 相手 +${cpuLeftoverBonus}
-  </div>
-  <div class="match-summary">
-    <div class="ms-row"><span>勝敗</span><span>あなた${s.youWins}勝 － ${s.cpuWins}勝相手 （引分${s.draws}）</span></div>
-    <div class="ms-row"><span>撤退回数</span><span>${s.passes}回</span></div>
-    <div class="ms-row"><span>Air使用</span><span>あなた${s.youAir}回 ／ 相手${s.cpuAir}回</span></div>
-    <div class="ms-row"><span>Kaos使用</span><span>あなた${s.youKaos}回 ／ 相手${s.cpuKaos}回</span></div>
-  </div>
-  <div style="display:flex;gap:6px;margin-top:10px;">
-    <div class="btn" style="flex:1;font-size:12px;" onclick="openHistory()">今回の履歴</div>
-    <div class="btn ghost" style="flex:1;font-size:12px;" onclick="openMatchLog()">対戦ログ一覧</div>
-    <div class="btn ghost" style="flex:1;font-size:12px;" onclick="openStats()">通算統計</div>
-  </div>`;
   if(youFinal>cpuFinal){ t.textContent='VICTORY'; t.className='big win'; }
   else if(cpuFinal>youFinal){ t.textContent='DEFEAT'; t.className='big lose'; }
   else { t.textContent='DRAW'; t.className='big draw'; }
-  document.getElementById('ovScore').innerHTML=`あなた <b>${youFinal}</b>pt － <b>${cpuFinal}</b>pt 相手`+bonusLine;
+  // 得点内訳テーブル(上から順にカウントアップ演出)
+  const numCell=(v,pre,who)=>`<span class="sb-n ${who}">${pre?`<span class="sb-pre">${pre}</span>`:''}<span class="num" data-t="${v}">0</span></span>`;
+  const rowHTML=(label,sub,yv,cv,pre,cls)=>`<div class="${cls}"><span class="sb-l">${label}${sub?`<span class="sb-sub">${sub}</span>`:''}</span>${numCell(yv,pre,'you')}${numCell(cv,pre,'cpu')}</div>`;
+  const tbl=`<div class="score-tbl">
+    <div class="sb-head"><span></span><span class="you">あなた</span><span class="cpu">相手</span></div>
+    ${rowHTML('決戦の得点','',youLP,cpuLP,'','sb-row')}
+    ${rowHTML('戦略カウンター','残り',youTrust,cpuTrust,'+','sb-row')}
+    ${rowHTML('残り手札ボーナス','Air×2',youLeftoverBonus,cpuLeftoverBonus,'+','sb-row')}
+    ${rowHTML('合計','',youFinal,cpuFinal,'','sb-total')}
+  </div>`;
+  const extra=`<div id="ovExtra">
+    <div class="match-summary">
+      <div class="ms-row"><span>勝敗</span><span>あなた${s.youWins}勝 － ${s.cpuWins}勝相手 （引分${s.draws}）</span></div>
+      <div class="ms-row"><span>撤退回数</span><span>${s.passes}回</span></div>
+      <div class="ms-row"><span>Air使用</span><span>あなた${s.youAir}回 ／ 相手${s.cpuAir}回</span></div>
+      <div class="ms-row"><span>Kaos使用</span><span>あなた${s.youKaos}回 ／ 相手${s.cpuKaos}回</span></div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:10px;">
+      <div class="btn" style="flex:1;font-size:12px;" onclick="openHistory()">今回の履歴</div>
+      <div class="btn ghost" style="flex:1;font-size:12px;" onclick="openMatchLog()">対戦ログ一覧</div>
+      <div class="btn ghost" style="flex:1;font-size:12px;" onclick="openStats()">通算統計</div>
+    </div>
+  </div>`;
+  document.getElementById('ovScore').innerHTML=tbl+extra;
   saveGameToHistory(youFinal, cpuFinal, s);
   maybeSendGameLog(youFinal, cpuFinal, s); // クラウド送信(設定＆同意がある場合のみ)
   ov.classList.add('show');
+  animateScoreBreakdown();
+}
+// 数字を0からtargetへカウントアップ
+function countUp(el, target, dur){
+  target=Number(target)||0;
+  if(target===0){ el.textContent='0'; return; }
+  const start=performance.now();
+  const tick=(now)=>{ const p=Math.min(1,(now-start)/dur);
+    el.textContent=Math.round(target*(1-Math.pow(1-p,2)));
+    if(p<1) requestAnimationFrame(tick); else el.textContent=String(target); };
+  requestAnimationFrame(tick);
+}
+// 結果の内訳を上の行から順に出しつつ数字をカウントアップ、最後に合計を強調＆補足を表示
+function animateScoreBreakdown(){
+  const ov=document.getElementById('ovScore');
+  const rows=[...ov.querySelectorAll('.sb-row, .sb-total')];
+  const extra=document.getElementById('ovExtra');
+  let delay=250;
+  rows.forEach((r,i)=>{
+    setTimeout(()=>{
+      r.classList.add('reveal');
+      if(r.classList.contains('sb-total')) r.classList.add('pop');
+      r.querySelectorAll('.num').forEach(c=>countUp(c, c.dataset.t, 480));
+      if(i===rows.length-1 && extra) setTimeout(()=>extra.classList.add('show'), 520);
+    }, delay);
+    delay += 380;
+  });
 }
 
 initCpuSettingUI(); // 全ての変数・関数定義が済んだ後に呼び出す
