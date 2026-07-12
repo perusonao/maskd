@@ -265,6 +265,23 @@
     background:var(--gold-bright); color:#1a1608; padding:1px 7px; border-radius:8px; font-weight:700;
   }
   .score-mid{ display:flex; align-items:center; font-size:10px; color:var(--ink-dim); }
+  /* 中央のラウンド表示(あなた｜ROUND｜相手) */
+  .score-round{ flex-shrink:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0; padding:0 4px; min-width:52px; position:relative; }
+  .score-round .sr-label{ font-size:7px; letter-spacing:0.18em; color:var(--gold-dim); line-height:1.2; }
+  .score-round .sr-num{ font-family:'Cormorant Garamond',serif; color:var(--gold-bright); line-height:1; display:flex; align-items:baseline; gap:1px; }
+  .score-round .sr-num b{ font-size:20px; font-weight:700; }
+  .score-round .sr-num span{ font-size:11px; color:var(--gold-dim); }
+  .score-round .late-badge{ margin-left:0; margin-top:2px; font-size:7px; padding:1px 5px; }
+  /* 相性ストリップ(正しい三竦み: 月✊＞闇✌＞太陽✋。Kaos/Airは特殊) */
+  .compat-strip{ display:flex; align-items:center; justify-content:center; gap:4px; flex-wrap:wrap; padding:2px 12px 1px; font-size:10px; color:var(--ink-dim); flex-shrink:0; }
+  .compat-strip .cs-label{ font-size:8px; letter-spacing:0.12em; color:var(--gold-dim); margin-right:1px; }
+  .compat-strip .cs-item{ font-weight:700; }
+  .compat-strip .cs-item.moon{ color:var(--moon); }
+  .compat-strip .cs-item.dark{ color:var(--dark); }
+  .compat-strip .cs-item.sun{ color:var(--sun); }
+  .compat-strip .cs-gt{ color:var(--gold-dim); font-size:9px; }
+  .compat-strip .cs-dot{ color:var(--gold-dim); }
+  .compat-strip .cs-special{ color:var(--kaos); font-size:9px; font-weight:700; }
   .lp-bar-wrap{
     margin-top:4px; height:7px; display:flex; gap:2px;
   }
@@ -683,6 +700,10 @@
 
   .hand-wrap{ padding:2px 12px 2px; flex-shrink:0; border-radius:10px; transition:background .2s; }
   .hand-wrap.tappable{ cursor:pointer; background:rgba(232,200,119,0.06); }
+  /* 選択可能なとき手札を光らせる(操作できる場所を明確に) */
+  .hand-wrap.tappable .hcard{ border-color:rgba(232,200,119,0.55); animation:handGlow 1.8s ease-in-out infinite; }
+  @keyframes handGlow{ 0%,100%{ box-shadow:0 0 0 rgba(232,200,119,0); } 50%{ box-shadow:0 0 11px 1px rgba(232,200,119,0.4); } }
+  @media(prefers-reduced-motion:reduce){ .hand-wrap.tappable .hcard{ animation:none; box-shadow:0 0 9px rgba(232,200,119,0.35); } }
   .hand-wrap.tappable .hand-title{ color:var(--gold-bright); }
   .hand-wrap.tappable .hand-title::after{ content:' (タップして選択)'; font-size:8px; color:var(--ink-dim); }
   .hand-title{ font-size:8px; letter-spacing:0.08em; color:var(--gold-dim); text-align:center; margin-bottom:2px; }
@@ -714,6 +735,11 @@
   .btn.disabled{ opacity:0.3; pointer-events:none; }
   .btn.ghost{ background:transparent; color:var(--gold); border:1px solid rgba(201,162,74,0.4); }
   .btn.danger{ background:linear-gradient(160deg,#d88,#a55); color:#2a0d0d; }
+  /* アクションボタン: アイコン＋ラベル */
+  .btn.act-btn{ display:flex; flex-direction:column; align-items:center; gap:1px; padding:7px 0 8px; line-height:1.15; }
+  .act-btn .act-ic{ font-size:18px; line-height:1; }
+  .act-btn .act-lb{ font-size:11px; font-weight:700; }
+  .act-btn .act-cost{ font-size:8px; font-weight:400; opacity:.8; }
   .hint-line{ text-align:center; font-size:10px; color:var(--ink-dim); padding:0 18px 1px; min-height:12px; flex-shrink:0; }
   /* 初心者ヒント(コーチ)行 */
   .coach-line{ flex-shrink:0; text-align:center; font-size:11px; line-height:1.5; padding:0 14px; min-height:0; }
@@ -1208,7 +1234,6 @@
       <div class="grid-btn" onclick="openRules()">ルール</div>
       <div class="grid-btn" onclick="openTracker()">一覧表</div>
       <div class="grid-btn" onclick="openHistory()">履歴 ↺</div>
-      <div class="round-badge">ラウンド <b id="roundN">1</b> / <b id="roundTotal">8</b><span class="late-badge" id="lateBadge">決戦×2</span></div>
     </div>
   </div>
 
@@ -1219,13 +1244,27 @@
       <div class="lp-bar-wrap" id="youBarWrap"></div>
       <div class="token-line" id="youToken"></div>
     </div>
-    <div class="score-mid">pt</div>
+    <div class="score-round">
+      <div class="sr-label">ROUND</div>
+      <div class="sr-num"><b id="roundN">1</b><span>/</span><b id="roundTotal">8</b></div>
+      <span class="late-badge" id="lateBadge">決戦×2</span>
+    </div>
     <div class="score-cell" id="cpuCell">
       <div class="dealer-tag" id="cpuDealerTag" style="display:none;">親</div>
       <div class="who">相手</div><div class="val" id="cpuLP">13</div>
       <div class="lp-bar-wrap" id="cpuBarWrap"></div>
       <div class="token-line" id="cpuToken"></div>
     </div>
+  </div>
+
+  <div class="compat-strip">
+    <span class="cs-label">相性</span>
+    <span class="cs-item moon">月✊</span><span class="cs-gt">＞</span>
+    <span class="cs-item dark">闇✌️</span><span class="cs-gt">＞</span>
+    <span class="cs-item sun">太陽✋</span><span class="cs-gt">＞</span>
+    <span class="cs-item moon">月</span>
+    <span class="cs-dot">・</span>
+    <span class="cs-special">Kaos/Air＝特殊</span>
   </div>
 
   <div class="role-banner" id="roleBanner"></div>
@@ -1897,21 +1936,23 @@ function renderActions(){
   actions.innerHTML='';
   if(phase==='decide' && youIsDealer){
     const fightBtn=document.createElement('div');
-    fightBtn.className='btn'; fightBtn.textContent='決戦';
+    fightBtn.className='btn act-btn'; fightBtn.innerHTML=actIcon('⚔','決戦');
     fightBtn.onclick=()=>resolveFight(true);
     const passBtn=document.createElement('div');
     const canPass = youTrust>=PASS_TRUST_COST;
-    passBtn.className='btn ghost'+(canPass?'':' disabled');
-    passBtn.textContent = canPass ? `撤退 (戦略-${PASS_TRUST_COST})` : `撤退 (戦略不足)`;
+    passBtn.className='btn ghost act-btn'+(canPass?'':' disabled');
+    passBtn.innerHTML = actIcon('🏳', canPass ? `撤退 <span class="act-cost">戦略-${PASS_TRUST_COST}</span>` : `撤退 <span class="act-cost">不足</span>`);
     passBtn.onclick=()=>{ if(canPass) resolveFight(false); };
     const swapBtn=document.createElement('div');
     const canSwap = youTrust>=SWAP_COST && youHand.length>0 && !youSwapUsedThisRound;
-    swapBtn.className='btn ghost'+(canSwap?'':' disabled');
-    swapBtn.textContent = youSwapUsedThisRound ? '入替 (使用済)' : (canSwap ? `入替 (戦略-${SWAP_COST})` : `入替 (不可)`);
+    swapBtn.className='btn ghost act-btn'+(canSwap?'':' disabled');
+    swapBtn.innerHTML = actIcon('🔄', youSwapUsedThisRound ? '入替 <span class="act-cost">使用済</span>' : (canSwap ? `入替 <span class="act-cost">戦略-${SWAP_COST}</span>` : '入替 <span class="act-cost">不可</span>'));
     swapBtn.onclick=()=>{ if(canSwap) openSwapModal(); };
     actions.appendChild(passBtn); actions.appendChild(swapBtn); actions.appendChild(fightBtn);
   }
 }
+// アクションボタン用: アイコン＋ラベル
+function actIcon(icon, label){ return `<span class="act-ic">${icon}</span><span class="act-lb">${label}</span>`; }
 
 // ===== 親の特権「入替」: 子の数字を見てから、自分のカードを手札の別の1枚と交換できる(1ラウンド1回まで) =====
 function openSwapModal(){
@@ -2497,10 +2538,10 @@ function resolveFight(doFight, isCpuDealer){
         hint(`相手は撤退しようとしている。戦略${FORCE_TRUST_COST}払って奇襲？`);
         const actions=document.getElementById('actions');
         const acceptBtn=document.createElement('div');
-        acceptBtn.className='btn ghost'; acceptBtn.textContent='撤退を受け入れる';
+        acceptBtn.className='btn ghost act-btn'; acceptBtn.innerHTML=actIcon('🏳','受け入れる');
         acceptBtn.onclick=()=>{ executePass(isCpuDealer); };
         const forceBtn=document.createElement('div');
-        forceBtn.className='btn danger'; forceBtn.textContent=`戦略${FORCE_TRUST_COST}払って奇襲！`;
+        forceBtn.className='btn danger act-btn'; forceBtn.innerHTML=actIcon('⚡',`奇襲 <span class="act-cost">戦略-${FORCE_TRUST_COST}</span>`);
         forceBtn.onclick=()=>{
           youTrust-=FORCE_TRUST_COST; renderScore();
           showActionBanner('kishuu', ()=>{
@@ -2762,8 +2803,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.24.0';
+const GAME_VERSION = 'v0.25.0';
 const CHANGELOG = [
+  { version:'v0.25.0', date:'2026-07-12', items:[
+    '対戦画面をさらに整理（UIモック案を反映）：①上部を「あなたの得点｜中央ROUND｜相手の得点」の1行バーに集約（ラウンドを中央に移動、ヘッダーをすっきり） ②決戦・撤退・入替・奇襲をアイコン＋ラベルのボタンに ③選べるとき手札を光らせて操作場所を明確化 ④対戦画面にも属性相性（月✊＞闇✌＞太陽✋、Kaos/Airは特殊）を常時表示。得点の仕組み（0から加点）は変更なし',
+  ]},
   { version:'v0.24.0', date:'2026-07-12', items:[
     '対戦画面のUIを改善（テスターの意見を反映）：①スコア表示を横長スリムな1行にまとめて余白を削減 ②手札を大きく表示 ③画面全体を明るく調整 ④相手の手札に「あり得るじゃんけん」を表示（属性は伏せたまま、月/闇/太陽の候補✊✌✋を表示し推理は維持。Kaos/Airは小アイコン）。ラベルや説明文も簡潔化',
   ]},
