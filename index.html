@@ -708,6 +708,20 @@
   @keyframes sbPop{ 0%{transform:translateY(0) scale(0.9);} 55%{transform:translateY(0) scale(1.07);} 100%{transform:translateY(0) scale(1);} }
   #ovExtra{ opacity:0; transition:opacity .5s ease; display:flex; flex-direction:column; align-items:center; }
   #ovExtra.show{ opacity:1; }
+  /* ラウンド別 獲得ポイント */
+  .round-points{ margin-top:12px; width:100%; max-width:300px; }
+  .rp-title{ font-size:10px; color:var(--ink-dim); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .rp-legend{ white-space:nowrap; flex-shrink:0; }
+  .rp-legend b{ font-size:8px; margin:0 2px 0 6px; }
+  .rp-legend b.you{ color:var(--gold-bright); } .rp-legend b.cpu{ color:var(--lose); }
+  .rp-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
+  .rp-cell{ border:1px solid var(--line); border-radius:8px; padding:5px 2px; text-align:center; display:flex; flex-direction:column; gap:2px; background:var(--bg-panel); }
+  .rp-r{ font-size:8px; color:var(--ink-dim); }
+  .rp-x2{ color:var(--kaos); font-size:7px; margin-left:2px; }
+  .rp-v{ font-size:15px; font-weight:700; font-family:'Cormorant Garamond',serif; color:var(--ink); }
+  .rp-cell.you{ border-color:rgba(217,180,90,0.5); } .rp-cell.you .rp-v{ color:var(--gold-bright); }
+  .rp-cell.cpu{ border-color:rgba(193,75,82,0.45); } .rp-cell.cpu .rp-v{ color:var(--lose); }
+  .rp-cell.none .rp-v{ color:var(--ink-dim); font-size:10px; }
   .btn-close-modal{
     align-self:center; padding:8px 28px; border-radius:10px; font-size:11px;
     color:var(--gold); border:1px solid rgba(201,162,74,0.4); cursor:pointer; letter-spacing:0.05em;
@@ -2467,8 +2481,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.17.0';
+const GAME_VERSION = 'v0.18.0';
 const CHANGELOG = [
+  { version:'v0.18.0', date:'2026-07-11', items:[
+    '結果画面に「ラウンド別 獲得ポイント」を追加。各ラウンドで誰が何点取ったか（引分・撤退も）を一覧表示し、色でどちらの得点かを区別（決戦の得点の内訳）。終盤2倍のラウンドには×2表示',
+  ]},
   { version:'v0.17.0', date:'2026-07-11', items:[
     '結果画面を刷新：得点の内訳（決戦の得点／戦略カウンター／残り手札ボーナス→合計）を表で表示し、上の行から順に数字がカウントアップする演出を追加。加点の内訳が分かりやすくなった',
   ]},
@@ -3035,7 +3052,19 @@ function endGame(){
     ${rowHTML('残り手札ボーナス','Air×2',youLeftoverBonus,cpuLeftoverBonus,'+','sb-row')}
     ${rowHTML('合計','',youFinal,cpuFinal,'','sb-total')}
   </div>`;
+  // ラウンド別の獲得ポイント(決戦の得点の内訳)
+  const rpCells=roundLog.map(r=>{
+    const passed=!!r.passed, draw=r.result==='draw';
+    const pts=(passed||draw)?0:(r.dmg||0);
+    let who='none';
+    if(!passed && !draw) who=((r.result==='dealer')===r.dealerIsYou)?'you':'cpu';
+    const late = !passed && !draw && r.round>=LATE_GAME_START;
+    const val = who==='none' ? (passed?'撤退':'引分') : `+${pts}`;
+    return `<div class="rp-cell ${who}"><span class="rp-r">R${r.round}${late?'<span class="rp-x2">×2</span>':''}</span><span class="rp-v">${val}</span></div>`;
+  }).join('');
+  const roundSection=`<div class="round-points"><div class="rp-title">ラウンド別 獲得ポイント（決戦の得点の内訳）<span class="rp-legend"><b class="you">■</b>あなた <b class="cpu">■</b>相手</span></div><div class="rp-grid">${rpCells}</div></div>`;
   const extra=`<div id="ovExtra">
+    ${roundSection}
     <div class="match-summary">
       <div class="ms-row"><span>勝敗</span><span>あなた${s.youWins}勝 － ${s.cpuWins}勝相手 （引分${s.draws}）</span></div>
       <div class="ms-row"><span>撤退回数</span><span>${s.passes}回</span></div>
