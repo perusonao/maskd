@@ -441,7 +441,7 @@
     .empty-slot{ width:60px !important; height:82px !important; }
     .field{ margin:3px 10px !important; }
     .field .mid-divider{ min-height:22px !important; }
-    .zone-hint{ font-size:7px !important; }
+    .zone-hint{ font-size:8px !important; }
     .opp-hand-strip{ padding:2px 10px 0 !important; }
     .opp-hand-strip .ohs-label{ margin-bottom:1px !important; }
     .ohs-cards{ gap:6px !important; }
@@ -504,7 +504,7 @@
   .zone-label{ font-size:9px; letter-spacing:0.2em; color:var(--ink-dim); display:flex; align-items:center; justify-content:center; gap:6px; }
   .zone-label.you{ color:var(--gold-dim); }
   .zone-wrap{ display:flex; flex-direction:column; align-items:center; gap:1px; padding:0 6px; }
-  .zone-hint{ font-size:8px; color:var(--ink-dim); text-align:center; min-height:0; line-height:1.2; }
+  .zone-hint{ font-size:9px; color:#cbc4b6; text-align:center; min-height:0; line-height:1.25; }
   .zone-hint:not(:empty){
     background:rgba(111,191,160,0.08); border:1px solid rgba(111,191,160,0.3);
     border-radius:5px; padding:1px 6px;
@@ -936,7 +936,7 @@
   .act-btn .act-ic{ font-size:18px; line-height:1; }
   .act-btn .act-lb{ font-size:11px; font-weight:700; }
   .act-btn .act-cost{ font-size:8px; font-weight:400; opacity:.8; }
-  .hint-line{ text-align:center; font-size:10px; color:var(--ink-dim); padding:0 18px 1px; min-height:12px; flex-shrink:0; }
+  .hint-line{ text-align:center; font-size:10.5px; color:#d6cfc0; padding:0 18px 1px; min-height:12px; flex-shrink:0; }
   /* 初心者ヒント(コーチ)行 */
   .coach-line{ flex-shrink:0; text-align:center; font-size:11px; line-height:1.5; padding:0 14px; min-height:0; }
   .coach-line:not(:empty){ margin:2px 14px; padding:5px 10px; border-radius:8px;
@@ -944,7 +944,7 @@
   .coach-line .ci{ margin-right:5px; }
   .coach-line b{ color:var(--gold-bright); } .coach-line b.air{ color:var(--air); } .coach-line b.kaos{ color:var(--kaos); }
   .coach-line .verdict{ font-weight:700; }
-  .coach-line .tips{ display:block; font-size:10px; color:var(--ink-dim); margin-top:2px; }
+  .coach-line .tips{ display:block; font-size:10.5px; color:#ddd6c8; font-weight:500; margin-top:2px; }
   /* 手札選択モーダル: おすすめ札の印 */
   .hmg-card.recommend{ box-shadow:0 0 0 2px var(--win), 0 0 12px rgba(126,201,138,.5); }
   .hmg-card .rec-badge{ position:absolute; top:-7px; right:-6px; z-index:5; font-size:10px;
@@ -2282,7 +2282,7 @@ function executeSwap(idx){
   youSwapUsedThisRound=true;
   renderYouSlot(newCard);
   showYouCardHint(newCard.num);
-  hint(`入替した。新しい数字は ${newCard.num}。決戦か撤退か。`);
+  hint(`入替した。あなたの新しい数字は ${newCard.num}。`);
   renderScore(); renderActions();
 }
 
@@ -2458,7 +2458,8 @@ function cpuActAsChild(){
   const card=cpuHand.splice(idx,1)[0]; card.owner='cpu';
   childCard=card;
   document.getElementById('cpuSlot').innerHTML=cardHTML(card,true,'相手');
-  hint('あなたは親です。子の数字は '+card.num+'。決戦か撤退か。');
+  // 中央の行動選択に「子の数字は N。どうする？」を出すので、下部の重複案内は消す
+  hint('');
   phase='decide'; renderActions(); renderScore();
   showAttrHint(card.num);
   showDecideCoach(); // 初心者ヒント: 決戦アドバイス(有利/不利)
@@ -3120,8 +3121,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.31.4';
+const GAME_VERSION = 'v0.31.5';
 const CHANGELOG = [
+  { version:'v0.31.5', date:'2026-07-13', items:[
+    'レビュー反映：①決断時に「子の数字は N。どうする？」が中央と下部で重複していたのを、中央の1か所に統一（下部の重複案内を削除） ②細かい説明文（コーチのヒント・「相手からの見え方」など）の文字色を明るく・少し大きくして読みやすさを向上',
+  ]},
   { version:'v0.31.4', date:'2026-07-13', items:[
     '対戦画面の改善（要望を反映）：①「使用済」カードの表示にラベルを付け、単独の数字が浮いて見える不具合を解消 ②フッターに「初心者/上級者」表示と「ヒントON/OFF」の切替を追加し、ゲーム中いつでも切替可能に ③案内メッセージ・ヒントを手札の「上」にまとめて表示（場の中央からは行動選択のみを表示）',
   ]},
