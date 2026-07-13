@@ -385,15 +385,16 @@
   .app.rich-mode .compat-strip{ display:none; }
   /* #2 出した札の重複表示を削除(使用済みは場に表示済み) */
   .you-played-row{ display:none !important; }
-  /* #4 案内メッセージ・ヒントは手札の上にまとめて表示 */
+  /* #4 案内メッセージ・ヒント・行動選択は手札の上にまとめて表示 */
   .guide-zone{ flex-shrink:0; }
   .guide-zone > .msg-window{ background:linear-gradient(180deg,#1a1626,#12101a); margin:2px 14px 1px; }
+  .guide-zone > .field-actions{ margin:3px auto 5px; }
   /* #5 場の余白を整理: 内容の高さに合わせ、中央に案内/行動/結果の余白を確保 */
   .play-area{ justify-content:center; }
   .play-area .field{ flex:0 1 auto; margin:4px 0; max-height:100%; }
   .field{ grid-template-rows:auto auto auto auto auto !important; row-gap:4px; }
-  /* 案内メッセージは手札上に移動したので、場の中央は行動選択(決戦等)が出る時だけ広がればよい */
-  .field .mid-divider{ min-height:28px; justify-content:center; }
+  /* 案内・行動選択とも手札上に移動したので、場札同士を近づけて対峙感を出す */
+  .field .mid-divider{ min-height:14px; justify-content:center; }
   /* #6 場に表示する各プレイヤーの得点 */
   .pi-pt{ font-size:10px; color:var(--ink-dim); letter-spacing:0.04em; white-space:nowrap; }
   .pinfo.you .pi-pt{ color:var(--gold-bright); }
@@ -440,7 +441,7 @@
     .card.facedown .num{ font-size:15px !important; }
     .empty-slot{ width:60px !important; height:82px !important; }
     .field{ margin:3px 10px !important; }
-    .field .mid-divider{ min-height:22px !important; }
+    .field .mid-divider{ min-height:10px !important; }
     .zone-hint{ font-size:8px !important; }
     .opp-hand-strip{ padding:2px 10px 0 !important; }
     .opp-hand-strip .ohs-label{ margin-bottom:1px !important; }
@@ -450,18 +451,29 @@
     .hand-title{ margin-bottom:1px !important; }
     .hand-wrap{ padding:1px 12px !important; }
     .hcard{ max-width:60px !important; }
+    /* ステータス(pinfo)を圧縮して、使用済カードが出ても場からはみ出さないように */
+    .pinfo{ gap:2px !important; }
+    .pi-used .uc{ width:13px !important; height:17px !important; font-size:9px !important; }
+    .pinfo .deck-chip{ padding:2px 6px !important; font-size:9px !important; }
+    .pinfo .lp-bar-wrap{ height:5px !important; }
+    /* フッターをコンパクトにして2段折り返しの高さを抑える */
+    .hd.bottom{ padding:4px 12px !important; }
+    .hd.bottom .grid-btn{ padding:2px 6px !important; font-size:8.5px !important; }
+    .hd.bottom .brand{ font-size:16px !important; }
     /* 決断ボタン(決戦・撤退・入替)をコンパクトに */
-    .field-actions .fa-ctx{ font-size:11px !important; margin-bottom:2px !important; }
-    .field-actions .act-btn{ padding:6px 0 !important; }
+    .field-actions .fa-ctx{ font-size:11px !important; margin-bottom:1px !important; }
+    .field-actions .act-btn{ padding:5px 0 !important; }
     .field-actions .act-ic{ font-size:15px !important; }
     .field-actions .act-lb{ font-size:12px !important; }
     .field-actions .act-cost{ font-size:9px !important; }
+    .coach-line:not(:empty){ padding:4px 8px !important; margin:1px 14px !important; }
+    .guide-zone > .field-actions{ margin:2px auto 3px !important; }
   }
   /* さらに短い画面(小型端末)向けの圧縮 */
   @media (max-height: 680px){
     .card{ width:52px !important; height:72px !important; }
     .empty-slot{ width:52px !important; height:72px !important; }
-    .field .mid-divider{ min-height:18px !important; }
+    .field .mid-divider{ min-height:8px !important; }
     .ohs-cards .opp-card{ width:38px !important; height:52px !important; }
     .hcard{ max-width:54px !important; }
   }
@@ -1470,10 +1482,10 @@
         </div>
       </div>
       <div class="zone-wrap"><div class="zone-hint" id="oppCardHint"></div></div>
-      <div class="mid-divider">
-        <div class="field-actions" id="fieldActions"></div>
-      </div>
+      <div class="mid-divider"></div>
       <div class="slot-line">
+        <div class="slot-side"></div>
+        <div class="slot-row" id="youSlot"><div class="empty-slot">あなた</div></div>
         <div class="pinfo you" id="youCell">
           <span class="pi-role" id="youDealerTag">子</span>
           <span class="pi-pt">あなた <b id="youLP">0</b>pt</span>
@@ -1482,8 +1494,6 @@
           <span class="pi-token" id="youToken"></span>
           <div class="pi-used" id="youUsed"></div>
         </div>
-        <div class="slot-row" id="youSlot"><div class="empty-slot">あなた</div></div>
-        <div class="slot-side"></div>
       </div>
       <div class="zone-wrap"><div class="zone-hint" id="youCardHint"></div></div>
       <div class="action-banner" id="actionBanner"><div class="ab-icon"></div><div class="ab-text"></div></div>
@@ -1502,11 +1512,12 @@
   <div class="peek" id="peek"></div>
   <div class="you-played-row" id="youPlayedRow"></div>
 
-  <!-- 案内メッセージ・ヒントは手札の「上」に集約表示 -->
+  <!-- 案内メッセージ・ヒント・行動選択は手札の「上」に集約表示(親指が届きやすい位置) -->
   <div class="guide-zone" id="guideZone">
     <div class="msg-window" id="roleBanner"></div>
     <div class="coach-line" id="coachLine"></div>
     <div class="hint-line" id="hint"></div>
+    <div class="field-actions" id="fieldActions"></div>
   </div>
 
   <div class="hand-wrap" id="handWrap">
@@ -3121,8 +3132,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.31.5';
+const GAME_VERSION = 'v0.31.6';
 const CHANGELOG = [
+  { version:'v0.31.6', date:'2026-07-13', items:[
+    'レビュー反映：①相手／自分のステータス（得点・親子・戦略・使用済）を、どちらも場の右側に縦に並べて配置し、視線移動を減らして比較しやすく ②行動選択（決戦・撤退・入替）を手札のすぐ上に移動して親指で押しやすく。あわせて上下の場札を近づけて対峙感を強調。縦に短い画面でもはみ出さないようステータス・フッターを圧縮',
+  ]},
   { version:'v0.31.5', date:'2026-07-13', items:[
     'レビュー反映：①決断時に「子の数字は N。どうする？」が中央と下部で重複していたのを、中央の1か所に統一（下部の重複案内を削除） ②細かい説明文（コーチのヒント・「相手からの見え方」など）の文字色を明るく・少し大きくして読みやすさを向上',
   ]},
