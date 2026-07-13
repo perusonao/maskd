@@ -105,6 +105,10 @@
   .odc-x{ font-size:11px; color:var(--ink-dim); }
   .odc-poss{ display:flex; align-items:center; gap:5px; margin-left:auto; flex-wrap:wrap; justify-content:flex-end; }
   .odc-lbl{ font-size:9px; color:var(--ink-dim); }
+  /* 自分の山札: 次に引く札を強調 */
+  .odc-cand.next{ border-color:var(--gold-bright); box-shadow:0 0 0 1px var(--gold-bright),0 0 12px rgba(240,208,135,0.3); background:rgba(240,208,135,0.06); }
+  .odc-nextbadge{ display:inline-block; font-size:8px; font-family:'Zen Kaku Gothic New',sans-serif; font-weight:700; color:#1a1608;
+    background:var(--gold-bright); border-radius:7px; padding:0 5px; margin-left:5px; vertical-align:middle; }
   /* 山札モーダルの中身 */
   .deck-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(58px,1fr)); gap:6px; padding:4px 2px; }
   .deck-card{ position:relative; border:1px solid; border-radius:8px; padding:8px 4px; text-align:center;
@@ -357,14 +361,18 @@
   .pi-used{ display:flex; gap:2px; flex-wrap:wrap; align-items:center; justify-content:center; max-width:92px; }
   .pi-used:empty{ display:none; }
   .pi-used:not(:empty)::before{ content:'使用済'; font-size:7px; color:var(--ink-dim); letter-spacing:0.02em; margin-right:1px; }
-  .pi-used .uc{ width:16px; height:22px; border-radius:4px; border:1px solid var(--line); display:grid; place-items:center;
-    font-family:'Cormorant Garamond',serif; font-size:11px; font-weight:700; background:rgba(255,255,255,0.03); color:var(--ink-dim);
-    box-shadow:0 1px 3px rgba(0,0,0,0.4); }
-  .pi-used .uc.moon{ border-color:var(--moon); color:var(--moon); background:rgba(143,169,201,0.16); }
-  .pi-used .uc.sun{ border-color:var(--sun); color:var(--sun); background:rgba(224,162,61,0.16); }
-  .pi-used .uc.dark{ border-color:var(--dark); color:var(--dark); background:rgba(138,92,174,0.16); }
-  .pi-used .uc.kaos{ border-color:var(--kaos); color:var(--kaos); background:rgba(193,75,82,0.16); }
-  .pi-used .uc.air{ border-color:var(--air); color:var(--air); background:rgba(111,191,160,0.16); }
+  .pi-used .uc{ width:22px; height:30px; border-radius:4px; border:1px solid var(--line); position:relative; overflow:hidden;
+    display:grid; place-items:center; font-family:'Cormorant Garamond',serif; font-size:11px; font-weight:700;
+    background:rgba(255,255,255,0.03); color:var(--ink-dim); box-shadow:0 1px 3px rgba(0,0,0,0.4); }
+  /* 上級者: 実際のカード絵を背景に、数字は小バッジで重ねる */
+  .pi-used .uc.art{ background-size:cover; background-position:center; }
+  .pi-used .uc.art .uc-n{ position:absolute; top:0; left:0; right:0; text-align:center; font-size:10px; color:#fff;
+    text-shadow:0 1px 2px #000,0 0 3px #000; background:linear-gradient(180deg,rgba(0,0,0,.55),transparent); line-height:1.3; }
+  /* 初心者: 属性色の枠＋数字＋じゃんけん記号 */
+  .pi-used .uc.bcard{ container-type:normal; }
+  .pi-used .uc.bcard .bc-num{ font-size:9px; line-height:1; } .pi-used .uc.bcard .bc-big{ font-size:11px; line-height:1; }
+  .pi-used .uc.moon{ border-color:var(--moon); } .pi-used .uc.sun{ border-color:var(--sun); }
+  .pi-used .uc.dark{ border-color:var(--dark); } .pi-used .uc.kaos{ border-color:var(--kaos); } .pi-used .uc.air{ border-color:var(--air); }
   /* 場中央の行動選択(決戦・撤退・入替。選べる時だけ表示) */
   .field-actions{ width:100%; max-width:340px; z-index:9; display:none; }
   .field-actions.show{ display:block; }
@@ -463,12 +471,12 @@
     border-radius:8px; padding:0 4px; font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,.5); }
   /* ===== 縦に短い画面向け: カード・余白を圧縮して、場のはみ出しや中央オーバーレイの重なりを防ぐ ===== */
   @media (max-height: 820px){
-    .card{ width:60px !important; height:82px !important; padding:4px 3px !important; }
-    .card .num{ font-size:15px !important; }
-    .card .glyph{ width:19px !important; height:19px !important; font-size:10px !important; }
+    .card{ width:76px !important; height:104px !important; padding:5px 3px !important; }
+    .card .num{ font-size:17px !important; }
+    .card .glyph{ width:22px !important; height:22px !important; font-size:11px !important; }
     .card .attr{ font-size:6px !important; }
-    .card.facedown .num{ font-size:15px !important; }
-    .empty-slot{ width:60px !important; height:82px !important; }
+    .card.facedown .num{ font-size:17px !important; }
+    .empty-slot{ width:76px !important; height:104px !important; }
     .field{ margin:3px 10px !important; }
     .field .mid-divider{ min-height:10px !important; }
     .zone-hint{ font-size:8px !important; }
@@ -485,13 +493,13 @@
     .hand-title{ margin-bottom:1px !important; }
     .hand-wrap{ padding:1px 12px !important; }
     .hcard{ max-width:60px !important; }
-    /* ステータス(pinfo)を圧縮して、使用済カードが出ても場からはみ出さないように */
+    /* ステータス(pinfo)を圧縮 */
     .pinfo{ gap:2px !important; }
-    .pi-used .uc{ width:13px !important; height:17px !important; font-size:9px !important; }
+    .pi-used .uc{ width:19px !important; height:26px !important; font-size:10px !important; }
     .pinfo .deck-chip{ padding:2px 6px !important; font-size:9px !important; }
-    /* 短い画面では戦略バーを省略し、精確な「戦略 N」テキストで代替(高さ節約) */
-    .pinfo .pi-ctr{ display:none !important; }
-    .pi-token{ font-size:9px !important; }
+    /* 戦略バーを表示するので、重複する「戦略 N」テキストは短い画面では省略 */
+    .pi-token{ display:none !important; }
+    .pinfo .lp-bar-wrap{ height:6px !important; }
     .pi-pt b{ font-size:20px !important; }
     /* フッターをコンパクトにして2段折り返しの高さを抑える */
     .hd.bottom{ padding:4px 12px !important; }
@@ -506,13 +514,21 @@
     .coach-line:not(:empty){ padding:4px 8px !important; margin:1px 14px !important; }
     .guide-zone > .field-actions{ margin:2px auto 3px !important; }
   }
+  /* 中くらいに短い画面(~750px): 大きめカードだと場からはみ出すので少し縮小 */
+  @media (max-height: 750px){
+    .card{ width:64px !important; height:88px !important; }
+    .card .num, .card.facedown .num{ font-size:16px !important; }
+    .empty-slot{ width:64px !important; height:88px !important; }
+    .pi-used .uc{ width:17px !important; height:23px !important; }
+  }
   /* さらに短い画面(小型端末)向けの圧縮 */
   @media (max-height: 680px){
-    .card{ width:52px !important; height:72px !important; }
-    .empty-slot{ width:52px !important; height:72px !important; }
+    .card{ width:54px !important; height:74px !important; }
+    .empty-slot{ width:54px !important; height:74px !important; }
     .field .mid-divider{ min-height:8px !important; }
     .ohs-cards .opp-card{ width:38px !important; height:52px !important; }
     .hcard{ max-width:54px !important; }
+    .pi-used .uc{ width:15px !important; height:20px !important; }
   }
   /* 案内メッセージ: 手札の上に表示(1行に収まる範囲で) */
   .guide-zone > .msg-window{ max-width:none; z-index:8; pointer-events:none;
@@ -1423,7 +1439,7 @@
 
   <div class="history-modal" id="deckModal">
     <h3>自分の山札</h3>
-    <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">まだ引いていない自分の残り札です（次に引く札を強調表示）</p>
+    <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">まだ引いていない自分の残り札（数字・枚数・属性）。次に引く札を強調</p>
     <div class="hist-scroll" id="deckModalBody"></div>
     <div class="btn-close-modal" onclick="closeDeckModal()">閉じる</div>
   </div>
@@ -2069,9 +2085,14 @@ function renderRoundProgress(){
   }
 }
 // お互いの使用済みカードを山札の下に表示(双方とも公開済み)
+// 使用済みカードを、実際のカード絵(上級者)/初心者カードのミニ表示で描画
+function usedCardHTML(c){
+  if(useRichCards()) return `<span class="uc art ${c.attr}" style="background-image:url(${attrImgUrl(c.attr)})"><span class="uc-n">${c.num}</span></span>`;
+  return `<span class="uc bcard ${c.attr}">${beginnerInner(c, true)}</span>`;
+}
 function renderUsedCards(){
   const yc=document.getElementById('youUsed');
-  if(yc) yc.innerHTML = youPlayedCards.map(c=>`<span class="uc ${c.attr}">${c.num}</span>`).join('');
+  if(yc) yc.innerHTML = youPlayedCards.map(usedCardHTML).join('');
   const cc=document.getElementById('cpuUsed');
   if(cc){
     const list=[];
@@ -2083,7 +2104,7 @@ function renderUsedCards(){
       });
     }
     list.sort((a,b)=>a.num-b.num);
-    cc.innerHTML = list.map(c=>`<span class="uc ${c.attr}">${c.num}</span>`).join('');
+    cc.innerHTML = list.map(usedCardHTML).join('');
   }
 }
 function setRoleTag(id, isDealer){
@@ -3221,8 +3242,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.32.0';
+const GAME_VERSION = 'v0.32.1';
 const CHANGELOG = [
+  { version:'v0.32.1', date:'2026-07-13', items:[
+    '対戦画面の改善（要望を反映）：①場に出たカードを大きく表示（狭い画面では自動で段階的に縮小） ②消えていた戦略カウンターのバーを復活（重複する「戦略N」テキストは省略） ③使用済みカードを実際のカード絵（上級者）／初心者カードのミニ表示に ④「自分の山札」を「相手の山札」と同じ一覧表示に（数字・枚数・属性＋次に引く札を強調）。自分・相手の山札はどちらも閉じるボタン付きのモーダル',
+  ]},
   { version:'v0.32.0', date:'2026-07-13', items:[
     'バランス調整（得点ルール変更）：残り手札ボーナスを見直し。従来は「残った全札の数字を合計（Airは数字×2）」だったため、強い札を温存するだけで勝ててしまう問題があった。今後は「残った非Air札のうち数字の大きい上位2枚のみ合計＋Airは数字に関係なく1枚2点」に変更。シミュレーション（各4万戦）で、温存戦略とバトル戦略がほぼ五分になることを確認。決戦（バトル）が勝敗の主軸になり、Airの数字が戦闘でも得点でも無関係で一貫。',
   ]},
@@ -3820,21 +3844,30 @@ function renderDeckChip(){
   const next=youDrawPile[n-1];
   bar.innerHTML=`<span class="deck-ico">🂠</span><span>山札<b>${n}</b></span><span class="deck-next">次<b>${next.num}</b></span>`;
 }
+// 自分の山札を数字ごとにまとめる(相手の山札と同じリスト表示。自分の札なので属性は確定表示)
+function youDrawPileGrouped(){
+  const map={};
+  youDrawPile.forEach(c=>{ (map[c.num]=map[c.num]||[]).push(c.attr); });
+  return Object.keys(map).map(n=>({num:+n, count:map[n].length, attrs:map[n].sort()})).sort((a,b)=>a.num-b.num);
+}
 function openDeckModal(){
   const body=document.getElementById('deckModalBody');
   const n=youDrawPile.length;
   if(n===0){
     body.innerHTML='<div class="hist-empty">山札は空です。<br>手札の札で戦いましょう。</div>';
   } else {
-    const next=youDrawPile[n-1];
-    const sorted=[...youDrawPile].sort((a,b)=> a.num-b.num || a.attr.localeCompare(b.attr));
-    body.innerHTML=`<p style="font-size:11px;color:var(--ink-dim);text-align:center;margin:-2px 0 8px;">引く順に数字は分かりますが、<b style="color:var(--gold-bright)">属性は伏せられています</b>（次に引く札を強調）</p><div class="deck-grid">`+sorted.map(c=>{
-      const isNext = c===next;
-      return `<div class="deck-card facedown${isNext?' next':''}">
-        <span class="dc-n">${c.num}</span>
-        ${isNext?'<span class="dc-badge">次</span>':''}
-      </div>`;
-    }).join('')+`</div>`;
+    const nextNum = youDrawPile[n-1].num;
+    let nextShown=false;
+    const groups=youDrawPileGrouped();
+    body.innerHTML=groups.map(g=>{
+        const isNext = !nextShown && g.num===nextNum; if(isNext) nextShown=true;
+        const icons=g.attrs.map(a=>`<div class="hint-icon ${a} confirmed"></div>`).join('');
+        return `<div class="odc-cand${isNext?' next':''}">
+          <div class="odc-num">${g.num}${isNext?'<span class="odc-nextbadge">次</span>':''}</div>
+          <div class="odc-x">×${g.count}</div>
+          <div class="odc-poss"><span class="odc-lbl">属性</span>${icons}</div>
+        </div>`;
+      }).join('');
   }
   document.getElementById('deckModal').classList.add('show');
 }
