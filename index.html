@@ -16,16 +16,16 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap');
   :root{
-    --bg-void:#241f3a; --bg-panel:#322d4b;
-    --gold:#d8b25e; --gold-bright:#f3d492; --gold-dim:#9a8145;
-    --ink:#f5f1e8; --ink-dim:#c1baad; --line:rgba(201,162,74,0.3);
+    --bg-void:#35313f; --bg-panel:#423e50;
+    --gold:#d8b25e; --gold-bright:#f3d492; --gold-dim:#a08a52;
+    --ink:#f6f2ea; --ink-dim:#c9c3b7; --line:rgba(201,162,74,0.32);
     --moon:#8fa9c9; --sun:#e0a23d; --dark:#8a5cae; --kaos:#c14b52; --air:#6fbfa0;
     --win:#7ec98a; --lose:#c96b6b;
     --card-back:none; /* JSでカード裏面画像に差し替え */
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{
-    background:radial-gradient(ellipse at 50% -10%, #3d3557 0%, #201c32 72%);
+    background:radial-gradient(ellipse at 50% -10%, #4a4559 0%, #302d3b 72%);
     font-family:'Zen Kaku Gothic New',sans-serif; color:var(--ink);
     min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px;
   }
@@ -389,9 +389,13 @@
   .guide-zone{ flex-shrink:0; }
   .guide-zone > .msg-window{ background:linear-gradient(180deg,#1a1626,#12101a); margin:2px 14px 1px; }
   .guide-zone > .field-actions{ margin:3px auto 5px; }
-  /* #5 場の余白を整理: 内容の高さに合わせ、中央に案内/行動/結果の余白を確保 */
-  .play-area{ justify-content:center; }
-  .play-area .field{ flex:0 1 auto; margin:4px 0; max-height:100%; }
+  /* #5 場の余白を整理: 場札同士を寄せて中央に配置し、上下の余白を詰める */
+  .play-area{ justify-content:center; padding:0 10px; }
+  .play-area .field{ flex:1 1 auto; margin:2px 0; max-height:100%; }
+  /* 場の内容(カード群)を枠の中央に寄せて、上下の空きを均等に */
+  .field{ align-content:center !important; }
+  /* 上下カードの間隔を程よく空けて対峙感を出す(余白の中心を詰める) */
+  .field .mid-divider{ min-height:20px; }
   .field{ grid-template-rows:auto auto auto auto auto !important; row-gap:4px; }
   /* 案内・行動選択とも手札上に移動したので、場札同士を近づけて対峙感を出す */
   .field .mid-divider{ min-height:14px; justify-content:center; }
@@ -3158,8 +3162,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.31.8';
+const GAME_VERSION = 'v0.31.9';
 const CHANGELOG = [
+  { version:'v0.31.9', date:'2026-07-13', items:[
+    '見やすさの調整：①画面全体をさらに明るく（明るめのグレー系ネイビー／パープルに）して視認性を向上 ②場（フィールド）の上下の大きな余白を詰め、場札や情報を枠の中央に寄せて配置',
+  ]},
   { version:'v0.31.8', date:'2026-07-13', items:[
     '画面全体の明るさを改善：背景・場・枠の色を一段明るいネイビー／パープルに調整し、暗すぎて見えにくい状態を緩和（金×ネイビーの世界観は維持）。文字色も少し明るくして視認性を向上',
   ]},
