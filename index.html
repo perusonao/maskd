@@ -51,6 +51,13 @@
     display:none; flex-direction:column; padding:22px 18px; gap:12px;
   }
   .history-modal.show{ display:flex; }
+  /* 山札モーダルは内容が短いので、中央のコンパクトなカードで表示(余白を詰める) */
+  .history-modal.deck-modal{ justify-content:center; align-items:center; background:rgba(6,5,12,0.82); padding:20px; }
+  .deck-card-box{ width:100%; max-width:400px; max-height:88vh; display:flex; flex-direction:column; gap:9px;
+    background:var(--bg-void); border:1px solid var(--line); border-radius:18px; padding:18px 15px 15px;
+    box-shadow:0 20px 55px rgba(0,0,0,0.6); }
+  .deck-card-box .hist-scroll{ flex:0 1 auto; }
+  .deck-card-box .btn-close-modal{ margin-top:2px; }
   .history-modal h3{ font-family:'Cormorant Garamond',serif; font-style:italic; color:var(--gold); font-size:22px; text-align:center; }
   .hist-scroll{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
   .hist-empty{ text-align:center; color:var(--ink-dim); font-size:12px; margin-top:30px; }
@@ -469,6 +476,13 @@
   .hcard.recommend{ box-shadow:0 0 0 2px var(--win),0 0 12px rgba(126,201,138,.5); }
   .hcard .rec-badge{ position:absolute; top:-7px; right:-6px; z-index:5; font-size:9px; background:var(--win); color:#0d1a10;
     border-radius:8px; padding:0 4px; font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,.5); }
+  /* 手札カード: 相手からの見え方(候補属性)を下部の帯に表示 */
+  .hcard .hc-seen{ position:absolute; left:0; right:0; bottom:0; z-index:4; display:flex; gap:2px; align-items:center; justify-content:center;
+    padding:2px 3px 2px; background:linear-gradient(0deg,rgba(6,5,12,0.92),rgba(6,5,12,0.55) 65%,transparent); border-radius:0 0 8px 8px; }
+  .hcard .hc-seen .hc-seen-lbl{ font-size:6px; color:var(--ink-dim); letter-spacing:0.02em; margin-right:1px; }
+  .hcard .hc-seen .hint-icon.tiny{ width:9px; height:9px; }
+  /* 初心者カードは属性名が下にあるので、見え方の帯ぶんだけ下余白を確保 */
+  .hcard.bcard .bc-name{ margin-bottom:11px; }
   /* ===== 縦に短い画面向け: カード・余白を圧縮して、場のはみ出しや中央オーバーレイの重なりを防ぐ ===== */
   @media (max-height: 820px){
     .card{ width:76px !important; height:104px !important; padding:5px 3px !important; }
@@ -1437,18 +1451,22 @@
     <div class="btn-close-modal" onclick="closeGlobalStats()">閉じる</div>
   </div>
 
-  <div class="history-modal" id="deckModal">
-    <h3>自分の山札</h3>
-    <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">まだ引いていない自分の残り札（数字・枚数・属性）。次に引く札を強調</p>
-    <div class="hist-scroll" id="deckModalBody"></div>
-    <div class="btn-close-modal" onclick="closeDeckModal()">閉じる</div>
+  <div class="history-modal deck-modal" id="deckModal">
+    <div class="deck-card-box">
+      <h3>自分の山札</h3>
+      <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">まだ引いていない自分の残り札（数字・枚数・属性）。次に引く札を強調</p>
+      <div class="hist-scroll" id="deckModalBody"></div>
+      <div class="btn-close-modal" onclick="closeDeckModal()">閉じる</div>
+    </div>
   </div>
 
-  <div class="history-modal" id="oppDeckModal">
-    <h3>相手の山札（推理）</h3>
-    <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">相手がまだ引いていない札の推理候補（数字・枚数・候補の属性）。属性は確定できません</p>
-    <div class="hist-scroll" id="oppDeckModalBody"></div>
-    <div class="btn-close-modal" onclick="closeOppDeckModal()">閉じる</div>
+  <div class="history-modal deck-modal" id="oppDeckModal">
+    <div class="deck-card-box">
+      <h3>相手の山札（推理）</h3>
+      <p style="font-size:11px;color:var(--ink-dim);text-align:center;margin-top:-6px;">相手がまだ引いていない札の推理候補（数字・枚数・候補の属性）。属性は確定できません</p>
+      <div class="hist-scroll" id="oppDeckModalBody"></div>
+      <div class="btn-close-modal" onclick="closeOppDeckModal()">閉じる</div>
+    </div>
   </div>
 
   <div class="history-modal" id="matchLogModal">
@@ -2290,8 +2308,15 @@ function renderHand(){
       const est=playerEstimate(c, dealerCard.num, false);
       if(est.win>=0.6 && est.win>est.lose){ el.classList.add('recommend'); recBadge='<span class="rec-badge">おすすめ</span>'; }
     }
-    if(useRichCards()){ el.style.backgroundImage=`url(${attrImgUrl(c.attr)})`; el.innerHTML=numBadge(c.num)+rpsBadge(c.attr)+recBadge; }
-    else el.innerHTML=beginnerInner(c)+recBadge;
+    // 相手からの見え方: この数字を出した時、相手が絞り込める候補属性を小アイコンで表示
+    const seenAttrs=cpuPossibleAttrsFor(c.num);
+    let seenRow='';
+    if(seenAttrs.length){
+      const ic=seenAttrs.map(a=>`<div class="hint-icon tiny ${a}${seenAttrs.length===1?' confirmed':''}"></div>`).join('');
+      seenRow=`<div class="hc-seen"><span class="hc-seen-lbl">相手視点</span>${ic}</div>`;
+    }
+    if(useRichCards()){ el.style.backgroundImage=`url(${attrImgUrl(c.attr)})`; el.innerHTML=numBadge(c.num)+rpsBadge(c.attr)+recBadge+seenRow; }
+    else el.innerHTML=beginnerInner(c)+recBadge+seenRow;
     if(canPick){
       el.style.cursor='pointer';
       el.onclick=()=>{ if(busy)return; el.classList.add('picking'); setTimeout(()=>playYouCard(i), 150); };
@@ -3242,8 +3267,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.32.1';
+const GAME_VERSION = 'v0.32.2';
 const CHANGELOG = [
+  { version:'v0.32.2', date:'2026-07-13', items:[
+    '対戦画面の改善（要望を反映）：①山札モーダル（自分／相手）を中央のコンパクトなカード表示にして余白を削減 ②自分の手札に「相手視点」＝相手から絞り込める候補属性の小アイコンを表示（駆け引きの読みに） ③相手の山札モーダルで一番上（最小の数字）の行を強調',
+  ]},
   { version:'v0.32.1', date:'2026-07-13', items:[
     '対戦画面の改善（要望を反映）：①場に出たカードを大きく表示（狭い画面では自動で段階的に縮小） ②消えていた戦略カウンターのバーを復活（重複する「戦略N」テキストは省略） ③使用済みカードを実際のカード絵（上級者）／初心者カードのミニ表示に ④「自分の山札」を「相手の山札」と同じ一覧表示に（数字・枚数・属性＋次に引く札を強調）。自分・相手の山札はどちらも閉じるボタン付きのモーダル',
   ]},
@@ -3901,10 +3929,10 @@ function openOppDeckModal(){
   if(total<=0){
     body.innerHTML='<div class="hist-empty">相手の山札は空です。</div>';
   } else {
-    body.innerHTML=cand.map(c=>{
+    body.innerHTML=cand.map((c,idx)=>{
       const icons=c.attrs.map(a=>`<div class="hint-icon ${a}${c.attrs.length===1?' confirmed':''}"></div>`).join('');
-      return `<div class="odc-cand">
-        <div class="odc-num">${c.num}</div>
+      return `<div class="odc-cand${idx===0?' next':''}">
+        <div class="odc-num">${c.num}${idx===0?'<span class="odc-nextbadge">最小</span>':''}</div>
         <div class="odc-x">×${c.count}</div>
         <div class="odc-poss"><span class="odc-lbl">${c.attrs.length===1?'確定':'候補'}</span>${icons}</div>
       </div>`;
