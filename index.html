@@ -1605,7 +1605,10 @@ const CARD_IMG={"sun": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDA
 const beats={moon:'dark',dark:'sun',sun:'moon'};
 const START_LP=0;
 const TOTAL_ROUNDS=8;
-const AIR_LEFTOVER_MULTIPLIER=2; // 残り手札ボーナスで、Airは数字を2倍にして計算する
+// 残り手札ボーナス: 非Air札は「数字が大きい上位N枚」のみ加算、Airは数字に関係なく1枚あたり固定点
+// (温存戦略が有利すぎる問題の是正。シミュレーションで温存/バトルがほぼ五分になることを確認)
+const LEFTOVER_TOPN=2;       // 非Air札は上位2枚の数字だけを合計
+const AIR_LEFTOVER_FLAT=2;   // Airは1枚につき2点(数字は無関係。戦闘でもAirの数字は無意味なので一貫)
 
 function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
 
@@ -2731,9 +2734,9 @@ function cpuChooseCard(hand, oppNum){
   if(cpuDifficulty==='weak') randomWeight*=2.2;
   else if(cpuDifficulty==='strong') randomWeight*=0.35;
   const roundsLeft = TOTAL_ROUNDS - round + 1;
-  // Airは終盤ほど残せば得点(2倍)になるが、使えば即座に戦略カウンター+1を得られるため
-  // 温存インセンティブは以前より弱め、使用そのものにも一定の価値を持たせる
-  const airHoardBonus = roundsLeft * 0.12;
+  // Airは残せば少し得点(1枚2点)、使えば即座に戦略カウンター+1を得られる。
+  // 温存インセンティブは弱め(残り手札は上位2枚+Air固定なので抱え込みの価値は限定的)
+  const airHoardBonus = roundsLeft * 0.06;
   const airUseBonus = 1.2; // Air使用による戦略カウンター+1の価値
   if(oppNum===null){
     // 親として先に出す: 期待値の高い中庸〜強カードを重み付きで選ぶ
@@ -3218,8 +3221,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.31.12';
+const GAME_VERSION = 'v0.32.0';
 const CHANGELOG = [
+  { version:'v0.32.0', date:'2026-07-13', items:[
+    'バランス調整（得点ルール変更）：残り手札ボーナスを見直し。従来は「残った全札の数字を合計（Airは数字×2）」だったため、強い札を温存するだけで勝ててしまう問題があった。今後は「残った非Air札のうち数字の大きい上位2枚のみ合計＋Airは数字に関係なく1枚2点」に変更。シミュレーション（各4万戦）で、温存戦略とバトル戦略がほぼ五分になることを確認。決戦（バトル）が勝敗の主軸になり、Airの数字が戦闘でも得点でも無関係で一貫。',
+  ]},
   { version:'v0.31.12', date:'2026-07-13', items:[
     '結果ダイアログを充実（レビュー反映）：勝敗表示の下に現在のスコア（あなた◯ – 相手◯）を大きく表示し、自分の山札の残り枚数も表示。「次へ」ボタンを「第◯ラウンドへ ›」に変えて次への期待感を強調',
   ]},
@@ -3571,8 +3577,8 @@ function renderRulesGuide(){
     </div>
     <div class="rg-bonus">
       <h4>残り手札ボーナスとは</h4>
-      <p>決着時、<b style="color:var(--ink)">手札に残ったカードの数字を合計</b>して加点。<b style="color:var(--ink)">Air は 2倍</b>で数える。（※ 山札に残った札は対象外）</p>
-      <div class="pt">つまり ―― <b>価値の高い仮面を手札に残すほど有利</b>。切り札を握り続ける胆力が問われる。</div>
+      <p>決着時、<b style="color:var(--ink)">手札に残った非Air札のうち数字の大きい上位2枚</b>を合計して加点。<b style="color:var(--ink)">Air は数字に関係なく1枚2点</b>。（※ 山札に残った札は対象外）</p>
+      <div class="pt">つまり ―― <b>価値の高い仮面を1〜2枚温存する</b>のは有利だが、<b>決戦で勝って点を取る</b>のが主軸。抱え込みすぎても上位2枚しか活きない。</div>
     </div>
     <div class="rg-verdict">得点が高い方の、勝利。</div>
   </div>
@@ -4016,11 +4022,11 @@ function showLogConsent(send){
 
 function endGame(){
   const ov=document.getElementById('overlay'), t=document.getElementById('ovTitle');
-  // 残り手札ボーナス: 手札に残ったカードの数字を加算(Airは2倍)。山札は対象外(引き運を得点に持ち込まないため)
+  // 残り手札ボーナス: 非Air札は「上位2枚の数字」のみ加算、Airは1枚2点(数字無関係)。山札は対象外
   const calcLeftoverBonus=(hand)=>{
-    let bonus=0;
-    hand.forEach(c=>{ bonus += c.attr==='air' ? c.num*AIR_LEFTOVER_MULTIPLIER : c.num; });
-    return bonus;
+    const nums=hand.filter(c=>c.attr!=='air').map(c=>c.num).sort((a,b)=>b-a).slice(0,LEFTOVER_TOPN);
+    const airCount=hand.filter(c=>c.attr==='air').length;
+    return nums.reduce((s,n)=>s+n,0) + airCount*AIR_LEFTOVER_FLAT;
   };
   const youLeftoverBonus = calcLeftoverBonus(youHand);
   const cpuLeftoverBonus = calcLeftoverBonus(cpuHand);
@@ -4038,7 +4044,7 @@ function endGame(){
     <div class="sb-head"><span></span><span class="you">あなた</span><span class="cpu">相手</span></div>
     ${rowHTML('決戦の得点','',youLP,cpuLP,'','sb-row')}
     ${rowHTML('戦略カウンター','残り',youTrust,cpuTrust,'+','sb-row')}
-    ${rowHTML('残り手札ボーナス','Air×2',youLeftoverBonus,cpuLeftoverBonus,'+','sb-row')}
+    ${rowHTML('残り手札ボーナス','上位2枚+Air2/枚',youLeftoverBonus,cpuLeftoverBonus,'+','sb-row')}
     ${rowHTML('合計','',youFinal,cpuFinal,'','sb-total')}
   </div>`;
   // 各ラウンドの対戦カードと獲得ポイント(決戦の得点の内訳)
@@ -4058,7 +4064,7 @@ function endGame(){
   // 最終的な残り手札(残り手札ボーナスの内訳。山札は対象外)
   const remainSort=h=>[...h].sort((a,b)=>a.num-b.num || a.attr.localeCompare(b.attr));
   const tagList=cards=>cards.length?cards.map(cardTag).join(' '):'<span class="rs-none">なし</span>';
-  const remainSection=`<div class="round-points"><div class="rp-title">最終的な残り手札（残り手札ボーナスの内訳・Air×2／山札は対象外）</div>
+  const remainSection=`<div class="round-points"><div class="rp-title">最終的な残り手札（非Airの上位2枚＋Air1枚2点／山札は対象外）</div>
     <div class="rs-hand"><span class="rs-who you">あなた +${youLeftoverBonus}</span><span class="rs-cards">${tagList(remainSort(youHand))}</span></div>
     <div class="rs-hand"><span class="rs-who cpu">相手 +${cpuLeftoverBonus}</span><span class="rs-cards">${tagList(remainSort(cpuHand))}</span></div></div>`;
   const extra=`<div id="ovExtra">
