@@ -16,16 +16,16 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap');
   :root{
-    --bg-void:#171525; --bg-panel:#221f30;
-    --gold:#d4ad57; --gold-bright:#f0d087; --gold-dim:#8a7238;
-    --ink:#f2ede2; --ink-dim:#b3ab9f; --line:rgba(201,162,74,0.26);
+    --bg-void:#241f3a; --bg-panel:#322d4b;
+    --gold:#d8b25e; --gold-bright:#f3d492; --gold-dim:#9a8145;
+    --ink:#f5f1e8; --ink-dim:#c1baad; --line:rgba(201,162,74,0.3);
     --moon:#8fa9c9; --sun:#e0a23d; --dark:#8a5cae; --kaos:#c14b52; --air:#6fbfa0;
     --win:#7ec98a; --lose:#c96b6b;
     --card-back:none; /* JSでカード裏面画像に差し替え */
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{
-    background:radial-gradient(ellipse at 50% -10%, #2a2438 0%, #12101c 72%);
+    background:radial-gradient(ellipse at 50% -10%, #3d3557 0%, #201c32 72%);
     font-family:'Zen Kaku Gothic New',sans-serif; color:var(--ink);
     min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px;
   }
@@ -3158,8 +3158,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.31.7';
+const GAME_VERSION = 'v0.31.8';
 const CHANGELOG = [
+  { version:'v0.31.8', date:'2026-07-13', items:[
+    '画面全体の明るさを改善：背景・場・枠の色を一段明るいネイビー／パープルに調整し、暗すぎて見えにくい状態を緩和（金×ネイビーの世界観は維持）。文字色も少し明るくして視認性を向上',
+  ]},
   { version:'v0.31.7', date:'2026-07-13', items:[
     'レビュー反映（磨き込み）：①ROUND表示の下に進行バーを追加し、終盤感を可視化 ②場に出たカードを一回り大きく表示して迫力アップ（画面が狭い端末では自動で調整） ③行動ボタン（決戦など）を大きくして押しやすく ④手札の間隔を広げて誤タップを減らし、タップ時にカードが少し浮き上がる演出を追加',
   ]},
