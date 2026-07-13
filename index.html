@@ -2350,7 +2350,7 @@ function renderActions(){
   if(phase==='decide' && youIsDealer){
     // 入替の札選択中: 下部の手札をタップして選ぶ案内＋キャンセルのみ表示
     if(swapSelecting){
-      fa.innerHTML=`<div class="fa-ctx">入替する札を手札からタップ <span class="act-cost">（戦略-${SWAP_COST}）</span></div>`;
+      fa.innerHTML=`<div class="fa-ctx">入替する札をタップ → そのまま決戦 <span class="act-cost">（戦略-${SWAP_COST}）</span></div>`;
       const row=document.createElement('div'); row.className='fa-row';
       const cancel=document.createElement('div'); cancel.className='btn ghost act-btn';
       cancel.innerHTML=actIcon('✕','やめる');
@@ -2435,9 +2435,9 @@ function executeSwap(idx){
   youTrust-=SWAP_COST;
   youSwapUsedThisRound=true;
   renderYouSlot(newCard);
-  showYouCardHint(newCard.num);
-  hint(`入替した。あなたの新しい数字は ${newCard.num}。`);
-  renderScore(); renderActions(); renderHand();
+  renderScore(); renderHand();
+  // 入替＝決戦確定。札を選んだら、そのまま勝敗へ進む
+  resolveFight(true);
 }
 
 // 属性の画像(なければ空)。CARD_IMGはスクリプト末尾で注入される
@@ -3299,8 +3299,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.32.3';
+const GAME_VERSION = 'v0.32.4';
 const CHANGELOG = [
+  { version:'v0.32.4', date:'2026-07-13', items:[
+    '入替のルールを整理：入替は「別の札で戦うと決めた」行動なので、入替する札を選んだ時点で決戦確定に。札を選ぶとそのまま勝敗へ進む（入替後に撤退できる無意味な選択肢を廃止）。',
+  ]},
   { version:'v0.32.3', date:'2026-07-13', items:[
     '対戦画面の改善（要望＋テスター意見を反映）：①属性名を英語に統一（SUN/DARK/MOON/KAOS/AIR） ②候補属性の表示を初心者モードでは「じゃんけん」に統一（手札の相手視点・山札モーダル・相手からの見え方など全て） ③入替の手札選択モーダルを廃止し、下部の手札を直接タップして入替できるように ④画面の文字を削減（「子の数字は…どうする？」→「どうする？」、相手手札や自分の手札のラベルを簡潔化）',
   ]},
