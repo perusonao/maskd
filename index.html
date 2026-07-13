@@ -58,6 +58,22 @@
     box-shadow:0 20px 55px rgba(0,0,0,0.6); }
   .deck-card-box .hist-scroll{ flex:0 1 auto; }
   .deck-card-box .btn-close-modal{ margin-top:2px; }
+  /* ラウンド開始モーダル */
+  .round-start-modal{ position:absolute; inset:0; z-index:26; display:none; align-items:center; justify-content:center;
+    background:rgba(6,5,12,0.86); padding:24px; }
+  .round-start-modal.show{ display:flex; animation:rsFade .25s ease; }
+  @keyframes rsFade{ from{ opacity:0; } to{ opacity:1; } }
+  .rs-box{ width:100%; max-width:340px; text-align:center; padding:26px 20px 20px; border-radius:20px;
+    background:linear-gradient(180deg,#2a2640,var(--bg-void)); border:1px solid var(--line); box-shadow:0 20px 55px rgba(0,0,0,0.6); }
+  .rs-round{ font-family:'Cormorant Garamond',serif; letter-spacing:0.16em; color:var(--gold-dim); font-size:14px; }
+  .rs-round b{ font-size:34px; color:var(--gold-bright); font-weight:700; }
+  .rs-round .rs-slash{ font-size:20px; color:var(--gold-dim); margin:0 3px; }
+  .rs-role{ margin-top:12px; font-size:20px; font-weight:700; }
+  .rs-role b{ font-family:'Cormorant Garamond',serif; font-style:italic; }
+  .rs-role.dealer{ color:var(--gold-bright); }
+  .rs-role.child{ color:var(--moon); }
+  .rs-inst{ margin-top:8px; font-size:12px; color:var(--ink-dim); line-height:1.5; }
+  .rs-go{ margin-top:18px; width:70%; padding:12px 0; }
   .name-input{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:rgba(0,0,0,0.25);
     color:var(--ink); font-size:16px; font-family:'Zen Kaku Gothic New',sans-serif; text-align:center; outline:none; }
   .name-input:focus{ border-color:var(--gold-bright); box-shadow:0 0 0 1px var(--gold-bright); }
@@ -105,6 +121,11 @@
   .deck-chip b{ color:var(--gold-bright); font-size:11px; }
   .deck-chip .deck-ico{ font-size:12px; color:var(--gold); }
   .deck-chip .deck-next{ color:var(--ink); }
+  /* 山札=1番上のカードの裏イメージ(小さな伏せ札) */
+  .deck-chip .deck-mini{ width:16px; height:22px; border-radius:3px; flex-shrink:0;
+    background:var(--card-back) center/cover no-repeat, #14121c; border:1px solid rgba(201,162,74,.45);
+    box-shadow:0 1px 3px rgba(0,0,0,.5); }
+  .deck-chip .deck-mini.none{ display:grid; place-items:center; background:rgba(255,255,255,0.04); color:var(--ink-dim); font-size:11px; }
   .deck-chip.empty{ opacity:0.55; cursor:default; }
   .deck-chip.opp{ right:auto; left:6px; }
   .deck-chip.opp .deck-next{ color:var(--kaos); }
@@ -1037,7 +1058,9 @@
   .act-btn .act-ic{ font-size:18px; line-height:1; }
   .act-btn .act-lb{ font-size:11px; font-weight:700; }
   .act-btn .act-cost{ font-size:8px; font-weight:400; opacity:.8; }
-  .hint-line{ text-align:center; font-size:10.5px; color:#d6cfc0; padding:0 18px 1px; min-height:12px; flex-shrink:0; }
+  /* メッセージエリア(役割メッセージ・案内文)は廃止。ラウンド開始情報はモーダルで提示する */
+  .hint-line{ display:none !important; }
+  .guide-zone > #roleBanner{ display:none !important; }
   /* 初心者ヒント(コーチ)行 */
   .coach-line{ flex-shrink:0; text-align:center; font-size:11px; line-height:1.5; padding:0 14px; min-height:0; }
   .coach-line:not(:empty){ margin:2px 14px; padding:5px 10px; border-radius:8px;
@@ -1462,6 +1485,15 @@
     <div class="btn-close-modal" onclick="closeGlobalStats()">閉じる</div>
   </div>
 
+  <div class="round-start-modal" id="roundStartModal">
+    <div class="rs-box">
+      <div class="rs-round">ROUND <b id="rsRoundN">1</b><span class="rs-slash">/</span><b id="rsRoundTot">8</b></div>
+      <div class="rs-role" id="rsRole"></div>
+      <div class="rs-inst" id="rsInst"></div>
+      <div class="btn rs-go" onclick="beginRoundPlay()">はじめる</div>
+    </div>
+  </div>
+
   <div class="history-modal deck-modal" id="nameModal">
     <div class="deck-card-box">
       <h3>騎士の名を</h3>
@@ -1567,7 +1599,7 @@
   </div>
 
   <div class="opp-hand-strip">
-    <div class="ohs-label">相手の手札 <b id="oppHandCount">5</b></div>
+    <div class="ohs-label">相手の手札</div>
     <div class="ohs-cards" id="oppHandStrip"></div>
   </div>
 
@@ -2063,19 +2095,34 @@ function startRound(){
 
   renderScore();
 
-  const banner=document.getElementById('roleBanner');
+  // メッセージエリアは廃止。ラウンド開始情報はモーダルで提示する。
+  const banner=document.getElementById('roleBanner'); if(banner){ banner.textContent=''; }
+  hint('');
+  phase='roundstart';
+  renderHand(); renderActions();
+  showRoundStartModal();
+}
+// ラウンド開始モーダル: ラウンド数・親/子・案内を表示。「はじめる」で本編へ。
+function showRoundStartModal(){
+  document.getElementById('rsRoundN').textContent=round;
+  document.getElementById('rsRoundTot').textContent=TOTAL_ROUNDS;
+  const role=document.getElementById('rsRole');
+  role.className='rs-role '+(youIsDealer?'dealer':'child');
+  role.innerHTML=youIsDealer? `あなたは <b>親</b> です` : `あなたは <b>子</b> です`;
+  document.getElementById('rsInst').textContent = youIsDealer
+    ? '場に出すカードを選択してください'
+    : '相手が先に置きます。数字を見てから、出す札を選べます';
+  document.getElementById('roundStartModal').classList.add('show');
+}
+function beginRoundPlay(){
+  document.getElementById('roundStartModal').classList.remove('show');
   if(youIsDealer){
-    banner.className='msg-window dealer';
-    banner.textContent='あなたが親です — 手札から1枚選んで、先に置いてください';
-    phase='pick';
-    hint('');
+    phase='pick'; hint('');
     renderHand(); renderActions();
   } else {
-    banner.className='msg-window child';
-    banner.textContent='相手が親です — 相手が先に置きます…';
     phase='wait';
     renderHand(); renderActions();
-    setTimeout(cpuActAsDealer, 700);
+    setTimeout(cpuActAsDealer, 500);
   }
 }
 
@@ -3340,8 +3387,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.32.5';
+const GAME_VERSION = 'v0.32.6';
 const CHANGELOG = [
+  { version:'v0.32.6', date:'2026-07-13', items:[
+    '対戦画面の情報整理（要望を反映）：①両プレイヤーの手札枚数・山札枚数の表示を削除して画面をすっきりと ②山札を「一番上のカードの裏イメージ」で表示 ③盤面のメッセージエリアを廃止し、ラウンド開始時にモーダルで案内（ラウンド数／あなたは親or子／場に出すカードを選択してください）',
+  ]},
   { version:'v0.32.5', date:'2026-07-13', items:[
     'プレイヤー名と相手名を導入：初回プレイ時に名前を入力（保存＋クラウド登録）し、ゲーム内に表示。相手（CPU）は戦略に応じた仮面名で表示（積極的＝剛力仮面／慎重＝鉄壁仮面／トリッキー＝技巧仮面）',
   ]},
@@ -3949,10 +3999,11 @@ function renderDeckChip(){
   const bar=document.getElementById('deckBar');
   if(!bar) return;
   const n=youDrawPile.length;
-  if(n===0){ bar.className='deck-chip empty'; bar.innerHTML='<span class="deck-ico">🂠</span><span>山札なし</span>'; return; }
+  if(n===0){ bar.className='deck-chip empty'; bar.innerHTML='<span class="deck-mini none">－</span><span>山札なし</span>'; return; }
   bar.className='deck-chip';
   const next=youDrawPile[n-1];
-  bar.innerHTML=`<span class="deck-ico">🂠</span><span>山札<b>${n}</b></span><span class="deck-next">次<b>${next.num}</b></span>`;
+  // 山札=1番上のカードの裏イメージ(数字は非公開)。次に引く数字だけ添える。
+  bar.innerHTML=`<span class="deck-mini"></span><span class="deck-next">次<b>${next.num}</b></span>`;
 }
 // 自分の山札を数字ごとにまとめる(相手の山札と同じリスト表示。自分の札なので属性は確定表示)
 function youDrawPileGrouped(){
@@ -4000,9 +4051,9 @@ function renderOppDeckChip(){
   const bar=document.getElementById('deckBarOpp');
   if(!bar) return;
   const total=oppDrawPileCandidates().reduce((s,c)=>s+c.count,0);
-  if(total<=0){ bar.className='deck-chip opp empty'; bar.innerHTML='<span class="deck-ico">🂠</span><span>相手山札なし</span>'; return; }
+  if(total<=0){ bar.className='deck-chip opp empty'; bar.innerHTML='<span class="deck-mini none">－</span><span>山札なし</span>'; return; }
   bar.className='deck-chip opp';
-  bar.innerHTML=`<span class="deck-ico">🂠</span><span>相手山札<b>${total}</b></span><span class="deck-next">推理 ›</span>`;
+  bar.innerHTML=`<span class="deck-mini"></span><span class="deck-next">推理 ›</span>`;
 }
 function openOppDeckModal(){
   const body=document.getElementById('oppDeckModalBody');
