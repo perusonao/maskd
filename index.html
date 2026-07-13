@@ -38,10 +38,13 @@
   .hd{ padding:8px 18px 6px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); flex-shrink:0; }
   .brand{ font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:600; font-size:19px; letter-spacing:0.1em; color:var(--gold); cursor:pointer; }
   .version-tag{ font-family:sans-serif; font-style:normal; font-weight:400; font-size:9px; letter-spacing:0; color:var(--ink-dim); vertical-align:super; }
-  .top-right{ display:flex; align-items:center; gap:6px; }
+  .top-right{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
   .round-badge{ font-size:10px; letter-spacing:0.1em; color:var(--ink-dim); }
   .round-badge b{ color:var(--gold-bright); font-family:'Cormorant Garamond',serif; font-size:14px; }
   .grid-btn{ font-size:9px; color:var(--gold); border:1px solid rgba(201,162,74,0.4); border-radius:14px; padding:3px 7px; cursor:pointer; white-space:nowrap; }
+  /* フッターの表示切替トグル(初心者/上級者・ヒントON/OFF) */
+  .toggle-btn{ background:rgba(201,162,74,0.1); }
+  .toggle-btn.off{ color:var(--ink-dim); border-color:var(--line); background:transparent; }
 
   .history-modal{
     position:absolute; inset:0; z-index:25; background:#08070c;
@@ -351,8 +354,9 @@
   .pinfo .lp-bar-wrap{ width:50px; height:6px; display:flex; gap:2px; margin:0; }
   .pi-token{ font-size:8px; color:var(--air); line-height:1; } .pi-token:empty{ display:none; }
   /* 使用済みカード(山札の下・双方) */
-  .pi-used{ display:flex; gap:2px; flex-wrap:wrap; justify-content:center; max-width:86px; }
+  .pi-used{ display:flex; gap:2px; flex-wrap:wrap; align-items:center; justify-content:center; max-width:92px; }
   .pi-used:empty{ display:none; }
+  .pi-used:not(:empty)::before{ content:'使用済'; font-size:7px; color:var(--ink-dim); letter-spacing:0.02em; margin-right:1px; }
   .pi-used .uc{ width:15px; height:20px; border-radius:3px; border:1px solid var(--line); display:grid; place-items:center;
     font-family:'Cormorant Garamond',serif; font-size:10px; font-weight:700; background:rgba(255,255,255,0.03); color:var(--ink-dim); }
   .pi-used .uc.moon{ border-color:var(--moon); color:var(--moon); } .pi-used .uc.sun{ border-color:var(--sun); color:var(--sun); }
@@ -381,13 +385,15 @@
   .app.rich-mode .compat-strip{ display:none; }
   /* #2 出した札の重複表示を削除(使用済みは場に表示済み) */
   .you-played-row{ display:none !important; }
-  /* #4 メッセージを不透明にして背後(カード)と重ならないよう */
-  .mid-divider > .msg-window{ background:linear-gradient(180deg,#1a1626,#12101a); }
+  /* #4 案内メッセージ・ヒントは手札の上にまとめて表示 */
+  .guide-zone{ flex-shrink:0; }
+  .guide-zone > .msg-window{ background:linear-gradient(180deg,#1a1626,#12101a); margin:2px 14px 1px; }
   /* #5 場の余白を整理: 内容の高さに合わせ、中央に案内/行動/結果の余白を確保 */
   .play-area{ justify-content:center; }
   .play-area .field{ flex:0 1 auto; margin:4px 0; max-height:100%; }
   .field{ grid-template-rows:auto auto auto auto auto !important; row-gap:4px; }
-  .field .mid-divider{ min-height:112px; justify-content:center; }
+  /* 案内メッセージは手札上に移動したので、場の中央は行動選択(決戦等)が出る時だけ広がればよい */
+  .field .mid-divider{ min-height:28px; justify-content:center; }
   /* #6 場に表示する各プレイヤーの得点 */
   .pi-pt{ font-size:10px; color:var(--ink-dim); letter-spacing:0.04em; white-space:nowrap; }
   .pinfo.you .pi-pt{ color:var(--gold-bright); }
@@ -434,7 +440,7 @@
     .card.facedown .num{ font-size:15px !important; }
     .empty-slot{ width:60px !important; height:82px !important; }
     .field{ margin:3px 10px !important; }
-    .field .mid-divider{ min-height:56px !important; }
+    .field .mid-divider{ min-height:22px !important; }
     .zone-hint{ font-size:7px !important; }
     .opp-hand-strip{ padding:2px 10px 0 !important; }
     .opp-hand-strip .ohs-label{ margin-bottom:1px !important; }
@@ -455,13 +461,13 @@
   @media (max-height: 680px){
     .card{ width:52px !important; height:72px !important; }
     .empty-slot{ width:52px !important; height:72px !important; }
-    .field .mid-divider{ min-height:48px !important; }
+    .field .mid-divider{ min-height:18px !important; }
     .ohs-cards .opp-card{ width:38px !important; height:52px !important; }
     .hcard{ max-width:54px !important; }
   }
-  /* メッセージウィンドウ: 場の中央にオーバーレイ表示 */
-  .mid-divider > .msg-window{ width:100%; max-width:320px; margin:0; z-index:8; pointer-events:none;
-    padding:7px 26px; box-shadow:0 8px 30px rgba(0,0,0,0.55); }
+  /* 案内メッセージ: 手札の上に表示(1行に収まる範囲で) */
+  .guide-zone > .msg-window{ max-width:none; z-index:8; pointer-events:none;
+    padding:7px 26px; box-shadow:0 6px 20px rgba(0,0,0,0.45); }
   /* 行動選択モーダル */
   .action-modal-grid{ display:flex; flex-direction:column; gap:8px; margin-top:8px; }
   .action-modal-grid .btn{ width:100%; }
@@ -1465,7 +1471,6 @@
       </div>
       <div class="zone-wrap"><div class="zone-hint" id="oppCardHint"></div></div>
       <div class="mid-divider">
-        <div class="msg-window" id="roleBanner"></div>
         <div class="field-actions" id="fieldActions"></div>
       </div>
       <div class="slot-line">
@@ -1497,18 +1502,25 @@
   <div class="peek" id="peek"></div>
   <div class="you-played-row" id="youPlayedRow"></div>
 
+  <!-- 案内メッセージ・ヒントは手札の「上」に集約表示 -->
+  <div class="guide-zone" id="guideZone">
+    <div class="msg-window" id="roleBanner"></div>
+    <div class="coach-line" id="coachLine"></div>
+    <div class="hint-line" id="hint"></div>
+  </div>
+
   <div class="hand-wrap" id="handWrap">
     <div class="hand-title" id="handTitle">あなたの手札</div>
     <div class="hand" id="hand"></div>
   </div>
 
-  <div class="coach-line" id="coachLine"></div>
-  <div class="hint-line" id="hint"></div>
   <div class="actions" id="actions"></div>
 
   <div class="hd bottom">
     <div class="brand" onclick="openChangelog()">MASKD <span class="version-tag" id="versionTag"></span></div>
     <div class="top-right">
+      <div class="grid-btn toggle-btn" id="styleToggle" onclick="toggleCardStyle()" title="カードの表示を切り替え"></div>
+      <div class="grid-btn toggle-btn" id="hintToggle" onclick="toggleHints()" title="ヒント表示の切り替え"></div>
       <div class="grid-btn" onclick="openRules()">ルール</div>
       <div class="grid-btn" onclick="openTracker()">一覧表</div>
       <div class="grid-btn" onclick="openHistory()">履歴 ↺</div>
@@ -1658,6 +1670,38 @@ function refreshCardsIfPlaying(){
     if(typeof renderScore==='function' && typeof round!=='undefined' && round){ renderScore(); }
     if(typeof dealerCard!=='undefined' && dealerCard && typeof youIsDealer!=='undefined' && youIsDealer && typeof renderYouSlot==='function'){ renderYouSlot(dealerCard); }
   }catch(e){}
+}
+// ===== フッターの表示切替(ゲーム中もいつでも) =====
+function toggleCardStyle(){
+  cardStyle = (cardStyle==='beginner') ? 'rich' : 'beginner';
+  try{ localStorage.setItem('maskd_cardstyle', cardStyle); }catch(e){}
+  try{ document.querySelectorAll('#cardStyleOpts .cpu-opt').forEach(x=>x.classList.toggle('selected', x.dataset.val===cardStyle)); }catch(e){}
+  refreshCardsIfPlaying();
+  updateFooterToggles();
+}
+function toggleHints(){
+  hintsEnabled = !hintsEnabled;
+  try{ localStorage.setItem('maskd_hints', hintsEnabled?'on':'off'); }catch(e){}
+  try{ document.querySelectorAll('#hintOpts .cpu-opt').forEach(x=>x.classList.toggle('selected', (x.dataset.val==='on')===hintsEnabled)); }catch(e){}
+  refreshHintsDisplay();
+  updateFooterToggles();
+}
+// ヒントON/OFF切替時、現在の局面に応じてコーチ表示とおすすめ札の印を更新
+function refreshHintsDisplay(){
+  try{
+    if(!hintsEnabled){ clearCoach(); }
+    else {
+      if(phase==='pick' && !youIsDealer && dealerCard){ showChildCoach(dealerCard.num); }
+      else if(phase==='decide' && youIsDealer && childCard){ showDecideCoach(); }
+    }
+    if(typeof phase!=='undefined' && phase){ renderHand(); }
+  }catch(e){}
+}
+function updateFooterToggles(){
+  const s=document.getElementById('styleToggle');
+  if(s) s.textContent = (cardStyle==='beginner') ? '🎴 初心者' : '🎴 上級者';
+  const h=document.getElementById('hintToggle');
+  if(h){ h.textContent = hintsEnabled ? '💡 ヒントON' : '💡 ヒントOFF'; h.classList.toggle('off', !hintsEnabled); }
 }
 // (initCpuSettingUI()はスクリプト末尾で呼び出す。変数宣言より先に実行されるのを防ぐため)
 
@@ -3076,8 +3120,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.31.3';
+const GAME_VERSION = 'v0.31.4';
 const CHANGELOG = [
+  { version:'v0.31.4', date:'2026-07-13', items:[
+    '対戦画面の改善（要望を反映）：①「使用済」カードの表示にラベルを付け、単独の数字が浮いて見える不具合を解消 ②フッターに「初心者/上級者」表示と「ヒントON/OFF」の切替を追加し、ゲーム中いつでも切替可能に ③案内メッセージ・ヒントを手札の「上」にまとめて表示（場の中央からは行動選択のみを表示）',
+  ]},
   { version:'v0.31.3', date:'2026-07-12', items:[
     'レイアウト崩れを修正：縦に短い画面で、決断時のボタンやメッセージが「可能性」チップやカードと重なり、場の下部がはみ出す不具合を修正。中央の案内・行動選択を上下カードの「間」に流し込む方式に変更（重なりを根本的に解消）＋短い画面向けにカードと余白を自動で圧縮',
   ]},
@@ -3942,6 +3989,7 @@ function animateScoreBreakdown(){
 
 initCpuSettingUI(); // 全ての変数・関数定義が済んだ後に呼び出す
 applyCardStyleClass(); // 保存された表示モード(上級者/初心者)を反映
+updateFooterToggles(); // フッターの表示切替トグルの初期表示
 document.getElementById('versionTag').textContent = GAME_VERSION;
 document.getElementById('roundTotal').textContent = TOTAL_ROUNDS; // ラウンド総数をUIに反映
 // トップページのバージョン表記と、開閉式「更新履歴」の中身を初期化
