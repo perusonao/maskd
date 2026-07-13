@@ -854,6 +854,17 @@
   .result-card.pass .rtitle{ color:var(--ink-dim); }
   .result-card .rdetail{ font-size:12px; color:var(--ink); line-height:1.55; }
   .result-card .rdetail .em{ color:var(--gold-bright); }
+  /* 結果の集計: 現在スコアを大きく＋残り山札 */
+  .rstats{ margin-top:11px; padding-top:10px; border-top:1px solid var(--line); }
+  .rs-score{ display:flex; align-items:center; justify-content:center; gap:12px; }
+  .rs-side{ display:flex; flex-direction:column; align-items:center; line-height:1; }
+  .rs-side .rs-lbl{ font-size:9px; letter-spacing:0.1em; color:var(--ink-dim); margin-bottom:3px; }
+  .rs-side b{ font-family:'Cormorant Garamond',serif; font-size:34px; font-weight:700; color:var(--ink); }
+  .rs-score.you .rs-side.you b{ color:var(--gold-bright); }
+  .rs-score.cpu .rs-side.cpu b{ color:var(--lose); }
+  .rs-dash{ font-family:'Cormorant Garamond',serif; font-size:22px; color:var(--ink-dim); }
+  .rs-sub{ font-size:10px; color:var(--ink-dim); margin-top:6px; }
+  .rs-sub b{ color:var(--gold-bright); font-family:'Cormorant Garamond',serif; font-size:13px; }
   .btn-next-round{
     margin-top:12px; padding:9px 26px; border-radius:10px; display:inline-block;
     background:linear-gradient(160deg,var(--gold-bright),var(--gold-dim)); color:#1a1608;
@@ -1544,6 +1555,7 @@
       <div class="result-overlay" id="resultOv">
         <div class="result-card" id="resultCard">
           <div class="rtitle"></div><div class="rdetail"></div>
+          <div class="rstats" id="resultStats"></div>
           <div class="btn-next-round" id="btnNextRound" onclick="proceedToNextRound()">次へ ›</div>
         </div>
       </div>
@@ -2908,7 +2920,7 @@ function finishPassReveal(){
         dealerCard:{attr:dealerCard.attr,num:dealerCard.num}, childCard:{attr:childCard.attr,num:childCard.num}
       });
       renderScore(); renderYouPlayed();
-      document.getElementById('btnNextRound').classList.add('show');
+      showNextBtn();
       pendingAdvance='round';
 }
 
@@ -3059,11 +3071,25 @@ function resolveFightJudge(){
 
       renderScore(); renderYouPlayed();
 
-      document.getElementById('btnNextRound').classList.add('show');
+      showNextBtn();
       pendingAdvance='round';
 }
 
 let pendingAdvance=null; // '次へ'ボタン待機中に何を実行するか('round'または'end')
+// 結果オーバーレイ: 現在のスコアを大きく見せ、次ラウンドへの期待感を出す
+function showNextBtn(){
+  const b=document.getElementById('btnNextRound'); if(!b) return;
+  const st=document.getElementById('resultStats');
+  if(st){
+    const lead = youLP>cpuLP ? 'you' : (cpuLP>youLP ? 'cpu' : 'even');
+    st.innerHTML=`<div class="rs-score ${lead}"><span class="rs-side you"><span class="rs-lbl">あなた</span><b>${youLP}</b></span>`+
+      `<span class="rs-dash">–</span>`+
+      `<span class="rs-side cpu"><span class="rs-lbl">相手</span><b>${cpuLP}</b></span></div>`+
+      `<div class="rs-sub">あなたの山札 残り <b>${youDrawPile.length}</b>枚</div>`;
+  }
+  b.textContent = (round>=TOTAL_ROUNDS) ? '最終結果を見る ›' : `第${round+1}ラウンドへ ›`;
+  b.classList.add('show');
+}
 function proceedToNextRound(){
   document.getElementById('btnNextRound').classList.remove('show');
   if(pendingAdvance==='round') nextRound();
@@ -3192,8 +3218,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.31.11';
+const GAME_VERSION = 'v0.31.12';
 const CHANGELOG = [
+  { version:'v0.31.12', date:'2026-07-13', items:[
+    '結果ダイアログを充実（レビュー反映）：勝敗表示の下に現在のスコア（あなた◯ – 相手◯）を大きく表示し、自分の山札の残り枚数も表示。「次へ」ボタンを「第◯ラウンドへ ›」に変えて次への期待感を強調',
+  ]},
   { version:'v0.31.11', date:'2026-07-13', items:[
     'レビュー反映（視認性の磨き込み）：①得点(pt)の数字を大きく強調（得点ゲームであることを明確に） ②ラウンド進行に「序盤／中盤／終盤」の局面ラベルを追加 ③「使用済」カードを属性色のミニカード風にして直感的に ④READMEの冒頭を短いキャッチコピーに',
   ]},
