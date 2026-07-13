@@ -395,7 +395,14 @@
   /* 場の内容(カード群)を枠の中央に寄せて、上下の空きを均等に */
   .field{ align-content:center !important; }
   /* 上下カードの間隔を程よく空けて対峙感を出す(余白の中心を詰める) */
-  .field .mid-divider{ min-height:20px; }
+  .field .mid-divider{ min-height:22px; }
+  /* 相手の場札と自分の場札の間の「VS」区切り */
+  .vs-divider{ display:flex; align-items:center; justify-content:center; gap:10px; width:74%; max-width:290px; }
+  .vs-ln{ flex:1; height:2px; border-radius:2px; box-shadow:0 0 6px rgba(216,178,94,0.35); }
+  .vs-ln.left{ background:linear-gradient(90deg, transparent, rgba(216,178,94,0.15) 30%, var(--gold-bright)); }
+  .vs-ln.right{ background:linear-gradient(90deg, var(--gold-bright), rgba(216,178,94,0.15) 70%, transparent); }
+  .vs-text{ font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:700; font-size:20px; line-height:1;
+    color:var(--gold-bright); letter-spacing:0.06em; text-shadow:0 0 10px rgba(240,208,135,0.55), 0 2px 4px rgba(0,0,0,0.6); }
   .field{ grid-template-rows:auto auto auto auto auto !important; row-gap:4px; }
   /* 案内・行動選択とも手札上に移動したので、場札同士を近づけて対峙感を出す */
   .field .mid-divider{ min-height:14px; justify-content:center; }
@@ -456,6 +463,8 @@
     .field{ margin:3px 10px !important; }
     .field .mid-divider{ min-height:10px !important; }
     .zone-hint{ font-size:8px !important; }
+    .vs-text{ font-size:15px !important; }
+    .vs-ln{ height:1.5px !important; }
     .opp-hand-strip{ padding:1px 10px 0 !important; }
     .opp-hand-strip .ohs-label{ margin-bottom:0 !important; }
     .ohs-cards{ gap:6px !important; }
@@ -1501,7 +1510,9 @@
         </div>
       </div>
       <div class="zone-wrap"><div class="zone-hint" id="oppCardHint"></div></div>
-      <div class="mid-divider"></div>
+      <div class="mid-divider">
+        <div class="vs-divider"><span class="vs-ln left"></span><span class="vs-text">VS</span><span class="vs-ln right"></span></div>
+      </div>
       <div class="slot-line">
         <div class="slot-side"></div>
         <div class="slot-row" id="youSlot"><div class="empty-slot">あなた</div></div>
@@ -3162,8 +3173,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.31.9';
+const GAME_VERSION = 'v0.31.10';
 const CHANGELOG = [
+  { version:'v0.31.10', date:'2026-07-13', items:[
+    '相手の場札と自分の場札の間に「VS」の区切りを追加（金の細いラインと発光する VS 文字）。対戦の対峙感を強調',
+  ]},
   { version:'v0.31.9', date:'2026-07-13', items:[
     '見やすさの調整：①画面全体をさらに明るく（明るめのグレー系ネイビー／パープルに）して視認性を向上 ②場（フィールド）の上下の大きな余白を詰め、場札や情報を枠の中央に寄せて配置',
   ]},
