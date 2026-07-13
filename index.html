@@ -357,11 +357,14 @@
   .pi-used{ display:flex; gap:2px; flex-wrap:wrap; align-items:center; justify-content:center; max-width:92px; }
   .pi-used:empty{ display:none; }
   .pi-used:not(:empty)::before{ content:'使用済'; font-size:7px; color:var(--ink-dim); letter-spacing:0.02em; margin-right:1px; }
-  .pi-used .uc{ width:15px; height:20px; border-radius:3px; border:1px solid var(--line); display:grid; place-items:center;
-    font-family:'Cormorant Garamond',serif; font-size:10px; font-weight:700; background:rgba(255,255,255,0.03); color:var(--ink-dim); }
-  .pi-used .uc.moon{ border-color:var(--moon); color:var(--moon); } .pi-used .uc.sun{ border-color:var(--sun); color:var(--sun); }
-  .pi-used .uc.dark{ border-color:var(--dark); color:var(--dark); } .pi-used .uc.kaos{ border-color:var(--kaos); color:var(--kaos); }
-  .pi-used .uc.air{ border-color:var(--air); color:var(--air); }
+  .pi-used .uc{ width:16px; height:22px; border-radius:4px; border:1px solid var(--line); display:grid; place-items:center;
+    font-family:'Cormorant Garamond',serif; font-size:11px; font-weight:700; background:rgba(255,255,255,0.03); color:var(--ink-dim);
+    box-shadow:0 1px 3px rgba(0,0,0,0.4); }
+  .pi-used .uc.moon{ border-color:var(--moon); color:var(--moon); background:rgba(143,169,201,0.16); }
+  .pi-used .uc.sun{ border-color:var(--sun); color:var(--sun); background:rgba(224,162,61,0.16); }
+  .pi-used .uc.dark{ border-color:var(--dark); color:var(--dark); background:rgba(138,92,174,0.16); }
+  .pi-used .uc.kaos{ border-color:var(--kaos); color:var(--kaos); background:rgba(193,75,82,0.16); }
+  .pi-used .uc.air{ border-color:var(--air); color:var(--air); background:rgba(111,191,160,0.16); }
   /* 場中央の行動選択(決戦・撤退・入替。選べる時だけ表示) */
   .field-actions{ width:100%; max-width:340px; z-index:9; display:none; }
   .field-actions.show{ display:block; }
@@ -407,9 +410,11 @@
   /* 案内・行動選択とも手札上に移動したので、場札同士を近づけて対峙感を出す */
   .field .mid-divider{ min-height:14px; justify-content:center; }
   /* #6 場に表示する各プレイヤーの得点 */
-  .pi-pt{ font-size:10px; color:var(--ink-dim); letter-spacing:0.04em; white-space:nowrap; }
+  .pi-pt{ font-size:10px; color:var(--ink-dim); letter-spacing:0.04em; white-space:nowrap; display:flex; align-items:baseline; gap:3px; }
   .pinfo.you .pi-pt{ color:var(--gold-bright); }
-  .pi-pt b{ font-family:'Cormorant Garamond',serif; font-size:15px; font-weight:700; color:var(--gold); margin:0 1px; }
+  .pi-pt b{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--gold-bright); line-height:1; margin:0 1px;
+    text-shadow:0 1px 6px rgba(0,0,0,0.5); }
+  .pi-pt .pt-unit{ font-size:9px; color:var(--ink-dim); letter-spacing:0.08em; }
   /* #7 空になった上部コンテキスト枠を消す */
   .hmc-context:empty{ display:none; }
   /* #8 手札選択モーダル: 1列で5枚 */
@@ -432,6 +437,10 @@
   .round-progress .rp-seg{ width:14px; height:6px; border-radius:2px; background:rgba(201,162,74,0.14); border:1px solid rgba(201,162,74,0.25); transition:background .3s; }
   .round-progress .rp-seg.done{ background:var(--gold-dim); border-color:var(--gold); }
   .round-progress .rp-seg.now{ background:var(--gold-bright); border-color:var(--gold-bright); box-shadow:0 0 6px rgba(240,208,135,0.6); }
+  .tb-phase{ font-size:9px; letter-spacing:0.14em; padding:1px 8px; border-radius:8px; line-height:1.4; }
+  .tb-phase.early{ color:var(--air); border:1px solid rgba(111,191,160,0.4); }
+  .tb-phase.mid{ color:var(--gold-bright); border:1px solid rgba(201,162,74,0.4); }
+  .tb-phase.late{ color:#f0a0a0; border:1px solid rgba(193,75,82,0.5); background:rgba(193,75,82,0.12); }
   /* 相手の手札を画面上部に(裏面・候補じゃんけん・数字) */
   .opp-hand-strip{ flex-shrink:0; padding:3px 10px 1px; text-align:center; }
   .opp-hand-strip .ohs-label{ font-size:9px; color:var(--gold-dim); letter-spacing:0.04em; margin-bottom:3px; }
@@ -483,6 +492,7 @@
     /* 短い画面では戦略バーを省略し、精確な「戦略 N」テキストで代替(高さ節約) */
     .pinfo .pi-ctr{ display:none !important; }
     .pi-token{ font-size:9px !important; }
+    .pi-pt b{ font-size:20px !important; }
     /* フッターをコンパクトにして2段折り返しの高さを抑える */
     .hd.bottom{ padding:4px 12px !important; }
     .hd.bottom .grid-btn{ padding:2px 6px !important; font-size:8.5px !important; }
@@ -1478,6 +1488,7 @@
       <span class="late-badge" id="lateBadge">×2</span>
     </div>
     <div class="round-progress" id="roundProgress"></div>
+    <span class="tb-phase" id="roundPhase"></span>
   </div>
 
   <div class="compat-strip">
@@ -1502,7 +1513,7 @@
         <div class="slot-row" id="cpuSlot"><div class="empty-slot">待機</div></div>
         <div class="pinfo cpu" id="cpuCell">
           <span class="pi-role" id="cpuDealerTag">親</span>
-          <span class="pi-pt">相手 <b id="cpuLP">0</b>pt</span>
+          <span class="pi-pt">相手 <b id="cpuLP">0</b><span class="pt-unit">pt</span></span>
           <div class="deck-chip opp" id="deckBarOpp" onclick="event.stopPropagation(); openOppDeckModal()"></div>
           <div class="pi-ctr"><div class="lp-bar-wrap cpu" id="cpuBarWrap"></div></div>
           <span class="pi-token" id="cpuToken"></span>
@@ -1518,7 +1529,7 @@
         <div class="slot-row" id="youSlot"><div class="empty-slot">あなた</div></div>
         <div class="pinfo you" id="youCell">
           <span class="pi-role" id="youDealerTag">子</span>
-          <span class="pi-pt">あなた <b id="youLP">0</b>pt</span>
+          <span class="pi-pt">あなた <b id="youLP">0</b><span class="pt-unit">pt</span></span>
           <div class="deck-chip" id="deckBar" onclick="event.stopPropagation(); openDeckModal()"></div>
           <div class="pi-ctr"><div class="lp-bar-wrap you" id="youBarWrap"></div></div>
           <span class="pi-token" id="youToken"></span>
@@ -2033,6 +2044,14 @@ function renderRoundProgress(){
     html+=`<span class="rp-seg ${cls}"></span>`;
   }
   el.innerHTML=html;
+  const ph=document.getElementById('roundPhase');
+  if(ph){
+    let label, cls;
+    if(round>=LATE_GAME_START){ label='終盤'; cls='late'; }
+    else if(round>=Math.ceil(TOTAL_ROUNDS/2)){ label='中盤'; cls='mid'; }
+    else { label='序盤'; cls='early'; }
+    ph.textContent=label; ph.className='tb-phase '+cls;
+  }
 }
 // お互いの使用済みカードを山札の下に表示(双方とも公開済み)
 function renderUsedCards(){
@@ -3173,8 +3192,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.31.10';
+const GAME_VERSION = 'v0.31.11';
 const CHANGELOG = [
+  { version:'v0.31.11', date:'2026-07-13', items:[
+    'レビュー反映（視認性の磨き込み）：①得点(pt)の数字を大きく強調（得点ゲームであることを明確に） ②ラウンド進行に「序盤／中盤／終盤」の局面ラベルを追加 ③「使用済」カードを属性色のミニカード風にして直感的に ④READMEの冒頭を短いキャッチコピーに',
+  ]},
   { version:'v0.31.10', date:'2026-07-13', items:[
     '相手の場札と自分の場札の間に「VS」の区切りを追加（金の細いラインと発光する VS 文字）。対戦の対峙感を強調',
   ]},
