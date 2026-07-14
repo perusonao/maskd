@@ -1119,6 +1119,10 @@
   .ms-row{ display:flex; justify-content:space-between; font-size:11px; color:var(--ink-dim); gap:8px; }
   .ms-row span:first-child{ color:var(--gold-dim); white-space:nowrap; }
   .ms-row span:last-child{ text-align:right; }
+  /* 通算成績・MVP・連勝を強調する結果画面のマイルストーン枠 */
+  .match-summary.milestone{ border-color:rgba(201,162,74,.55); background:linear-gradient(180deg,rgba(201,162,74,.08),transparent);
+    box-shadow:0 0 14px rgba(201,162,74,.12); }
+  .match-summary.milestone .ms-row{ font-size:12px; }
 
   /* 結果画面: 得点内訳テーブル(上からカウントアップ) */
   .score-tbl{ width:100%; max-width:300px; margin:6px auto 2px; }
@@ -3120,6 +3124,7 @@ function isLateGame(){ return round>=LATE_GAME_START; }
 
 // 見送りの実行(親がPASS_COSTを支払う)
 function executePass(isCpuDealer){
+  if(!dealerCard || !childCard){ busy=false; return; } // 安全装置: 非同期の連打等でカードが未確定な場合は無視
   busy=true;
   document.getElementById('actions').innerHTML='';
   if(youIsDealer) youTrust=Math.max(0,youTrust-PASS_TRUST_COST); else cpuTrust=Math.max(0,cpuTrust-PASS_TRUST_COST);
@@ -3135,9 +3140,11 @@ function executePass(isCpuDealer){
   });
 
   showActionBanner('tettai', ()=>{
+    if(!dealerCard || !childCard){ busy=false; return; } // 安全装置: 非同期でカードが無効化された場合
     hint('撤退。中身を公開します…');
     document.getElementById('cpuSlot').innerHTML=cardHTML(dealerCard.owner==='cpu'?dealerCard:childCard, false);
     setTimeout(()=>{
+      if(!dealerCard || !childCard){ busy=false; return; }
       document.getElementById('youSlot').innerHTML=cardHTML(dealerCard.owner==='you'?dealerCard:childCard, false);
       setTimeout(()=>{
         finishPassReveal();
@@ -3210,8 +3217,10 @@ function resolveFight(doFight, isCpuDealer){
 
   // 決戦: 公開して判定
   showActionBanner('kessen', ()=>{
+    if(!dealerCard || !childCard){ busy=false; return; } // 安全装置: 非同期でカードが無効化された場合
     document.getElementById('cpuSlot').innerHTML=cardHTML(dealerCard.owner==='cpu'?dealerCard:childCard, false);
     setTimeout(()=>{
+      if(!dealerCard || !childCard){ busy=false; return; }
       document.getElementById('youSlot').innerHTML=cardHTML(dealerCard.owner==='you'?dealerCard:childCard, false);
       setTimeout(()=>{
         resolveFightJudge();
@@ -3458,8 +3467,12 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.34.0';
+const GAME_VERSION = 'v0.35.0';
 const CHANGELOG = [
+  { version:'v0.35.0', date:'2026-07-14', items:[
+    'リザルト・統計を拡充（遊び続ける動機づけ）：①結果画面に「今回のMVPカード（あなたが最も稼いだ札と得点）」「通算成績＝勝率」「連勝（現在／最高）」を表示。自己ベスト更新時は🏆を表示 ②通算統計モーダルにも勝率・連勝・通算MVPカード（あなたが通算で最も稼いだ札）を追加。',
+    '不具合修正：決戦／撤退の公開演出中にラウンドが切り替わると稀にエラーが発生し得た箇所へ安全装置を追加（非同期タイミングでカードが無効化されても落ちないように）。',
+  ]},
   { version:'v0.34.0', date:'2026-07-14', items:[
     '勝敗演出を強化（手触りの向上）：①カード公開を「裏から表へパタンとめくれる」3D演出に ②場に札を置いた瞬間に「フワッ」と落ちて収まる設置アニメーション ③決着（決戦の勝敗が付いた瞬間）に盤面が短く揺れ、勝敗色の光が弾ける「ドン！」というインパクト演出を追加 ④対応端末では決着・Kaos特殊発動時に軽い振動（ハプティクス）。※「動きを控えめに」設定の端末では演出を自動で抑制。',
   ]},
@@ -3965,6 +3978,43 @@ function computeAggregateStats(games){
   return agg;
 }
 
+// この試合であなたが最も稼いだカード(=MVP)。決戦で勝った時の自分の札と得点から算出
+function computeGameMVP(rlog){
+  let best=null;
+  (rlog||[]).forEach(r=>{
+    if(r.passed || r.result==='draw' || !r.result) return;
+    const winnerIsYou = (r.result==='dealer')===r.dealerIsYou;
+    if(!winnerIsYou) return;
+    const yourCard = r.dealerIsYou ? r.dealerCard : r.childCard;
+    const pts = r.dmg||0;
+    if(!best || pts>best.pts) best={card:yourCard, pts};
+  });
+  return best; // {card,pts} or null
+}
+// 保存済み全試合から、連勝・勝率・通算MVPカード(あなたが最も稼いだ札)を集計
+function computeStreaksAndRate(games){
+  let maxStreak=0, cur=0, wins=0;
+  const cardPts={};
+  games.forEach(g=>{
+    if(g.result==='win'){ wins++; cur++; if(cur>maxStreak) maxStreak=cur; }
+    else cur=0; // 敗北・引分は連勝を止める
+    (g.rounds||[]).forEach(r=>{
+      if(r.passed || r.result==='draw' || !r.result) return;
+      const winnerIsYou=(r.result==='dealer')===r.dealerIsYou;
+      if(!winnerIsYou) return;
+      const yc=r.dealerIsYou?r.dealerCard:r.childCard;
+      const key=yc.attr+yc.num;
+      cardPts[key]=(cardPts[key]||0)+(r.dmg||0);
+    });
+  });
+  let trailing=0;
+  for(let i=games.length-1;i>=0;i--){ if(games[i].result==='win') trailing++; else break; }
+  let mvp=null;
+  Object.keys(cardPts).forEach(k=>{ if(!mvp||cardPts[k]>mvp.pts) mvp={attr:k.slice(0,-1), num:+k.slice(-1), pts:cardPts[k]}; });
+  return { winRate: games.length?wins/games.length*100:0, wins, total:games.length,
+    maxStreak, currentStreak:trailing, mvpCard:mvp };
+}
+
 function openStats(){
   const games=loadGameHistory();
   const modal=document.getElementById('statsModal');
@@ -3975,11 +4025,17 @@ function openStats(){
     return;
   }
   const a=computeAggregateStats(games);
+  const st=computeStreaksAndRate(games);
   const decidedRounds = a.dealerRoundWins+a.childRoundWins;
   const retreatOpp = a.totalPasses; // 撤退が発生した局面の総数(近似)
+  const mvpTag = st.mvpCard
+    ? `<span class="hist-tag ${st.mvpCard.attr}">${ALABEL[st.mvpCard.attr]}${RPS_GLYPH[st.mvpCard.attr]||''}${st.mvpCard.num}</span> <b style="color:var(--gold-bright)">+${st.mvpCard.pts}pt</b>`
+    : '—';
   body.innerHTML=`
     <div class="ms-row"><span>記録された試合数</span><span>${a.totalGames}戦</span></div>
-    <div class="ms-row"><span>総合成績</span><span>${a.youWins}勝 ${a.cpuWins}敗 ${a.draws}分</span></div>
+    <div class="ms-row"><span>総合成績</span><span>${a.youWins}勝 ${a.cpuWins}敗 ${a.draws}分 <b style="color:var(--gold-bright)">（勝率${st.winRate.toFixed(0)}%）</b></span></div>
+    <div class="ms-row"><span>連勝</span><span>現在 ${st.currentStreak} ／ 最高 ${st.maxStreak}</span></div>
+    <div class="ms-row"><span>通算MVPカード</span><span>${mvpTag}</span></div>
     <div class="ms-row"><span>親の決戦勝率</span><span>${decidedRounds?(a.dealerRoundWins/decidedRounds*100).toFixed(1):'-'}%</span></div>
     <div class="ms-row"><span>子の決戦勝率</span><span>${decidedRounds?(a.childRoundWins/decidedRounds*100).toFixed(1):'-'}%</span></div>
     <div class="ms-row"><span>ラウンド内引分率</span><span>${a.totalRounds?(a.roundDraws/a.totalRounds*100).toFixed(1):'-'}%</span></div>
@@ -4309,6 +4365,10 @@ function endGame(){
   if(youFinal>cpuFinal){ t.textContent='VICTORY'; t.className='big win'; }
   else if(cpuFinal>youFinal){ t.textContent='DEFEAT'; t.className='big lose'; }
   else { t.textContent='DRAW'; t.className='big draw'; }
+  // 先に履歴へ保存し、この試合を含めた通算成績（勝率・連勝・MVP）を算出する
+  saveGameToHistory(youFinal, cpuFinal, s);
+  const gameMVP = computeGameMVP(roundLog);
+  const streak = computeStreaksAndRate(loadGameHistory());
   // 得点内訳テーブル(上から順にカウントアップ演出)
   const numCell=(v,pre,who)=>`<span class="sb-n ${who}">${pre?`<span class="sb-pre">${pre}</span>`:''}<span class="num" data-t="${v}">0</span></span>`;
   const rowHTML=(label,sub,yv,cv,pre,cls)=>`<div class="${cls}"><span class="sb-l">${label}${sub?`<span class="sb-sub">${sub}</span>`:''}</span>${numCell(yv,pre,'you')}${numCell(cv,pre,'cpu')}</div>`;
@@ -4339,7 +4399,19 @@ function endGame(){
   const remainSection=`<div class="round-points"><div class="rp-title">最終的な残り手札（非Airの上位2枚＋Air1枚2点／山札は対象外）</div>
     <div class="rs-hand"><span class="rs-who you">あなた +${youLeftoverBonus}</span><span class="rs-cards">${tagList(remainSort(youHand))}</span></div>
     <div class="rs-hand"><span class="rs-who cpu">相手 +${cpuLeftoverBonus}</span><span class="rs-cards">${tagList(remainSort(cpuHand))}</span></div></div>`;
+  // 今回のMVP・通算成績・連勝（遊び続ける動機づけ）
+  const mvpTag = gameMVP
+    ? `${cardTag(gameMVP.card)} <b style="color:var(--gold-bright)">+${gameMVP.pts}pt</b>`
+    : '<span class="rs-none">なし（決戦勝利なし）</span>';
+  const bestNote = (streak.currentStreak>=2 && streak.currentStreak===streak.maxStreak)
+    ? ' <b style="color:var(--gold-bright)">🏆自己ベスト更新！</b>' : '';
+  const milestoneSection=`<div class="match-summary milestone">
+    <div class="ms-row"><span>今回のMVPカード</span><span>${mvpTag}</span></div>
+    <div class="ms-row"><span>通算成績</span><span>${streak.wins}勝 / ${streak.total}戦 （勝率 ${streak.winRate.toFixed(0)}%）</span></div>
+    <div class="ms-row"><span>連勝</span><span>現在 ${streak.currentStreak} ／ 最高 ${streak.maxStreak}${bestNote}</span></div>
+  </div>`;
   const extra=`<div id="ovExtra">
+    ${milestoneSection}
     ${roundSection}
     ${remainSection}
     <div class="match-summary">
@@ -4355,7 +4427,6 @@ function endGame(){
     </div>
   </div>`;
   document.getElementById('ovScore').innerHTML=tbl+extra;
-  saveGameToHistory(youFinal, cpuFinal, s);
   maybeSendGameLog(youFinal, cpuFinal, s); // クラウド送信(設定＆同意がある場合のみ)
   ov.classList.add('show');
   animateScoreBreakdown();
