@@ -73,6 +73,10 @@
   .rs-role.dealer{ color:var(--gold-bright); }
   .rs-role.child{ color:var(--moon); }
   .rs-inst{ margin-top:8px; font-size:12px; color:var(--ink-dim); line-height:1.5; }
+  /* 初回プレイの最初の数ラウンドだけ出る「今回のポイント」ガイド */
+  .rs-tip{ margin-top:12px; font-size:11.5px; line-height:1.55; color:#e8dcc0; text-align:left;
+    background:rgba(201,162,74,.10); border:1px solid rgba(201,162,74,.35); border-radius:10px; padding:9px 12px; }
+  .rs-tip b{ color:var(--gold-bright); }
   .rs-go{ margin-top:18px; width:70%; padding:12px 0; }
   .name-input{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:rgba(0,0,0,0.25);
     color:var(--ink); font-size:16px; font-family:'Zen Kaku Gothic New',sans-serif; text-align:center; outline:none; }
@@ -1521,6 +1525,7 @@
       <div class="rs-round">ROUND <b id="rsRoundN">1</b><span class="rs-slash">/</span><b id="rsRoundTot">8</b></div>
       <div class="rs-role" id="rsRole"></div>
       <div class="rs-inst" id="rsInst"></div>
+      <div class="rs-tip" id="rsTip" style="display:none;"></div>
       <div class="btn rs-go" onclick="beginRoundPlay()">はじめる</div>
     </div>
   </div>
@@ -2134,6 +2139,25 @@ function startRound(){
   showRoundStartModal();
 }
 // ラウンド開始モーダル: ラウンド数・親/子・案内を表示。「はじめる」で本編へ。
+// ===== 初回プレイのオンボーディング(最初の数ラウンドだけ「考え方」を案内) =====
+const ONBOARD_KEY='maskd_onboard_done_v1';
+function onboardingActive(){ try{ return localStorage.getItem(ONBOARD_KEY)!=='1'; }catch(e){ return false; } }
+function markOnboardingDone(){ try{ localStorage.setItem(ONBOARD_KEY,'1'); }catch(e){} }
+// 初回プレイのR1〜R3で、そのラウンドに「何を考えるか」を1行で提示する
+function onboardTip(){
+  if(!onboardingActive() || round>3) return '';
+  if(round===1){
+    return youIsDealer
+      ? '🔰 あなたが先に出す番（親）。出したあと<b>決戦</b>で勝てば相手の数字が得点に。まずは強すぎない札から試そう。'
+      : '🔰 まず相手の<b>数字</b>に注目。その数字に<b>勝てる札</b>を手札から探そう（手札を開くと<b>おすすめ</b>に印が付きます）。';
+  }
+  if(round===2){
+    return youIsDealer
+      ? '🔰 親は<b>決戦か撤退</b>を選べる。<b>有利なら決戦</b>、不利なら<b>撤退</b>で被害ゼロ。迷ったら⚖️の色が目安。'
+      : '🔰 勝てない時は<b>低い札</b>で受け流すのも手。<b>高い札は温存</b>して終盤やボーナスに回そう。';
+  }
+  return '🔰 使わず残した手札は最後に<b>ボーナス点</b>（非Airの上位2枚＋Air各2点）。<b>高い札の温存</b>も立派な戦略。';
+}
 function showRoundStartModal(){
   document.getElementById('rsRoundN').textContent=round;
   document.getElementById('rsRoundTot').textContent=TOTAL_ROUNDS;
@@ -2143,6 +2167,8 @@ function showRoundStartModal(){
   document.getElementById('rsInst').textContent = youIsDealer
     ? '場に出すカードを選択してください'
     : '相手が先に置きます。数字を見てから、出す札を選べます';
+  const tipEl=document.getElementById('rsTip');
+  if(tipEl){ const t=onboardTip(); tipEl.innerHTML=t; tipEl.style.display = t ? 'block' : 'none'; }
   document.getElementById('roundStartModal').classList.add('show');
 }
 function beginRoundPlay(){
@@ -3467,8 +3493,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.35.0';
+const GAME_VERSION = 'v0.36.0';
 const CHANGELOG = [
+  { version:'v0.36.0', date:'2026-07-14', items:[
+    '初心者オンボーディングを追加：初回プレイの最初の3ラウンドだけ、ラウンド開始モーダルに「🔰 今回のポイント」を表示し、その場面で“何を考えるか”を役割（親／子）に合わせて案内（R1=相手の数字に勝てる札を探す／R2=決戦か撤退かの選び方／R3=高い札の温存＝残り手札ボーナス）。1試合終えると自動で終了し、以降は通常のヒントに任せる。',
+  ]},
   { version:'v0.35.0', date:'2026-07-14', items:[
     'リザルト・統計を拡充（遊び続ける動機づけ）：①結果画面に「今回のMVPカード（あなたが最も稼いだ札と得点）」「通算成績＝勝率」「連勝（現在／最高）」を表示。自己ベスト更新時は🏆を表示 ②通算統計モーダルにも勝率・連勝・通算MVPカード（あなたが通算で最も稼いだ札）を追加。',
     '不具合修正：決戦／撤退の公開演出中にラウンドが切り替わると稀にエラーが発生し得た箇所へ安全装置を追加（非同期タイミングでカードが無効化されても落ちないように）。',
@@ -4365,6 +4394,7 @@ function endGame(){
   if(youFinal>cpuFinal){ t.textContent='VICTORY'; t.className='big win'; }
   else if(cpuFinal>youFinal){ t.textContent='DEFEAT'; t.className='big lose'; }
   else { t.textContent='DRAW'; t.className='big draw'; }
+  markOnboardingDone(); // 初回プレイの案内は1試合で終了(以降は通常のヒントに任せる)
   // 先に履歴へ保存し、この試合を含めた通算成績（勝率・連勝・MVP）を算出する
   saveGameToHistory(youFinal, cpuFinal, s);
   const gameMVP = computeGameMVP(roundLog);
