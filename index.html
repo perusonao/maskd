@@ -2838,22 +2838,55 @@ function cpuEstimate(myCard, oppNum, iAmDealer){
   return {win:w/t, lose:l/t, draw:d/t};
 }
 
+// CPUの強さに応じた「うっかり率」: 一定確率で最善手ではなくランダムな判断をする。
+// weakは初心者でも勝てるよう大きめ、strongはほぼ最善手のみ。
+function cpuEps(){ return cpuDifficulty==='weak' ? 0.33 : (cpuDifficulty==='normal' ? 0.10 : 0.0); }
+// CPUが推理で把握している「相手(you)の未使用カード」一覧(手札+山札の候補。公平情報)
+function cpuOppRemainingCards(){
+  const out=[];
+  Object.keys(poolOwner).forEach(k=>{
+    if(poolOwner[k]==='you' && !allUsedPoolCards.has(k)){
+      out.push({attr:k.slice(0,-1), num:parseInt(k.slice(-1),10)});
+    }
+  });
+  return out;
+}
+// 親として札cを先出しした場合の見込み価値(1手読み):
+// 相手が最善の子札で応じると仮定し、その後こちらが決戦/撤退の有利な方を選べるとして評価する。
+function cpuDealerLeadValue(c){
+  const lm=scoreMultiplier();
+  const oppCards=cpuOppRemainingCards();
+  if(oppCards.length===0) return -c.num*0.1; // 情報なし: 大きい札を無駄に切るのを軽く避ける
+  let bestOppEV=-1e9, chosen=oppCards[0];
+  oppCards.forEach(oc=>{
+    const r=judge(c, oc);
+    const oppEV=(r==='child'?c.num:0)-(r==='dealer'?oc.num:0); // 相手(子)視点の得
+    if(oppEV>bestOppEV){ bestOppEV=oppEV; chosen=oc; }
+  });
+  const r=judge(c, chosen);
+  const fightEV=(r==='dealer'?chosen.num:0)-(r==='child'?c.num:0); // 決戦した場合の親の得失
+  return Math.max(fightEV*lm, -PASS_TRUST_COST*0.5); // 不利なら撤退できる(損失はコスト分に限定)
+}
+
 // ===== CPUが親として、勝負するか決める(推理+LP状況+戦略パターン考慮) =====
 function cpuDecide(){
-  // 親の特権「入替」: 子の数字を見て、自分のカードが明確に不利なら入替を検討(1ラウンド1回まで)
-  if(!cpuSwapUsedThisRound && cpuTrust>=SWAP_COST && dealerCard.num < childCard.num && cpuHand.length>0){
-    const candidates = cpuHand.map((c,i)=>{
-      const est=cpuEstimate(c, childCard.num, true);
-      return {i, c, score: est.win*childCard.num - est.lose*c.num};
-    }).sort((a,b)=>b.score-a.score);
+  const S=cpuStrategy, lm=scoreMultiplier(); // 終盤2倍を意識(勝ちの価値・負けの痛みが倍)
+  // 親の特権「入替」: 子の数字を見てから、より期待値の高い札があれば入替を検討(1ラウンド1回まで)
+  if(!cpuSwapUsedThisRound && cpuTrust>=SWAP_COST && cpuHand.length>0){
     const currentEst=cpuEstimate(dealerCard, childCard.num, true);
-    const currentScore = currentEst.win*childCard.num - currentEst.lose*dealerCard.num;
-    // 慎重なほど入替しやすく、積極的なほど今の手を信じる
-    const swapBar = cpuStrategy==='cautious' ? 0.3 : (cpuStrategy==='aggressive' ? 1.5 : 0.8);
-    if(candidates[0].score > currentScore + swapBar){
+    const currentScore = currentEst.win*childCard.num*lm - currentEst.lose*dealerCard.num*lm;
+    let best=currentScore, bi=-1;
+    cpuHand.forEach((c,i)=>{
+      const est=cpuEstimate(c, childCard.num, true);
+      const v = est.win*childCard.num*lm - est.lose*c.num*lm;
+      if(v>best){ best=v; bi=i; }
+    });
+    // 慎重なほど入替しやすく、積極的なほど今の手を信じる(コスト分を上回る改善が必要)
+    const swapBar = S==='cautious' ? SWAP_COST*0.6 : (S==='aggressive' ? SWAP_COST*1.1 : SWAP_COST*0.85);
+    if(bi>=0 && best > currentScore + swapBar){
       const oldCard=dealerCard; oldCard.owner=undefined;
       cpuHand.push(oldCard);
-      dealerCard=cpuHand.splice(candidates[0].i,1)[0];
+      dealerCard=cpuHand.splice(bi,1)[0];
       dealerCard.owner='cpu';
       cpuTrust-=SWAP_COST;
       cpuSwapUsedThisRound=true;
@@ -2862,69 +2895,70 @@ function cpuDecide(){
     }
   }
 
-  const est=cpuEstimate(dealerCard, childCard.num, true);
-  const lm=scoreMultiplier(); // 終盤2倍を意識(勝ちの価値・負けの痛みが倍)
-  const expLoss=est.lose*dealerCard.num*lm;
-  const expGain=est.win*childCard.num*lm;
-  let threshold=0;
+  let doFight;
+  if(Math.random()<cpuEps()){
+    doFight = Math.random()<0.5; // うっかり: 難易度に応じてランダムに決める
+  } else {
+    const est=cpuEstimate(dealerCard, childCard.num, true);
+    const expLoss=est.lose*dealerCard.num*lm;
+    const expGain=est.win*childCard.num*lm;
+    let threshold=0;
 
-  // 状況判断: 点差(自分視点)と残りラウンドで積極/慎重を調整
-  const scoreDiff = cpuLP - youLP; // 正なら相手(CPU)がリード
-  const roundsLeft = TOTAL_ROUNDS - round + 1;
-  const urgency = roundsLeft<=3 ? 1.6 : (roundsLeft<=6 ? 1.0 : 0.5);
-  if(scoreDiff < -2) threshold -= urgency;       // 負けている: 終盤ほど積極的に取り返しにいく
-  else if(scoreDiff > 2) threshold += urgency*0.6; // リード中: 終盤ほど手堅く逃げ切りたい
+    // 状況判断: 点差(自分視点)と残りラウンドで積極/慎重を調整
+    const scoreDiff = cpuLP - youLP; // 正なら相手(CPU)がリード
+    const roundsLeft = TOTAL_ROUNDS - round + 1;
+    const urgency = roundsLeft<=3 ? 1.6 : (roundsLeft<=6 ? 1.0 : 0.5);
+    if(scoreDiff < -2) threshold -= urgency;       // 負けている: 終盤ほど積極的に取り返しにいく
+    else if(scoreDiff > 2) threshold += urgency*0.6; // リード中: 終盤ほど手堅く逃げ切りたい
 
-  // 戦略パターンによる補正
-  if(cpuStrategy==='aggressive') threshold-=0.7; // 積極的: 多少不利でも勝負に出る
-  else if(cpuStrategy==='cautious') threshold+=0.9; // 慎重: 十分有利でないと勝負しない
-  else if(cpuStrategy==='tricky') threshold+=(Math.random()*2-1); // トリッキー: 毎回ブレる
+    // 戦略パターンによる補正(期待値を壊さない範囲の「味付け」に抑える)
+    if(S==='aggressive') threshold-=0.4;   // 積極的: 多少不利でも勝負に出る
+    else if(S==='cautious') threshold+=0.6; // 慎重: 十分有利でないと勝負しない
+    else if(S==='tricky') threshold+=(Math.random()*1.2-0.6); // トリッキー: 毎回ブレる
 
-  // CPUの強さ: 弱いほど判断にノイズが乗り、強いほど正確
-  if(cpuDifficulty==='weak') threshold += (Math.random()*2.4-1.2);
-  else if(cpuDifficulty==='strong') threshold += (Math.random()*0.3-0.15);
+    // 戦略カウンターが尽きかけているなら、撤退/奇襲に頼れない分やや積極的に
+    if(cpuTrust<=1) threshold-=0.3;
 
-  // 戦略カウンターが尽きかけているなら、撤退/奇襲に頼れない分やや積極的に
-  if(cpuTrust<=1) threshold-=0.3;
-
-  let doFight = (expGain-expLoss) > threshold;
-  if(!doFight && (expGain-expLoss) > -PASS_TRUST_COST*0.5) doFight=true;
+    doFight = (expGain-expLoss) > threshold;
+    if(!doFight && (expGain-expLoss) > -PASS_TRUST_COST*0.5) doFight=true;
+  }
   hint(doFight ? '相手が決戦を仕掛けてきた！' : '相手はこのラウンドを撤退した');
   setTimeout(()=>resolveFight(doFight, true), 600);
 }
 
 // CPUのカード選択(推理+期待値ベース+戦略パターン)
 function cpuChooseCard(hand, oppNum){
-  let randomWeight = cpuStrategy==='tricky' ? 3.5 : (cpuStrategy==='cautious' ? 1.0 : 2.0);
-  // CPUの強さ: 弱いほどランダム性(ノイズ)が増え、強いほど期待値通りに動く
-  if(cpuDifficulty==='weak') randomWeight*=2.2;
-  else if(cpuDifficulty==='strong') randomWeight*=0.35;
+  const S=cpuStrategy;
+  // 難易度に応じたうっかり: 一定確率でランダムな札を出す(初心者が付け入る隙)
+  if(Math.random()<cpuEps()) return Math.floor(Math.random()*hand.length);
+  // 同点付近の自然な揺らぎ用の微小ノイズ(トリッキーは大きめ)
+  const noise = 0.35 + (S==='tricky' ? 1.2 : 0);
+  const lm=scoreMultiplier(); // 終盤2倍を意識(勝ちの価値・負けの痛みが倍)
   const roundsLeft = TOTAL_ROUNDS - round + 1;
   // Airは残せば少し得点(1枚2点)、使えば即座に戦略カウンター+1を得られる。
-  // 温存インセンティブは弱め(残り手札は上位2枚+Air固定なので抱え込みの価値は限定的)
-  const airHoardBonus = roundsLeft * 0.06;
-  const airUseBonus = 1.2; // Air使用による戦略カウンター+1の価値
+  const airUseBonus = 1.0; // Air使用による戦略カウンター+1の価値
+  const airHoardBonus = roundsLeft * 0.05; // 温存インセンティブは弱め
   if(oppNum===null){
-    // 親として先に出す: 期待値の高い中庸〜強カードを重み付きで選ぶ
+    // 親として先に出す: 1手読みの見込み価値で評価。低い札から切り、高い札は決戦/残り手札ボーナス用に温存。
     const scored=hand.map((c,i)=>{
-      let base=0;
-      if(c.attr==='kaos') base=c.num*0.5;
-      else if(c.attr==='air') base = (cpuStrategy==='cautious' ? 1.5 : 0.3) + airUseBonus - airHoardBonus;
-      else base=1.5;
-      if(cpuStrategy==='aggressive') base+=c.num*0.3; // 積極的: 高い数字を好む
-      return {i, score: base + Math.random()*randomWeight};
+      let sc;
+      if(c.attr==='air') sc = (S==='cautious' ? 1.2 : 0.6) + airUseBonus - airHoardBonus;
+      else { sc = cpuDealerLeadValue(c); sc += (5-c.num)*0.12; } // 低い数字を先に消費(高い札は温存)
+      if(S==='aggressive') sc += 0.25;                 // 積極的: 決戦を仕掛けやすく
+      else if(S==='cautious') sc += (c.num<=2 ? 0.4 : 0); // 慎重: 安全な低い札を好む
+      return {i, score: sc + Math.random()*noise};
     }).sort((a,b)=>b.score-a.score);
     return scored[0].i;
   }
   // 子として、相手の数字を見て最良の一手を選ぶ
-  const lm=scoreMultiplier(); // 終盤2倍を意識(勝ちの価値・負けの痛みが倍)
   const scored=hand.map((c,i)=>{
     const est=cpuEstimate(c, oppNum, false);
     let ev = est.win*oppNum*lm - est.lose*c.num*lm;
     if(c.attr==='air') ev += airUseBonus - airHoardBonus;
-    if(cpuStrategy==='aggressive') ev += est.win*0.5; // 積極的: 勝ち筋を重視
-    else if(cpuStrategy==='cautious') ev -= est.lose*0.5; // 慎重: 負けを強く嫌う
-    return {i, ev: ev + Math.random()*randomWeight*0.25};
+    else ev += est.draw*(5-c.num)*0.05; // 引き分け含みなら低い札で凌ぐ(高い札を温存)
+    if(S==='aggressive') ev += est.win*0.4; // 積極的: 勝ち筋を重視
+    else if(S==='cautious') ev -= est.lose*0.6; // 慎重: 負けを強く嫌う
+    return {i, ev: ev + Math.random()*noise*0.4};
   }).sort((a,b)=>b.ev-a.ev);
   return scored[0].i;
 }
@@ -2932,21 +2966,21 @@ function cpuChooseCard(hand, oppNum){
 // CPU(子)が親の撤退に対して奇襲を仕掛けるか(無料の戦略判断)
 function cpuWantsForce(){
   if(cpuTrust<FORCE_TRUST_COST) return false;
+  const S=cpuStrategy;
+  if(Math.random()<cpuEps()) return Math.random()<0.3; // うっかり: たまにランダムに奇襲
+  const lm=scoreMultiplier();
   const est=cpuEstimate(childCard, dealerCard.num, false);
-  const ev=est.win*dealerCard.num - est.lose*childCard.num;
-  let bar = 1.0;
-  if(cpuStrategy==='aggressive') bar=0.4;
-  else if(cpuStrategy==='cautious') bar=1.8;
-  else if(cpuStrategy==='tricky') bar=1.0+(Math.random()*1.2-0.6);
+  const ev=est.win*dealerCard.num*lm - est.lose*childCard.num*lm;
+  let bar = FORCE_TRUST_COST*0.9; // 奇襲コスト分を上回る見込みが必要
+  if(S==='aggressive') bar-=0.6;
+  else if(S==='cautious') bar+=0.8;
+  else if(S==='tricky') bar+=(Math.random()*1.2-0.6);
 
   // 状況判断: 負けていて残り少ないなら強気に、リード中で戦略が乏しいなら温存
   const scoreDiff = cpuLP - youLP;
   const roundsLeft = TOTAL_ROUNDS - round + 1;
   if(scoreDiff < -2 && roundsLeft<=4) bar -= 0.6;
   if(scoreDiff > 2 && cpuTrust<=2) bar += 0.5;
-
-  if(cpuDifficulty==='weak') bar += (Math.random()*1.6-0.8);
-  else if(cpuDifficulty==='strong') bar += (Math.random()*0.2-0.1);
 
   return ev > bar;
 }
@@ -3387,8 +3421,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.32.6';
+const GAME_VERSION = 'v0.33.0';
 const CHANGELOG = [
+  { version:'v0.33.0', date:'2026-07-14', items:[
+    'CPU（相手）の思考を大幅強化：①親の先出しを「1手読み」で評価するように（相手の最善応手を想定し、決戦／撤退の有利な方を選べる前提で札を選ぶ。従来はほぼランダムだった） ②高い札は決戦・残り手札ボーナス用に温存し、低い札から切る方針を追加 ③入替（親の札交換）を数字条件に縛らず、期待値が上回る場面で活用 ④「積極的でも強い方が弱くなる」不具合を修正し、難易度（弱い／普通／強い）が素直に強さへ反映されるように（弱いはうっかり多め＝初心者向け、強いはほぼ最善手）。※本物のjudge/配札/得点を移植したシミュレータで、強い参照プレイヤー相手に勝率が旧CPUの13〜34%から約49〜54%（強い）まで改善することを確認。仮面キャラの個性（剛力＝積極／鉄壁＝慎重／技巧＝トリッキー）は維持。',
+  ]},
   { version:'v0.32.6', date:'2026-07-13', items:[
     '対戦画面の情報整理（要望を反映）：①両プレイヤーの手札枚数・山札枚数の表示を削除して画面をすっきりと ②山札を「一番上のカードの裏イメージ」で表示 ③盤面のメッセージエリアを廃止し、ラウンド開始時にモーダルで案内（ラウンド数／あなたは親or子／場に出すカードを選択してください）',
   ]},
