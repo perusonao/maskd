@@ -136,6 +136,8 @@
   .name-input:focus{ border-color:var(--gold-bright); box-shadow:0 0 0 1px var(--gold-bright); }
   .history-modal h3{ font-family:'Cormorant Garamond',serif; font-style:italic; color:var(--gold); font-size:22px; text-align:center; }
   .hist-scroll{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
+  /* 行数が増えても各行が縮んで中身が切れないように(縦フレックスのshrink抑制) */
+  .hist-scroll > *{ flex-shrink:0; }
   .hist-empty{ text-align:center; color:var(--ink-dim); font-size:12px; margin-top:30px; }
   .hist-row{
     border:1px solid var(--line); border-radius:10px; padding:8px 10px; font-size:11px;
@@ -517,6 +519,30 @@
   .lead-mark{ display:none; font-size:9px; font-weight:700; color:#1a1608; background:var(--gold-bright);
     border-radius:6px; padding:1px 5px; letter-spacing:.02em; margin-left:2px; }
   .lead-mark.show{ display:inline-block; }
+  /* ===== Design B(メリハリ): 上=スコア / 中=場 / 下=手札 ===== */
+  .top-score-bar{ display:none; }
+  .app.layout-b .top-score-bar{ display:flex; align-items:center; justify-content:space-between;
+    margin:5px 12px 2px; padding:8px 14px; border-radius:14px;
+    background:linear-gradient(180deg,rgba(201,162,74,.09),transparent 70%),var(--bg-panel);
+    border:1px solid var(--line); box-shadow:0 4px 14px -8px rgba(0,0,0,.6); }
+  .tsb-side{ display:flex; align-items:center; gap:7px; flex:1; min-width:0; }
+  .tsb-side.cpu{ justify-content:flex-end; }
+  .tsb-name{ font-size:11px; color:var(--ink-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:88px; }
+  .tsb-side.you .tsb-name{ color:var(--gold-dim); }
+  .tsb-pt{ font-family:'Cormorant Garamond',serif; font-size:30px; font-weight:700; color:#cfc7b8; line-height:1; }
+  .tsb-side.you .tsb-pt{ color:var(--gold-bright); }
+  .tsb-pt.leading{ text-shadow:0 0 14px rgba(232,200,119,.6); }
+  .tsb-mid{ padding:0 10px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .tsb-round{ font-size:10px; color:var(--gold-dim); letter-spacing:.06em; white-space:nowrap; }
+  .tsb-round b{ font-family:'Cormorant Garamond',serif; font-size:15px; color:var(--gold-bright); }
+  .tsb-late{ display:none; font-size:8px; font-weight:700; color:#2a0d0d; background:linear-gradient(160deg,#dd7a80,var(--kaos)); border-radius:7px; padding:1px 6px; }
+  .app.layout-b.late-x2 .tsb-late{ display:inline-block; }
+  .tsb-lead{ font-size:9px; font-weight:700; color:#1a1608; background:var(--gold-bright); border-radius:6px; padding:1px 5px; display:none; }
+  .tsb-lead.show{ display:inline-block; }
+  /* Bでは場の左右にある得点(pi-pt)を隠して、スコアは上段に一本化＝場をすっきり */
+  .app.layout-b .pinfo .pi-pt{ display:none; }
+  .app.layout-b .opp-hand-strip{ opacity:.9; }
+  .app.layout-b .play-area .field{ border-color:rgba(201,162,74,.28); }
   /* #7 空になった上部コンテキスト枠を消す */
   .hmc-context:empty{ display:none; }
   /* #8 手札選択モーダル: 1列で5枚 */
@@ -844,18 +870,28 @@
   }
   /* Kaos特殊ルール発動を告げる画面フラッシュ */
   .kaos-flash{
-    position:absolute; inset:0; z-index:9; pointer-events:none; opacity:0;
-    background:radial-gradient(circle at center, rgba(193,75,82,0.35), transparent 70%);
+    position:absolute; inset:0; z-index:9; pointer-events:none; opacity:0; overflow:hidden;
+    background:radial-gradient(circle at center, rgba(159,74,168,0.32), rgba(193,75,82,0.30) 45%, transparent 72%);
   }
-  .kaos-flash.fire{ animation:kaosFlashAnim .9s ease; }
+  .kaos-flash.fire{ animation:kaosFlashAnim .95s ease; }
   @keyframes kaosFlashAnim{
     0%{ opacity:0; } 20%{ opacity:1; } 100%{ opacity:0; }
   }
+  /* 混沌の衝撃波リング(紫のオーラが拡がる) */
+  .kaos-flash::before{
+    content:''; position:absolute; top:50%; left:50%; width:44px; height:44px; border-radius:50%;
+    transform:translate(-50%,-50%); border:2px solid rgba(221,130,205,.85);
+    box-shadow:0 0 28px rgba(193,75,82,.8), inset 0 0 22px rgba(159,74,168,.6); opacity:0;
+  }
+  .kaos-flash.fire::before{ animation:kaosRing .95s ease; }
+  @keyframes kaosRing{ 0%{ transform:translate(-50%,-50%) scale(.2); opacity:0; } 25%{ opacity:1; } 100%{ transform:translate(-50%,-50%) scale(9); opacity:0; } }
   .kaos-flash .kf-label{
     position:absolute; top:14%; left:0; right:0; text-align:center;
-    font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:600; font-size:20px;
-    color:var(--kaos); text-shadow:0 0 16px rgba(193,75,82,0.9); letter-spacing:0.06em;
+    font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:600; font-size:22px;
+    color:#e79a8f; text-shadow:0 0 18px rgba(159,74,168,.95), 0 0 8px rgba(193,75,82,.9); letter-spacing:0.06em;
   }
+  .kaos-flash.fire .kf-label{ animation:kaosLabel .95s ease; }
+  @keyframes kaosLabel{ 0%{ opacity:0; transform:scale(.6) rotate(-6deg); } 25%{ opacity:1; transform:scale(1.15) rotate(3deg); } 45%{ transform:scale(1) rotate(-1deg); } 100%{ opacity:0; transform:scale(1.05); } }
   /* 終盤決戦(得点2倍)を告げるバッジ */
   .late-badge{
     font-size:9px; font-weight:700; letter-spacing:0.04em; color:#2a0d0d;
@@ -915,17 +951,25 @@
     position:absolute; inset:0; z-index:9; pointer-events:none; opacity:0; overflow:hidden;
     background:radial-gradient(circle at center, rgba(111,191,160,0.28), transparent 72%);
   }
-  .air-flash.fire{ animation:kaosFlashAnim 1s ease; }
+  .air-flash.fire{ animation:kaosFlashAnim 1.2s ease; }
   .air-flash::after{
     content:''; position:absolute; inset:0;
-    background:repeating-linear-gradient(115deg, transparent 0 14px, rgba(155,216,194,.25) 14px 17px, transparent 17px 34px);
-    animation:airSweep 1s ease;
+    background:repeating-linear-gradient(115deg, transparent 0 16px, rgba(155,216,194,.22) 16px 19px, transparent 19px 38px);
+    animation:airSweep 1.2s ease;
   }
-  @keyframes airSweep{ 0%{ transform:translateX(-30%); opacity:0; } 30%{opacity:1;} 100%{ transform:translateX(30%); opacity:0; } }
+  @keyframes airSweep{ 0%{ transform:translateX(-35%); opacity:0; } 30%{opacity:1;} 100%{ transform:translateX(35%); opacity:0; } }
   .air-flash .kf-label{
     position:absolute; top:14%; left:0; right:0; text-align:center;
-    font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:600; font-size:20px;
+    font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:600; font-size:21px;
     color:var(--air); text-shadow:0 0 16px rgba(111,191,160,0.9); letter-spacing:0.06em;
+  }
+  /* 「AIR」がふわっと現れ、文字間隔を広げながら上へ消える(静寂の風) */
+  .air-flash.fire .kf-label{ animation:airLabel 1.2s ease; }
+  @keyframes airLabel{
+    0%{ opacity:0; transform:translateY(12px) scale(.9); letter-spacing:0.06em; }
+    30%{ opacity:1; transform:translateY(0) scale(1); }
+    70%{ opacity:1; letter-spacing:0.32em; }
+    100%{ opacity:0; transform:translateY(-12px) scale(1.05); letter-spacing:0.44em; }
   }
   /* ===== 戦略カウンターの増減演出 ===== */
   .lp-bar-wrap.pulse{ animation:barPulse .7s ease; }
@@ -1514,6 +1558,13 @@
         <div class="cpu-opt" data-val="off">OFF</div>
       </div>
     </div>
+    <div class="cpu-setting-row">
+      <div class="cpu-setting-label">画面レイアウト（対戦画面の見せ方・フッターでも切替可）</div>
+      <div class="cpu-setting-opts" id="layoutOpts">
+        <div class="cpu-opt" data-val="a">標準A</div>
+        <div class="cpu-opt" data-val="b">メリハリB（上=スコア）</div>
+      </div>
+    </div>
     <div class="btn-wrap" style="display:flex;gap:8px;">
       <div class="btn" style="flex:2;" onclick="beginMatchSetup()">対戦を始める</div>
       <div class="btn ghost" style="flex:1.2;" onclick="openStats()">通算成績・履歴</div>
@@ -1768,6 +1819,13 @@
     <span class="cs-special">Kaos/Air＝特殊</span>
   </div>
 
+  <!-- Design B(メリハリ)の最上段: 勝敗/スコアを大きく表示 -->
+  <div class="top-score-bar" id="topScoreBar">
+    <div class="tsb-side you"><span class="tsb-name" id="tsbYouName">あなた</span><b class="tsb-pt" id="tsbYou">0</b><span class="tsb-lead" id="tsbYouLead"></span></div>
+    <div class="tsb-mid"><span class="tsb-round">R<b id="tsbRound">1</b>/<span id="tsbRoundTot">8</span></span><span class="tsb-late" id="tsbLate">終盤 ×2</span></div>
+    <div class="tsb-side cpu"><span class="tsb-lead" id="tsbCpuLead"></span><b class="tsb-pt" id="tsbCpu">0</b><span class="tsb-name" id="tsbCpuName">相手</span></div>
+  </div>
+
   <div class="opp-hand-strip">
     <div class="ohs-cards" id="oppHandStrip"></div>
   </div>
@@ -1842,6 +1900,7 @@
       <div class="grid-btn toggle-btn" id="styleToggle" onclick="toggleCardStyle()" title="カードの表示を切り替え"></div>
       <div class="grid-btn toggle-btn" id="hintToggle" onclick="toggleHints()" title="ヒント表示の切り替え"></div>
       <div class="grid-btn toggle-btn" id="soundToggle" onclick="toggleSound()" title="効果音の切り替え"></div>
+      <div class="grid-btn toggle-btn" id="layoutToggle" onclick="toggleLayout()" title="画面レイアウト A/B の切り替え"></div>
       <div class="grid-btn" onclick="openRules()">ルール</div>
       <div class="grid-btn" onclick="openTracker()">一覧表</div>
       <div class="grid-btn" onclick="openHistory()">履歴 ↺</div>
@@ -1982,6 +2041,13 @@ function initCpuSettingUI(){
     };
     if(el.dataset.val===cardStyle) el.classList.add('selected');
   });
+  document.querySelectorAll('#layoutOpts .cpu-opt').forEach(el=>{
+    el.onclick=()=>{
+      document.querySelectorAll('#layoutOpts .cpu-opt').forEach(x=>x.classList.remove('selected'));
+      el.classList.add('selected'); setBoardLayout(el.dataset.val);
+    };
+    if(el.dataset.val===boardLayout) el.classList.add('selected');
+  });
 }
 // カード表示モードの切り替え時、対戦中なら見えている札を再描画する
 function applyCardStyleClass(){
@@ -2029,6 +2095,8 @@ function updateFooterToggles(){
   if(h){ h.textContent = hintsEnabled ? '💡 ヒントON' : '💡 ヒントOFF'; h.classList.toggle('off', !hintsEnabled); }
   const sd=document.getElementById('soundToggle');
   if(sd){ sd.textContent = sfxEnabled ? '🔊 音ON' : '🔇 音OFF'; sd.classList.toggle('off', !sfxEnabled); }
+  const ly=document.getElementById('layoutToggle');
+  if(ly){ ly.textContent = boardLayout==='b' ? '🖼 配置B' : '🖼 配置A'; }
 }
 // (initCpuSettingUI()はスクリプト末尾で呼び出す。変数宣言より先に実行されるのを防ぐため)
 
@@ -2362,6 +2430,18 @@ function renderScore(){
       yM.textContent = diff>0 ? `▲ +${diff}` : ''; yM.classList.toggle('show', diff>0);
       cM.textContent = diff<0 ? `▲ +${-diff}` : ''; cM.classList.toggle('show', diff<0);
     }
+    // Design B の上段スコアバーも同期
+    const tY=document.getElementById('tsbYou'), tC=document.getElementById('tsbCpu');
+    if(tY){ tY.textContent=youLP; tY.classList.toggle('leading', diff>0); }
+    if(tC){ tC.textContent=cpuLP; tC.classList.toggle('leading', diff<0); }
+    const tR=document.getElementById('tsbRound'); if(tR) tR.textContent=round;
+    const tRt=document.getElementById('tsbRoundTot'); if(tRt) tRt.textContent=TOTAL_ROUNDS;
+    const tCn=document.getElementById('tsbCpuName'); if(tCn) tCn.textContent=cpuMaskName();
+    const tYn=document.getElementById('tsbYouName'); if(tYn) tYn.textContent=youDisplayName();
+    const tYl=document.getElementById('tsbYouLead'), tCl=document.getElementById('tsbCpuLead');
+    if(tYl){ tYl.textContent=diff>0?`+${diff}`:''; tYl.classList.toggle('show', diff>0); }
+    if(tCl){ tCl.textContent=diff<0?`+${-diff}`:''; tCl.classList.toggle('show', diff<0); }
+    const appEl=document.querySelector('.app'); if(appEl) appEl.classList.toggle('late-x2', isLateGame());
   }
   { const yn=document.getElementById('youNameLbl'); if(yn) yn.textContent=youDisplayName();
     const cn=document.getElementById('cpuNameLbl'); if(cn) cn.textContent=cpuMaskName(); }
@@ -2776,6 +2856,13 @@ function toggleSound(){
   updateFooterToggles();
   if(sfxEnabled) sfx('select'); // ONにした合図
 }
+
+// ===== 盤面レイアウト A(標準) / B(メリハリ：上=スコア/中=場/下=手札) =====
+let boardLayout='a'; try{ boardLayout=(localStorage.getItem('maskd_layout')||'a')==='b'?'b':'a'; }catch(e){}
+function applyLayout(){ const app=document.querySelector('.app'); if(app) app.classList.toggle('layout-b', boardLayout==='b'); }
+function setBoardLayout(v){ boardLayout=(v==='b')?'b':'a'; try{ localStorage.setItem('maskd_layout', boardLayout); }catch(e){} applyLayout(); updateFooterToggles();
+  try{ if(typeof renderScore==='function' && typeof phase!=='undefined' && phase) renderScore(); }catch(e){} }
+function toggleLayout(){ setBoardLayout(boardLayout==='b'?'a':'b'); }
 const BEG_RPS={moon:'✊',dark:'✌️',sun:'✋'};   // 大きく表示するじゃんけん(絵文字表現)
 const ROLE_LABEL={kaos:'特殊', air:'引分'};      // じゃんけん外の属性の役割
 // 候補属性をモード対応で描画: 初心者は月/闇/太陽を「じゃんけん」、Kaos/Airは小アイコン。上級者は全て小アイコン。
@@ -2870,7 +2957,7 @@ function fireAirFlash(label){
   fl.classList.remove('fire'); void fl.offsetWidth;
   fl.classList.add('fire');
   sfx('air');
-  setTimeout(()=>fl.classList.remove('fire'), 1000);
+  setTimeout(()=>fl.classList.remove('fire'), 1200);
 }
 // 決着の「ドン！」: 盤面を短く揺らし、勝敗色の光を弾けさせ、端末を軽く振動させる
 function fireImpact(kind){ // kind: 'win' | 'lose'
@@ -3691,8 +3778,13 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.42.0';
+const GAME_VERSION = 'v0.43.0';
 const CHANGELOG = [
+  { version:'v0.43.0', date:'2026-07-14', items:[
+    '対戦画面のレイアウトを切替式に：<b>標準A</b>／<b>メリハリB</b>（上＝勝敗スコアを大きく／中央＝場／下＝手札の3層）。トップ設定またはフッター「🖼 配置A/B」で切替（保存）。Bでは最上段のスコアバーに得点・リード・終盤×2をまとめて表示。',
+    'Kaos・Airの発動演出を強化：<b class="kaos">Kaos</b>は紫のオーラが拡がる衝撃波リング＋「混沌」がポップ、<b class="air">Air</b>は「AIR」が文字間隔を広げながらふわっと現れて消える（静寂の風）。',
+    '不具合修正：対戦ログ一覧で記録が増えると各行が縦につぶれて文字が切れていた問題を修正（縦フレックスの縮み抑制）。',
+  ]},
   { version:'v0.42.0', date:'2026-07-14', items:[
     'CPUの手番に「🎭 相手 思考中 …」インジケータを表示（考えている間が分かり、テンポが良くなる）。',
     '得点のリードを可視化：リードしている側の点数を強調し「▲ +N」バッジを表示（数字を読まなくても優勢が一目で分かる）。',
@@ -5039,6 +5131,7 @@ function animateScoreBreakdown(){
 
 initCpuSettingUI(); // 全ての変数・関数定義が済んだ後に呼び出す
 applyCardStyleClass(); // 保存された表示モード(上級者/初心者)を反映
+applyLayout(); // 保存された盤面レイアウト(A/B)を反映
 updateFooterToggles(); // フッターの表示切替トグルの初期表示
 document.getElementById('versionTag').textContent = GAME_VERSION;
 document.getElementById('roundTotal').textContent = TOTAL_ROUNDS; // ラウンド総数をUIに反映

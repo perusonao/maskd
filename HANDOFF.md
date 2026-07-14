@@ -98,6 +98,7 @@
 - v0.40.0: ①**上級ミッション** `TUT_ADVANCED`（本格派4問）。エンジンは `tutList`/`tutSet` で基本(`TUT_MISSIONS`)/上級を切替、`openMissions('advanced')`、`ADVANCED_DONE_KEY`/`advancedCleared()`。導線: タイトル「⚔️ 上級ミッション」＋基本修了後の誘導。②実績6追加で**全18種**（`_maxDeficit`等のヘルパー追加、`endGame`ctxに `summary`/`advancedCleared` を追加）。③対戦画面の「あなたの手札／相手の手札」見出しを削除（`handTitle` 既定空、`ohs-label` 撤去）。④**admin.html**: 対戦ログ表に「名前」列＋検索＋詳細に `playerName` を表示。
 - v0.41.0: レイアウト見直し。①トップ: 上部ボタンを `top-learn-btns`（ミッション/上級）＋ `top-info-btns.mini`（実績/遊び方/ルール）の2段に整頓（更新履歴はフッター`MASKD`タップに集約）。②結果画面(`endGame`): 各ラウンド内訳/残り手札/統計を `<details class="ov-details">` で折りたたみ（要点＝スコア/MVP/連勝/実績は上部固定）。「もう一度/とじる」が初期表示内に収まるように。
 - **v0.42.0（現在）**: ①CPU思考中インジケータ `#cpuThinking`（`showCpuThinking`/`hideCpuThinking`。CPU手番のsetTimeout前に表示、`cpuActAsDealer`/`cpuActAsChild`/`cpuDecide` 冒頭で解除。CPU待ちは 700/800ms）。②得点リード可視化（`renderScore` でリード側 `#youLP`/`#cpuLP` に `.leading`、`#youLeadMark`/`#cpuLeadMark` に「▲ +N」）。
+- **v0.43.0（現在）**: ①盤面レイアウト切替 A(標準)/B(メリハリ)。`boardLayout`/`maskd_layout`、`applyLayout()`/`setBoardLayout()`/`toggleLayout()`、`.app.layout-b` CSS、上段スコアバー `#topScoreBar`（`renderScore`が同期、Bでは `.pinfo .pi-pt` を隠す）。導線: トップ設定 `#layoutOpts`＋フッター `#layoutToggle`。②Kaos/Air演出強化（`.kaos-flash` に紫の衝撃波リング`::before`＋ラベルpop、`.air-flash` のAIRラベルをふわっと浮上）。③**不具合修正**: `.hist-scroll > *{flex-shrink:0}` で対戦ログ一覧の行つぶれ（縦フレックスのshrink）を解消。
 
 ## 9. 次にやり得ること（未確定・候補）
 
