@@ -91,11 +91,12 @@
 - v0.33.0: **CPU AI 大幅強化**（親の1手読み・難易度スケーリング修正）。本物のjudge/配札/得点を移植したNodeシミュレータで検証し、強い参照プレイヤー相手の勝率が旧CPUの13〜34%→約49〜54%(強)へ改善。CPU主要関数は `cpuChooseCard`/`cpuDecide`/`cpuWantsForce` ＋ 新規 `cpuEps`/`cpuOppRemainingCards`/`cpuDealerLeadValue`。
 - v0.34.0: 勝敗演出のジュース化（3Dめくり `flipIn`／設置 `card-place`／決着インパクト `fireImpact`＋ハプティクス）。`prefers-reduced-motion` で抑制。
 - v0.35.0: リザルト/統計拡充（MVPカード・勝率・連勝＝`computeGameMVP`/`computeStreaksAndRate`）＋ 決戦/撤退の公開演出中のnull参照に安全装置。
-- **v0.36.0（現在）**: 初心者オンボーディング（初回R1〜R3のみラウンド開始モーダルに「🔰今回のポイント」＝`onboardTip`/`ONBOARD_KEY`）。
+- v0.36.0: 初心者オンボーディング（初回R1〜R3のみラウンド開始モーダルに「🔰今回のポイント」＝`onboardTip`/`ONBOARD_KEY`）。
+- **v0.37.0（現在）**: **ミッション形式チュートリアル**（実際に操作して学ぶ6ミッション）。データ＝`TUT_MISSIONS`、エンジン＝`openMissions`/`renderMission`/`tutPlayCard`/`tutDecide`/`tutFinish`、専用オーバーレイ `#tutMissionOverlay`（本編エンジンとは独立、`judge()`で答え合わせ）。タイトルの「🎓 ミッションで学ぶ」から起動。`MISSIONS_DONE_KEY`。
 
 ## 9. 次にやり得ること（未確定・候補）
 
-> 外部レビュー(9.2/10)の主な指摘は v0.33〜v0.36 で対応済み（CPU個性/難易度・勝敗演出・リザルト充実・初心者ガイド）。以下は残りの候補。
+> 外部レビュー(9.2/10)の主な指摘は v0.33〜v0.37 で対応済み（CPU個性/難易度・勝敗演出・リザルト充実・初心者ガイド・ミッション式チュートリアル）。以下は残りの候補。
 
 - **効果音**: 意図的に未実装（自動再生の煩わしさ回避のため）。入れるならフッターにトグル（既定OFF）＋WebAudioの控えめなSFX推奨。
 - さらなるバランス検証（新ログ回収 → シミュレータ再実行）。※シミュレータは scratchpad(揮発) にあった `sim.js`/`cpumod.js`/`verify5.js` 方式。必要なら再作成：本物のjudge/配札/得点＋index.htmlからCPU関数を抽出し、強い参照(greedy)と対戦させ勝率を測る。移植の忠実性は `cpumod.js`(実関数抽出)＋統一エンジンで検証できる。

@@ -78,6 +78,49 @@
     background:rgba(201,162,74,.10); border:1px solid rgba(201,162,74,.35); border-radius:10px; padding:9px 12px; }
   .rs-tip b{ color:var(--gold-bright); }
   .rs-go{ margin-top:18px; width:70%; padding:12px 0; }
+  /* ===== ミッション形式チュートリアル ===== */
+  .tutm-overlay{ position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center;
+    background:rgba(8,7,12,.82); backdrop-filter:blur(3px); padding:14px; }
+  .tutm-overlay.show{ display:flex; }
+  .tutm-box{ width:100%; max-width:380px; max-height:94vh; overflow-y:auto; background:var(--bg-panel);
+    border:1px solid var(--line); border-radius:18px; padding:16px 16px 14px; text-align:center;
+    box-shadow:0 20px 60px -12px rgba(0,0,0,.7); }
+  .tutm-head{ display:flex; align-items:center; gap:8px; }
+  .tutm-count{ font-size:11px; font-weight:700; color:#1a1608; background:linear-gradient(160deg,var(--gold-bright),var(--gold-dim)); border-radius:8px; padding:2px 9px; }
+  .tutm-title{ flex:1; text-align:left; font-size:16px; font-weight:700; color:var(--gold-bright); }
+  .tutm-close{ cursor:pointer; color:var(--ink-dim); font-size:15px; padding:2px 6px; }
+  .tutm-progress{ display:flex; gap:4px; margin:10px 0 4px; }
+  .tutm-progress .tp-dot{ flex:1; height:4px; border-radius:2px; background:var(--line); }
+  .tutm-progress .tp-dot.done{ background:var(--win); }
+  .tutm-progress .tp-dot.cur{ background:var(--gold-bright); }
+  .tutm-intro{ font-size:12px; line-height:1.6; color:#d9d2c4; text-align:left; background:rgba(255,255,255,.03);
+    border:1px solid var(--line); border-radius:10px; padding:9px 11px; margin-top:8px; }
+  .tutm-intro b{ color:var(--gold-bright); }
+  .tutm-field{ display:flex; align-items:center; justify-content:center; gap:12px; margin:14px 0 6px; }
+  .tutm-side{ display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .tutm-lbl{ font-size:9px; letter-spacing:.1em; color:var(--ink-dim); }
+  .tutm-slot{ width:78px; height:106px; display:flex; align-items:center; justify-content:center; }
+  .tutm-slot .card{ width:78px; height:106px; }
+  .tutm-slot.empty{ border:1px dashed rgba(201,162,74,.2); border-radius:10px; font-size:8px; color:var(--ink-dim); }
+  .tutm-vs{ font-family:'Cormorant Garamond',serif; font-style:italic; color:var(--gold-dim); font-size:15px; }
+  .tutm-objective{ font-size:12.5px; line-height:1.55; color:#e8dcc0; margin:8px 4px; }
+  .tutm-objective b{ color:var(--gold-bright); }
+  .tutm-hand{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:4px; }
+  .tutm-card{ width:66px; height:90px; cursor:pointer; transition:transform .15s; position:relative; }
+  .tutm-card .card{ width:66px; height:90px; }
+  .tutm-card:active{ transform:scale(.96); }
+  .tutm-card.pick{ transform:translateY(-8px) scale(1.04); }
+  .tutm-card.correct::after{ content:'おすすめ'; position:absolute; top:-8px; left:50%; transform:translateX(-50%);
+    font-size:8px; font-weight:700; color:#1a1608; background:var(--gold-bright); border-radius:6px; padding:1px 5px; white-space:nowrap; z-index:2; }
+  .tutm-hand.locked .tutm-card{ cursor:default; }
+  .tutm-actions{ display:flex; gap:10px; justify-content:center; margin-top:10px; }
+  .tutm-feedback{ font-size:12px; line-height:1.6; margin-top:10px; border-radius:10px; padding:0 12px; max-height:0; overflow:hidden; transition:max-height .3s ease, padding .3s ease; text-align:left; }
+  .tutm-feedback.show{ padding:10px 12px; max-height:280px; }
+  .tutm-feedback.ok{ background:rgba(126,201,138,.1); border:1px solid rgba(126,201,138,.4); color:#d7f0dc; }
+  .tutm-feedback.ng{ background:rgba(193,75,82,.1); border:1px solid rgba(193,75,82,.4); color:#f0d7d9; }
+  .tutm-feedback b{ color:var(--gold-bright); }
+  .tutm-controls{ display:flex; gap:10px; justify-content:center; margin-top:12px; }
+  .tutm-controls .btn{ min-width:96px; padding:11px 14px; }
   .name-input{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:rgba(0,0,0,0.25);
     color:var(--ink); font-size:16px; font-family:'Zen Kaku Gothic New',sans-serif; text-align:center; outline:none; }
   .name-input:focus{ border-color:var(--gold-bright); box-shadow:0 0 0 1px var(--gold-bright); }
@@ -1389,7 +1432,8 @@
     <p class="lead">全8ラウンド、<b>毎ラウンド親が交代</b>。親は先に置き、子は後から置く。親だけが「決戦か撤退か」を決められる。</p>
 
     <div class="top-info-btns">
-      <div class="btn" onclick="openTutorial()">遊び方</div>
+      <div class="btn" onclick="openMissions()">🎓 ミッションで学ぶ</div>
+      <div class="btn ghost" onclick="openTutorial()">遊び方</div>
       <div class="btn ghost" onclick="openRules()">ルール説明</div>
       <div class="btn ghost" onclick="openChangelog()">更新履歴</div>
     </div>
@@ -1527,6 +1571,31 @@
       <div class="rs-inst" id="rsInst"></div>
       <div class="rs-tip" id="rsTip" style="display:none;"></div>
       <div class="btn rs-go" onclick="beginRoundPlay()">はじめる</div>
+    </div>
+  </div>
+
+  <!-- ミッション形式のチュートリアル(実際に操作しながらルールを覚える) -->
+  <div class="tutm-overlay" id="tutMissionOverlay">
+    <div class="tutm-box">
+      <div class="tutm-head">
+        <span class="tutm-count" id="tutmCount"></span>
+        <span class="tutm-title" id="tutmTitle"></span>
+        <span class="tutm-close" onclick="closeMissions()">✕</span>
+      </div>
+      <div class="tutm-progress" id="tutmProgress"></div>
+      <div class="tutm-body" id="tutmBody">
+        <div class="tutm-intro" id="tutmIntro"></div>
+        <div class="tutm-field">
+          <div class="tutm-side"><span class="tutm-lbl" id="tutmCpuLbl">相手</span><div class="tutm-slot" id="tutmCpuSlot"></div></div>
+          <div class="tutm-vs">VS</div>
+          <div class="tutm-side"><span class="tutm-lbl" id="tutmYouLbl">あなた</span><div class="tutm-slot" id="tutmYouSlot"></div></div>
+        </div>
+        <div class="tutm-objective" id="tutmObjective"></div>
+        <div class="tutm-hand" id="tutmHand"></div>
+        <div class="tutm-actions" id="tutmActions"></div>
+        <div class="tutm-feedback" id="tutmFeedback"></div>
+      </div>
+      <div class="tutm-controls" id="tutmControls"></div>
     </div>
   </div>
 
@@ -3493,8 +3562,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.36.0';
+const GAME_VERSION = 'v0.37.0';
 const CHANGELOG = [
+  { version:'v0.37.0', date:'2026-07-14', items:[
+    'ミッション形式のチュートリアルを追加：読むだけでなく、<b>実際にカードを出して操作とルールを覚える</b>6つのミッション（①基本操作 ②じゃんけん＝3すくみ ③同属性は数字勝負 ④不利なら撤退 ⑤Kaosの特殊効果 ⑥Airで引き分け）。本物の勝敗判定で答え合わせし、間違えると理由つき解説＋おすすめ札を表示してリトライ可。タイトルの「🎓 ミッションで学ぶ」から開始。',
+  ]},
   { version:'v0.36.0', date:'2026-07-14', items:[
     '初心者オンボーディングを追加：初回プレイの最初の3ラウンドだけ、ラウンド開始モーダルに「🔰 今回のポイント」を表示し、その場面で“何を考えるか”を役割（親／子）に合わせて案内（R1=相手の数字に勝てる札を探す／R2=決戦か撤退かの選び方／R3=高い札の温存＝残り手札ボーナス）。1試合終えると自動で終了し、以降は通常のヒントに任せる。',
   ]},
@@ -3954,6 +4026,147 @@ function maybeShowTutorialFirstTime(){
   let seen=false; try{ seen=localStorage.getItem(TUT_KEY)==='1'; }catch(e){}
   if(!seen) setTimeout(openTutorial, 450);
 }
+
+// ===== ミッション形式チュートリアル(実際に操作しながらルールを覚える) =====
+// role:'child' … 相手(親)の札cpuに対し、手札handから1枚選んでgoal(勝ち/引分)を達成する
+// role:'dealerDecide' … あなた(親)の札youと相手(子)の札cpuを見て、決戦/撤退を選ぶ
+const TUT_MISSIONS=[
+  { icon:'🎴', title:'出してみよう', role:'child',
+    intro:'まずは基本操作。<b>手札のカードをタップ</b>すると場に出せます。相手の札より強い1枚を出してみましょう。',
+    cpu:{attr:'sun',num:2}, hand:[{attr:'dark',num:3}], goal:'win', correct:0,
+    objective:'相手は <b class="sun">SUN✋2</b>。手札の <b class="dark">DARK✌3</b> をタップして出そう。',
+    okMsg:'できました！<b class="dark">DARK✌</b>は<b class="sun">SUN✋</b>に勝ちます（闇✌＞太陽✋）。これがカードの出し方です。' },
+  { icon:'✊', title:'じゃんけんで勝つ', role:'child',
+    intro:'異なる属性どうしは<b>じゃんけん（3すくみ）</b>で決まり、<b>数字は関係ありません</b>。<br>月✊＞闇✌＞太陽✋＞月…',
+    cpu:{attr:'sun',num:4}, hand:[{attr:'moon',num:5},{attr:'dark',num:1}], goal:'win', correct:1,
+    objective:'相手は <b class="sun">SUN✋4</b>。じゃんけんで<b>勝てる</b>のはどっち？',
+    okMsg:'正解！<b class="dark">DARK✌1</b>は数字が低くても<b class="sun">SUN✋</b>に勝ちます。異属性は<b>じゃんけんが最優先</b>です。',
+    ngMsg:'惜しい！<b class="moon">MOON✊5</b>は数字は高いけれど<b class="sun">SUN✋</b>に負けます（太陽✋＞月✊）。数字より<b>じゃんけんの相性</b>が大事。' },
+  { icon:'🔢', title:'数字で勝つ（同属性）', role:'child',
+    intro:'<b>同じ属性</b>どうしがぶつかった時は、<b>数字が大きい方</b>が勝ちます。',
+    cpu:{attr:'moon',num:2}, hand:[{attr:'moon',num:4},{attr:'dark',num:1}], goal:'win', correct:0,
+    objective:'相手は <b class="moon">MOON✊2</b>。勝てる札はどっち？',
+    okMsg:'正解！同属性の <b class="moon">MOON✊4</b> は数字で上回り勝ち。<br>（<b class="dark">DARK✌1</b>だと闇は月に負けます＝月✊＞闇✌）',
+    ngMsg:'<b class="dark">DARK✌1</b>は<b class="moon">MOON✊</b>に負けます（月✊＞闇✌）。同属性なら<b>数字が大きい札</b>で勝てます。' },
+  { icon:'🏳', title:'不利なら撤退', role:'dealerDecide',
+    intro:'あなたは<b>親</b>。親だけが<b>決戦</b>（勝負）か<b>撤退</b>（見送り）を選べます。不利な時に撤退すれば<b>失点ゼロ</b>（戦略カウンター−1のみ）で切り抜けられます。',
+    you:{attr:'sun',num:5}, cpu:{attr:'dark',num:2},
+    objective:'あなたの <b class="sun">SUN✋5</b> vs 相手の <b class="dark">DARK✌2</b>。<br>闇✌は太陽✋に強い…さあどうする？',
+    okMsg:'正解！このまま決戦すると大事な<b>5点</b>を奪われます。ここは<b>撤退</b>して失点ゼロに抑えるのが好判断。',
+    ngMsg:'決戦すると<b class="dark">DARK✌</b>が<b class="sun">SUN✋</b>に勝ち、<b>5点</b>を相手に献上…。不利な時は<b>撤退</b>を選びましょう。' },
+  { icon:'🌀', title:'Kaosの奇跡', role:'child',
+    intro:'<b class="kaos">Kaos</b>は属性を問わず<b>数字勝負</b>。さらに特殊効果として、<b class="kaos">Kaos0・1</b>は最強の<b>5</b>を打ち破ります。',
+    cpu:{attr:'sun',num:5}, hand:[{attr:'kaos',num:0},{attr:'moon',num:5}], goal:'win', correct:0,
+    objective:'相手は最強格の <b class="sun">SUN✋5</b>。これを食える札は？',
+    okMsg:'正解！<b class="kaos">Kaos0</b>は特殊効果で<b>あらゆる5に勝利</b>。数字の常識をひっくり返す切り札です。',
+    ngMsg:'<b class="moon">MOON✊5</b>は<b class="sun">SUN✋</b>に負けます（太陽✋＞月✊）。ここは<b class="kaos">Kaos0</b>の特殊効果で5を食いましょう。' },
+  { icon:'🌬', title:'Airで引き分け', role:'child',
+    intro:'<b class="air">Air</b>が絡むと<b>必ず引き分け</b>。強い相手の攻撃を無効化する「流れを止める一手」です（使うと戦略カウンター+1）。',
+    cpu:{attr:'dark',num:5}, hand:[{attr:'air',num:2},{attr:'sun',num:1}], goal:'draw', correct:0,
+    objective:'相手は強力な <b class="dark">DARK✌5</b>。まともにぶつかると負け。被害を防ぐには？',
+    okMsg:'正解！<b class="air">Air</b>で<b>引き分け</b>に持ち込み、5点の失点を回避（さらに戦略カウンター+1）。守りの名手です。',
+    ngMsg:'<b class="sun">SUN✋1</b>は<b class="dark">DARK✌</b>に負けます（闇✌＞太陽✋）。勝てない相手は<b class="air">Air</b>で引き分けに持ち込みましょう。' },
+];
+const MISSIONS_DONE_KEY='maskd_missions_done_v1';
+let tutMi=0, tutLocked=false;
+// チュートリアル用のカード描画(常に初心者表示＝じゃんけん記号+数字+属性名で分かりやすく)
+function tutCardHTML(c){ return `<div class="card faceup bcard ${c.attr}">${beginnerInner(c)}</div>`; }
+function openMissions(){
+  tutMi=0;
+  document.getElementById('tutMissionOverlay').classList.add('show');
+  renderMission();
+}
+function closeMissions(){ document.getElementById('tutMissionOverlay').classList.remove('show'); }
+function renderMission(){
+  tutLocked=false;
+  const m=TUT_MISSIONS[tutMi];
+  document.getElementById('tutmCount').textContent=`${tutMi+1}/${TUT_MISSIONS.length}`;
+  document.getElementById('tutmTitle').innerHTML=`${m.icon} ${m.title}`;
+  document.getElementById('tutmProgress').innerHTML=TUT_MISSIONS.map((_,i)=>
+    `<div class="tp-dot${i<tutMi?' done':(i===tutMi?' cur':'')}"></div>`).join('');
+  document.getElementById('tutmIntro').innerHTML=m.intro;
+  document.getElementById('tutmObjective').innerHTML=m.objective||'';
+  const fb=document.getElementById('tutmFeedback'); fb.className='tutm-feedback'; fb.innerHTML='';
+  document.getElementById('tutmControls').innerHTML='';
+  const cpuSlot=document.getElementById('tutmCpuSlot'), youSlot=document.getElementById('tutmYouSlot');
+  const hand=document.getElementById('tutmHand'), actions=document.getElementById('tutmActions');
+  hand.className='tutm-hand'; hand.innerHTML=''; actions.innerHTML='';
+  if(m.role==='child'){
+    document.getElementById('tutmCpuLbl').textContent='相手（親）';
+    document.getElementById('tutmYouLbl').textContent='あなた（子）';
+    cpuSlot.className='tutm-slot'; cpuSlot.innerHTML=tutCardHTML(m.cpu);
+    youSlot.className='tutm-slot empty'; youSlot.innerHTML='？';
+    m.hand.forEach((c,i)=>{
+      const el=document.createElement('div'); el.className='tutm-card'; el.innerHTML=tutCardHTML(c);
+      el.onclick=()=>tutPlayCard(i); hand.appendChild(el);
+    });
+  } else { // dealerDecide
+    document.getElementById('tutmCpuLbl').textContent='相手（子）';
+    document.getElementById('tutmYouLbl').textContent='あなた（親）';
+    cpuSlot.className='tutm-slot'; cpuSlot.innerHTML=tutCardHTML(m.cpu);
+    youSlot.className='tutm-slot'; youSlot.innerHTML=tutCardHTML(m.you);
+    const fight=document.createElement('div'); fight.className='btn danger'; fight.textContent='⚔ 決戦';
+    fight.onclick=()=>tutDecide(true);
+    const retreat=document.createElement('div'); retreat.className='btn ghost'; retreat.textContent='🏳 撤退';
+    retreat.onclick=()=>tutDecide(false);
+    actions.appendChild(fight); actions.appendChild(retreat);
+  }
+}
+function tutShowResult(success, chosenCardEl){
+  tutLocked=true;
+  const m=TUT_MISSIONS[tutMi];
+  const fb=document.getElementById('tutmFeedback');
+  fb.className='tutm-feedback show '+(success?'ok':'ng');
+  fb.innerHTML=(success?'✅ ':'❌ ')+(success?m.okMsg:(m.ngMsg||m.okMsg));
+  document.getElementById('tutmHand').classList.add('locked');
+  document.getElementById('tutmActions').innerHTML='';
+  const ctrl=document.getElementById('tutmControls'); ctrl.innerHTML='';
+  if(success){
+    const last=(tutMi>=TUT_MISSIONS.length-1);
+    const next=document.createElement('div'); next.className='btn';
+    next.textContent=last?'修了！':'次のミッション ›';
+    next.onclick=()=> last?tutFinish():tutNextMission();
+    ctrl.appendChild(next);
+  } else {
+    // 不正解: 正解カードを示してもう一度
+    if(m.role==='child'){ const cards=document.querySelectorAll('#tutmHand .tutm-card'); if(cards[m.correct]) cards[m.correct].classList.add('correct'); }
+    const retry=document.createElement('div'); retry.className='btn ghost'; retry.textContent='もう一度';
+    retry.onclick=()=>renderMission();
+    ctrl.appendChild(retry);
+  }
+}
+function tutPlayCard(i){
+  if(tutLocked) return;
+  const m=TUT_MISSIONS[tutMi]; const c=m.hand[i];
+  const cards=document.querySelectorAll('#tutmHand .tutm-card');
+  if(cards[i]) cards[i].classList.add('pick');
+  document.getElementById('tutmYouSlot').className='tutm-slot';
+  document.getElementById('tutmYouSlot').innerHTML=tutCardHTML(c);
+  const res=judge(m.cpu, c); // m.cpuが親、cが子
+  const win=(res==='child'), draw=(res==='draw');
+  const success=(m.goal==='win'&&win)||(m.goal==='draw'&&draw);
+  tutShowResult(success, cards[i]);
+}
+function tutDecide(fight){
+  if(tutLocked) return;
+  const m=TUT_MISSIONS[tutMi];
+  const fightResult=judge(m.you, m.cpu); // あなたが親
+  const fightWins=(fightResult==='dealer');
+  const success = fight ? fightWins : !fightWins; // 勝てるなら決戦、勝てない(負け/引分)なら撤退が正解
+  tutShowResult(success);
+}
+function tutNextMission(){ tutMi++; renderMission(); }
+function tutFinish(){
+  try{ localStorage.setItem(MISSIONS_DONE_KEY,'1'); }catch(e){}
+  const box=document.querySelector('#tutMissionOverlay .tutm-box');
+  box.innerHTML=`<div class="tutm-head"><span class="tutm-title" style="text-align:center;">🎓 全ミッション修了！</span></div>
+    <div class="tutm-intro" style="text-align:center;margin-top:14px;">お疲れさまでした。基本の操作と<b>じゃんけん・数字・撤退・Kaos・Air</b>を身につけました。<br>あとは実戦で腕を試しましょう！</div>
+    <div class="tutm-controls" style="margin-top:16px;">
+      <div class="btn" onclick="closeMissions(); beginMatchSetup();">対戦を始める</div>
+      <div class="btn ghost" onclick="closeMissions()">閉じる</div>
+    </div>`;
+}
+function missionsCleared(){ try{ return localStorage.getItem(MISSIONS_DONE_KEY)==='1'; }catch(e){ return false; } }
 function closeChangelog(){ document.getElementById('changelogModal').classList.remove('show'); }
 
 const HISTORY_KEY='maskd_game_history_v1';
