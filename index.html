@@ -879,8 +879,35 @@
   @keyframes trustFloat{ 0%{opacity:0; transform:translateY(8px) scale(.8);} 20%{opacity:1; transform:translateY(0) scale(1.1);} 100%{opacity:0; transform:translateY(-16px) scale(1);} }
 
   .empty-slot{ width:88px;height:120px;border-radius:11px;border:1px dashed rgba(201,162,74,.18); display:flex;align-items:center;justify-content:center; font-size:8px; color:var(--ink-dim); }
-  .flip-in{ animation:flipIn .45s ease; }
-  @keyframes flipIn{ from{transform:rotateY(90deg);opacity:0;} to{transform:rotateY(0);opacity:1;} }
+  /* カード公開: 裏から表へ「パタン」と3Dでめくれる */
+  .flip-in{ animation:flipIn .5s cubic-bezier(.2,.75,.3,1); backface-visibility:hidden; }
+  @keyframes flipIn{
+    0%{ transform:perspective(680px) rotateY(-92deg) scale(.9); opacity:0; filter:brightness(1.5); }
+    55%{ transform:perspective(680px) rotateY(11deg) scale(1.05); opacity:1; filter:brightness(1.15); box-shadow:0 9px 28px rgba(0,0,0,.5); }
+    100%{ transform:perspective(680px) rotateY(0) scale(1); opacity:1; filter:brightness(1); }
+  }
+  /* カード設置: 場に置いた瞬間「フワッ」と落ちて収まる */
+  .card-place{ animation:cardPlace .42s cubic-bezier(.2,.85,.25,1); }
+  @keyframes cardPlace{
+    0%{ transform:translateY(-16px) scale(.82) rotate(-3deg); opacity:0; }
+    60%{ transform:translateY(3px) scale(1.04); opacity:1; }
+    100%{ transform:translateY(0) scale(1); opacity:1; }
+  }
+  /* 決着インパクト「ドン！」: 盤面が短く揺れ、勝敗色の光が弾ける */
+  .field.impact{ animation:fieldImpact .42s ease; }
+  @keyframes fieldImpact{
+    0%{ transform:translate(0,0); } 15%{ transform:translate(-4px,3px); } 30%{ transform:translate(5px,-2px); }
+    45%{ transform:translate(-3px,2px); } 60%{ transform:translate(3px,-1px); } 100%{ transform:translate(0,0); }
+  }
+  .impact-flash{ position:absolute; inset:0; z-index:7; pointer-events:none; opacity:0; }
+  .impact-flash.win{ background:radial-gradient(circle at center, rgba(232,200,119,.34), transparent 66%); animation:impactFlash .5s ease; }
+  .impact-flash.lose{ background:radial-gradient(circle at center, rgba(193,75,82,.34), transparent 66%); animation:impactFlash .5s ease; }
+  @keyframes impactFlash{ 0%{opacity:0;} 18%{opacity:1;} 100%{opacity:0;} }
+  /* 動きを控えたい設定のユーザーには演出を抑制 */
+  @media (prefers-reduced-motion: reduce){
+    .field.impact{ animation:none; }
+    .card-place, .flip-in{ animation-duration:.01ms; }
+  }
 
   .action-banner{
     position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -2558,7 +2585,7 @@ function faceCardHTML(c, extra){
 }
 function cardHTML(c, faceDown, ownerLabel){
   if(faceDown){
-    return `<div class="card facedown"><div class="fd-top">${ownerLabel||''}</div><div class="num">${c.num}</div></div>`;
+    return `<div class="card facedown card-place"><div class="fd-top">${ownerLabel||''}</div><div class="num">${c.num}</div></div>`;
   }
   return faceCardHTML(c);
 }
@@ -2613,6 +2640,7 @@ function fireKaosFlash(label){
   fl.querySelector('.kf-label').textContent=label||'混沌';
   fl.classList.remove('fire'); void fl.offsetWidth; // アニメ再始動
   fl.classList.add('fire');
+  try{ if(navigator.vibrate) navigator.vibrate([0,20,30,20]); }catch(e){}
   setTimeout(()=>fl.classList.remove('fire'), 950);
 }
 // Air使用時の「静寂の風」フラッシュ演出(特別な一手だと感じさせる)
@@ -2622,6 +2650,14 @@ function fireAirFlash(label){
   fl.classList.remove('fire'); void fl.offsetWidth;
   fl.classList.add('fire');
   setTimeout(()=>fl.classList.remove('fire'), 1000);
+}
+// 決着の「ドン！」: 盤面を短く揺らし、勝敗色の光を弾けさせ、端末を軽く振動させる
+function fireImpact(kind){ // kind: 'win' | 'lose'
+  const field=document.querySelector('.field'); if(!field) return;
+  field.classList.remove('impact'); void field.offsetWidth; field.classList.add('impact');
+  const fl=document.createElement('div'); fl.className='impact-flash '+kind; field.appendChild(fl);
+  setTimeout(()=>{ field.classList.remove('impact'); fl.remove(); }, 520);
+  try{ if(navigator.vibrate) navigator.vibrate(kind==='win'?[0,35,45,25]:[0,70]); }catch(e){}
 }
 // 勝者カードを輝かせ、背後から光を放射する
 function applyTriumph(cardEl){
@@ -3228,6 +3264,7 @@ function resolveFightJudge(){
         const winEl=winnerIsYou?yEl:cEl, loseEl=winnerIsYou?cEl:yEl;
         winEl.classList.add('win-glow'); applyTriumph(winEl);  // 勝者: 仮面が輝き、光を放射
         applyShatter(loseEl);                                   // 敗者: 仮面にヒビが入り砕ける
+        fireImpact(winnerIsYou ? 'win' : 'lose');               // 決着の「ドン！」(揺れ+閃光+振動)
         // Kaosの特殊ルール発動時は、勝者カードを混沌色で脈動させ画面をフラッシュ
         if(isKaosSpecial(dealerCard, childCard)){
           winEl.classList.add('kaos-special');
@@ -3421,8 +3458,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.33.0';
+const GAME_VERSION = 'v0.34.0';
 const CHANGELOG = [
+  { version:'v0.34.0', date:'2026-07-14', items:[
+    '勝敗演出を強化（手触りの向上）：①カード公開を「裏から表へパタンとめくれる」3D演出に ②場に札を置いた瞬間に「フワッ」と落ちて収まる設置アニメーション ③決着（決戦の勝敗が付いた瞬間）に盤面が短く揺れ、勝敗色の光が弾ける「ドン！」というインパクト演出を追加 ④対応端末では決着・Kaos特殊発動時に軽い振動（ハプティクス）。※「動きを控えめに」設定の端末では演出を自動で抑制。',
+  ]},
   { version:'v0.33.0', date:'2026-07-14', items:[
     'CPU（相手）の思考を大幅強化：①親の先出しを「1手読み」で評価するように（相手の最善応手を想定し、決戦／撤退の有利な方を選べる前提で札を選ぶ。従来はほぼランダムだった） ②高い札は決戦・残り手札ボーナス用に温存し、低い札から切る方針を追加 ③入替（親の札交換）を数字条件に縛らず、期待値が上回る場面で活用 ④「積極的でも強い方が弱くなる」不具合を修正し、難易度（弱い／普通／強い）が素直に強さへ反映されるように（弱いはうっかり多め＝初心者向け、強いはほぼ最善手）。※本物のjudge/配札/得点を移植したシミュレータで、強い参照プレイヤー相手に勝率が旧CPUの13〜34%から約49〜54%（強い）まで改善することを確認。仮面キャラの個性（剛力＝積極／鉄壁＝慎重／技巧＝トリッキー）は維持。',
   ]},
