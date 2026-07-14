@@ -348,11 +348,11 @@
     background:rgba(8,6,14,.6); border-radius:6px; padding:0 5px;
   }
   .opp-card.facedown .opp-poss{
-    position:absolute; left:0; right:0; bottom:2px; z-index:2;
-    padding:1px 2px; background:linear-gradient(0deg,rgba(8,6,14,.82),rgba(8,6,14,0));
+    position:absolute; left:0; right:0; bottom:2px; z-index:2; gap:1px;
+    padding:1px 1px; background:linear-gradient(0deg,rgba(8,6,14,.82),rgba(8,6,14,0));
     flex-wrap:nowrap; overflow:hidden; /* 候補は必ず1行に収め、上部の数字を隠さない */
   }
-  .opp-card.facedown .opp-poss .opp-rps-g{ font-size:11px; }
+  .opp-card.facedown .opp-poss .opp-rps-g{ font-size:9px; }
   .opp-card .opp-num{ font-family:'Cormorant Garamond',serif; font-size:16px; font-weight:600; color:var(--ink); line-height:1; }
   .opp-card .opp-rps-g{ font-size:13px; line-height:1; filter:drop-shadow(0 1px 1px rgba(0,0,0,.75)); }
   .opp-card .opp-poss{ display:flex; gap:2px; flex-wrap:wrap; justify-content:center; align-items:center; min-height:12px; }
@@ -3935,8 +3935,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.45.1';
+const GAME_VERSION = 'v0.45.2';
 const CHANGELOG = [
+  { version:'v0.45.2', date:'2026-07-14', items:[
+    '不具合修正：初心者表示で相手の伏せ札の候補記号が<b>カードの左右からわずかにはみ出す</b>問題を修正（記号を9pxに縮小し、余白を詰めて1行に確実に収めた）。通常対戦の候補数は最大3つに収まるため、はみ出しは解消。',
+  ]},
   { version:'v0.45.1', date:'2026-07-14', items:[
     '不具合修正：v0.45.0で相手の伏せ札の候補記号を大きくした際、初心者表示で候補が複数行に折り返して<b>カード上部の数字を覆い隠していた</b>問題を修正。数字に専用の背景バッジを付けて常に読めるようにし、候補記号は<b>1行に固定</b>してカード下部に収めるよう調整。',
   ]},
