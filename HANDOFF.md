@@ -93,7 +93,8 @@
 - v0.35.0: リザルト/統計拡充（MVPカード・勝率・連勝＝`computeGameMVP`/`computeStreaksAndRate`）＋ 決戦/撤退の公開演出中のnull参照に安全装置。
 - v0.36.0: 初心者オンボーディング（初回R1〜R3のみラウンド開始モーダルに「🔰今回のポイント」＝`onboardTip`/`ONBOARD_KEY`）。
 - v0.37.0: **ミッション形式チュートリアル**（実際に操作して学ぶ）。データ＝`TUT_MISSIONS`、エンジン＝`openMissions`/`renderMission`/`tutPlayCard`/`tutDecide`/`tutFinish`、専用オーバーレイ `#tutMissionOverlay`（本編エンジンとは独立、`judge()`で答え合わせ）。タイトルの「🎓 ミッションで学ぶ」から起動。`MISSIONS_DONE_KEY`。
-- **v0.38.0（現在）**: ①初回ウェルカム画面 `#welcomeModal`＋`welcomeChoose()`（初回はスライド自動表示をやめ、ミッション/遊び方/対戦を選択）。②ミッション追加で全8問に（role `swap`＝入替、`strict`＝温存判定を engine に追加）。③**効果音**（WebAudio合成、`sfx(name)`/`toggleSound()`、キー `maskd_sound`、フッター `#soundToggle`）。フック: `fireImpact`(win/lose)・`resolveFightJudge`(draw)・`fireKaosFlash`/`fireAirFlash`・`playYouCard`・`tutShowResult`/`tutPlayCard`。
+- v0.38.0: ①初回ウェルカム画面 `#welcomeModal`＋`welcomeChoose()`（初回はスライド自動表示をやめ、ミッション/遊び方/対戦を選択）。②ミッション追加で全8問に（role `swap`＝入替、`strict`＝温存判定を engine に追加）。③**効果音**（WebAudio合成、`sfx(name)`/`toggleSound()`、キー `maskd_sound`、フッター `#soundToggle`）。フック: `fireImpact`(win/lose)・`resolveFightJudge`(draw)・`fireKaosFlash`/`fireAirFlash`・`playYouCard`・`tutShowResult`/`tutPlayCard`。
+- **v0.39.0（現在）**: ①**実績システム**（`ACHIEVEMENTS` 全12種・`checkAchievements(ctx)`・`openAchievements()`・キー `maskd_achievements_v1`・モーダル `#achieveModal`）。フック: `endGame`（試合結果＋通算のctxで判定→結果画面に表示）・`tutFinish`（全ミッションクリア）。導線: タイトル/結果画面の「🏅 実績」。②ミッション3追加で全11問（role `forceDecide`＝奇襲を追加、終盤2倍・Kaos5弱点は既存roleで）。
 
 ## 9. 次にやり得ること（未確定・候補）
 

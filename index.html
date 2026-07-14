@@ -121,6 +121,16 @@
   .tutm-feedback b{ color:var(--gold-bright); }
   .tutm-controls{ display:flex; gap:10px; justify-content:center; margin-top:12px; }
   .tutm-controls .btn{ min-width:96px; padding:11px 14px; }
+  /* ===== 実績 ===== */
+  .ach-count{ text-align:center; font-size:12px; color:var(--ink-dim); margin:10px 0 12px; }
+  .ach-count b{ color:var(--gold-bright); font-size:15px; }
+  .ach-grid{ display:flex; flex-direction:column; gap:7px; }
+  .ach-item{ display:flex; align-items:center; gap:11px; padding:8px 11px; border:1px solid var(--line); border-radius:10px; opacity:.5; }
+  .ach-item.on{ opacity:1; border-color:rgba(201,162,74,.5); background:linear-gradient(180deg,rgba(201,162,74,.07),transparent); }
+  .ach-ic{ font-size:22px; width:30px; text-align:center; flex-shrink:0; }
+  .ach-t{ font-size:12.5px; font-weight:700; color:#e8dcc0; }
+  .ach-item.on .ach-t{ color:var(--gold-bright); }
+  .ach-d{ font-size:10.5px; color:var(--ink-dim); line-height:1.4; }
   .name-input{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:rgba(0,0,0,0.25);
     color:var(--ink); font-size:16px; font-family:'Zen Kaku Gothic New',sans-serif; text-align:center; outline:none; }
   .name-input:focus{ border-color:var(--gold-bright); box-shadow:0 0 0 1px var(--gold-bright); }
@@ -1433,6 +1443,7 @@
 
     <div class="top-info-btns">
       <div class="btn" onclick="openMissions()">🎓 ミッションで学ぶ</div>
+      <div class="btn ghost" onclick="openAchievements()">🏅 実績</div>
       <div class="btn ghost" onclick="openTutorial()">遊び方</div>
       <div class="btn ghost" onclick="openRules()">ルール説明</div>
       <div class="btn ghost" onclick="openChangelog()">更新履歴</div>
@@ -1571,6 +1582,14 @@
       <div class="rs-inst" id="rsInst"></div>
       <div class="rs-tip" id="rsTip" style="display:none;"></div>
       <div class="btn rs-go" onclick="beginRoundPlay()">はじめる</div>
+    </div>
+  </div>
+
+  <!-- 実績(アチーブメント)一覧 -->
+  <div class="tutm-overlay" id="achieveModal">
+    <div class="tutm-box" style="max-width:360px;">
+      <div class="tutm-head"><span class="tutm-title" style="flex:1;">🏅 実績</span><span class="tutm-close" onclick="closeAchievements()">✕</span></div>
+      <div id="achieveBody"></div>
     </div>
   </div>
 
@@ -3621,8 +3640,12 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.38.0';
+const GAME_VERSION = 'v0.39.0';
 const CHANGELOG = [
+  { version:'v0.39.0', date:'2026-07-14', items:[
+    '<b>実績（アチーブメント）</b>を追加：初勝利・三/五連勝・大勝・完封・混沌の一撃（Kaos0/1で5を食う）・静寂の風（Airで引分）・終盤の一撃・修練の達人（全ミッションクリア）・歴戦・実力者 など全12種。試合終了やミッション修了で自動解除し、結果画面で通知。タイトル／結果画面の「🏅 実績」から一覧を確認できる（進捗も表示）。長く遊ぶ目標に。',
+    'ミッションを3つ追加（全11問に）：<b>⚡ 奇襲でしとめる</b>（子が親の撤退を強制決戦に）、<b>🔥 終盤は2倍</b>（R7・R8の決戦は得点2倍）、<b>⚠️ Kaos5の弱点</b>（Kaos5は1に負ける）。',
+  ]},
   { version:'v0.38.0', date:'2026-07-14', items:[
     '初回プレイの案内を刷新：起動時にスライドを自動表示する代わりに、<b>「🎓 ミッションで学ぶ（おすすめ）／遊び方を読む／すぐに対戦」</b>を選べるウェルカム画面を表示。実践で覚えたい人をミッションへ誘導。',
     'ミッションを2つ追加（全8問に）：<b>♻️ 入替で逆転</b>（親が子の数字を見て有利な札に差し替える）と <b>🏆 高い札を温存</b>（勝てる時は低い札で済ませ、高い札を残り手札ボーナスへ回す）。',
@@ -4150,6 +4173,24 @@ const TUT_MISSIONS=[
     objective:'相手は <b class="moon">MOON✊2</b>。<b>勝ちつつ、高い札を残す</b>にはどちらで勝つ？',
     okMsg:'正解！<b class="moon">MOON✊3</b>で十分勝てます。最強の<b>5</b>は温存して<b>残り手札ボーナス</b>に回すのが上手い戦い方。',
     ngMsg:'<b class="moon">MOON✊5</b>でも勝てますが、<b>5は貴重なボーナス札</b>。勝てるなら<b>低い札（3）</b>で済ませ、5は温存しましょう。' },
+  { icon:'⚡', title:'奇襲でしとめる', role:'forceDecide',
+    intro:'子は<b>奇襲</b>で、親の<b>撤退</b>を強制的に<b>決戦</b>へ引き込めます（戦略カウンター−2）。勝てる場面なら奇襲でしとめよう。',
+    cpu:{attr:'sun',num:3}, you:{attr:'dark',num:4},
+    objective:'相手（親）は <b class="sun">SUN✋3</b> で<b>撤退</b>しようとしている。あなたは <b class="dark">DARK✌4</b>。どうする？',
+    okMsg:'正解！<b class="dark">DARK✌</b>は<b class="sun">SUN✋</b>に勝てます（闇✌＞太陽✋）。奇襲で決戦に持ち込み、相手の得点札を奪います。',
+    ngMsg:'見送ると勝てる勝負を逃します。勝てる場面は<b>奇襲</b>でしとめましょう（闇✌＞太陽✋）。' },
+  { icon:'🔥', title:'終盤は2倍', role:'dealerDecide',
+    intro:'<b>最終2ラウンド（R7・R8）の決戦は得点2倍</b>！ 有利な終盤は強気に決戦で大きく稼ごう。',
+    you:{attr:'dark',num:4}, cpu:{attr:'sun',num:2},
+    objective:'終盤R8。あなたの <b class="dark">DARK✌4</b> vs 相手の <b class="sun">SUN✋2</b>。2倍のチャンス、どうする？',
+    okMsg:'正解！<b class="dark">DARK✌</b>は<b class="sun">SUN✋</b>に勝ち、終盤なので得点は<b>2倍</b>。有利な終盤は積極的に決戦を。',
+    ngMsg:'撤退はもったいない！有利な終盤の決戦は<b>2倍</b>。勝てる時は決戦で大きく稼ぎましょう。' },
+  { icon:'⚠️', title:'Kaos5の弱点', role:'child',
+    intro:'万能に見える<b class="kaos">Kaos</b>にも弱点が。<b class="kaos">Kaos5</b>は、最も小さい<b>1</b>に不覚を取ります。',
+    cpu:{attr:'sun',num:1}, hand:[{attr:'kaos',num:5},{attr:'dark',num:3}], goal:'win', correct:1,
+    objective:'相手は <b class="sun">SUN✋1</b>。強力な <b class="kaos">Kaos5</b> を出したいところだが…？',
+    okMsg:'正解！<b class="kaos">Kaos5</b>は<b>1</b>に負けるので危険。ここは<b class="dark">DARK✌3</b>で堅実に勝ちましょう（闇✌＞太陽✋）。',
+    ngMsg:'<b class="kaos">Kaos5</b>は特殊弱点で<b>1</b>に敗北します。万能ではありません。相性で勝てる<b class="dark">DARK✌3</b>を選びましょう。' },
 ];
 const MISSIONS_DONE_KEY='maskd_missions_done_v1';
 let tutMi=0, tutLocked=false;
@@ -4186,6 +4227,16 @@ function renderMission(){
       const el=document.createElement('div'); el.className='tutm-card'; el.innerHTML=tutCardHTML(c);
       el.onclick=()=>tutPlayCard(i); hand.appendChild(el);
     });
+  } else if(m.role==='forceDecide'){ // 子として親の撤退に奇襲するか
+    document.getElementById('tutmCpuLbl').textContent='相手（親・撤退）';
+    document.getElementById('tutmYouLbl').textContent='あなた（子）';
+    cpuSlot.className='tutm-slot'; cpuSlot.innerHTML=tutCardHTML(m.cpu);
+    youSlot.className='tutm-slot'; youSlot.innerHTML=tutCardHTML(m.you);
+    const force=document.createElement('div'); force.className='btn danger'; force.textContent='⚡ 奇襲';
+    force.onclick=()=>tutForceDecide(true);
+    const skip=document.createElement('div'); skip.className='btn ghost'; skip.textContent='見送る';
+    skip.onclick=()=>tutForceDecide(false);
+    actions.appendChild(force); actions.appendChild(skip);
   } else { // dealerDecide
     document.getElementById('tutmCpuLbl').textContent='相手（子）';
     document.getElementById('tutmYouLbl').textContent='あなた（親）';
@@ -4245,18 +4296,77 @@ function tutDecide(fight){
   const success = fight ? fightWins : !fightWins; // 勝てるなら決戦、勝てない(負け/引分)なら撤退が正解
   tutShowResult(success);
 }
+function tutForceDecide(force){
+  if(tutLocked) return;
+  const m=TUT_MISSIONS[tutMi];
+  const res=judge(m.cpu, m.you); // m.cpuが親、m.youが子(あなた)
+  const youWin=(res==='child');
+  const success = force ? youWin : !youWin; // 勝てるなら奇襲、勝てないなら見送りが正解
+  tutShowResult(success);
+}
 function tutNextMission(){ tutMi++; renderMission(); }
 function tutFinish(){
   try{ localStorage.setItem(MISSIONS_DONE_KEY,'1'); }catch(e){}
+  const fresh=checkAchievements({ missionsCleared:true, agg:computeAggregateStats(loadGameHistory()), streak:computeStreaksAndRate(loadGameHistory()) });
+  const achNote = fresh.length ? `<div class="tutm-intro" style="text-align:center;margin-top:10px;border-color:rgba(201,162,74,.5);background:rgba(201,162,74,.08);">🎉 実績解除：${fresh.map(a=>a.icon+' '+a.title).join(' / ')}</div>` : '';
   const box=document.querySelector('#tutMissionOverlay .tutm-box');
   box.innerHTML=`<div class="tutm-head"><span class="tutm-title" style="text-align:center;">🎓 全ミッション修了！</span></div>
-    <div class="tutm-intro" style="text-align:center;margin-top:14px;">お疲れさまでした。基本の操作と<b>じゃんけん・数字・撤退・Kaos・Air</b>を身につけました。<br>あとは実戦で腕を試しましょう！</div>
+    <div class="tutm-intro" style="text-align:center;margin-top:14px;">お疲れさまでした。基本操作と<b>じゃんけん・数字・撤退・Kaos・Air・入替・奇襲</b>を身につけました。<br>あとは実戦で腕を試しましょう！</div>
+    ${achNote}
     <div class="tutm-controls" style="margin-top:16px;">
       <div class="btn" onclick="closeMissions(); beginMatchSetup();">対戦を始める</div>
       <div class="btn ghost" onclick="closeMissions()">閉じる</div>
     </div>`;
 }
 function missionsCleared(){ try{ return localStorage.getItem(MISSIONS_DONE_KEY)==='1'; }catch(e){ return false; } }
+
+// ===== 実績(アチーブメント)システム：長く遊ぶ目標 =====
+const ACHIEVE_KEY='maskd_achievements_v1';
+function loadAchievements(){ try{ return JSON.parse(localStorage.getItem(ACHIEVE_KEY)||'{}'); }catch(e){ return {}; } }
+function saveAchievements(o){ try{ localStorage.setItem(ACHIEVE_KEY, JSON.stringify(o)); }catch(e){} }
+// ラウンド解析ヘルパー(ctx.roundLogから、自分が決戦で勝った局面を調べる)
+function _myRoundCard(r){ return r.dealerIsYou? r.dealerCard : r.childCard; }
+function _oppRoundCard(r){ return r.dealerIsYou? r.childCard : r.dealerCard; }
+function _myWinRound(r){ return !r.passed && r.result && r.result!=='draw' && ((r.result==='dealer')===r.dealerIsYou); }
+function _hasWinRound(c, pred){ return (c.roundLog||[]).some(r=> _myWinRound(r) && pred(r)); }
+const ACHIEVEMENTS=[
+  { id:'rookie',   icon:'🎭', title:'仮面の新入り', desc:'はじめてプレイする',            check:c=>c.agg&&c.agg.totalGames>=1 },
+  { id:'firstwin', icon:'🏆', title:'初勝利',       desc:'はじめて勝利する',            check:c=>c.agg&&c.agg.youWins>=1 },
+  { id:'streak3',  icon:'🔥', title:'三連勝',       desc:'3連勝を達成する',             check:c=>c.streak&&c.streak.maxStreak>=3 },
+  { id:'streak5',  icon:'👑', title:'五連勝',       desc:'5連勝を達成する',             check:c=>c.streak&&c.streak.maxStreak>=5 },
+  { id:'bigwin',   icon:'⚔️', title:'大勝',         desc:'1試合で合計20点以上で勝つ',   check:c=>c.win&&c.youFinal>=20 },
+  { id:'shutout',  icon:'🛡️', title:'完封勝ち',     desc:'相手に決戦得点を与えず勝つ',   check:c=>c.win&&c.cpuLP===0 },
+  { id:'kaosslay', icon:'🌀', title:'混沌の一撃',   desc:'Kaos0か1で相手の5を食って勝つ', check:c=>_hasWinRound(c,r=>_myRoundCard(r).attr==='kaos'&&(_myRoundCard(r).num===0||_myRoundCard(r).num===1)&&_oppRoundCard(r).num===5) },
+  { id:'airdraw',  icon:'🌬️', title:'静寂の風',     desc:'Airで引き分けに持ち込む',     check:c=>(c.roundLog||[]).some(r=>!r.passed&&r.result==='draw'&&_myRoundCard(r).attr==='air') },
+  { id:'late',     icon:'⚡', title:'終盤の一撃',   desc:'終盤(R7・R8)の決戦に勝つ',    check:c=>_hasWinRound(c,r=>r.round>=LATE_GAME_START) },
+  { id:'missions', icon:'🎓', title:'修練の達人',   desc:'全ミッションをクリアする',     check:c=>c.missionsCleared },
+  { id:'veteran',  icon:'🎲', title:'歴戦の仮面',   desc:'通算25戦プレイする',          check:c=>c.agg&&c.agg.totalGames>=25 },
+  { id:'skilled',  icon:'📈', title:'実力者',       desc:'通算10戦以上で勝率50%以上',   check:c=>c.agg&&c.agg.totalGames>=10&&c.streak&&c.streak.winRate>=50 },
+];
+// ctxを渡して未解除の実績を判定・解除。新規解除ぶんを返す
+function checkAchievements(ctx){
+  const have=loadAchievements(); const fresh=[];
+  ACHIEVEMENTS.forEach(a=>{
+    if(have[a.id]) return;
+    let ok=false; try{ ok=!!a.check(ctx); }catch(e){}
+    if(ok){ have[a.id]=Date.now(); fresh.push(a); }
+  });
+  if(fresh.length) saveAchievements(have);
+  return fresh;
+}
+function openAchievements(){
+  const have=loadAchievements();
+  const grid=ACHIEVEMENTS.map(a=>{
+    const on=!!have[a.id];
+    return `<div class="ach-item${on?' on':''}"><div class="ach-ic">${on?a.icon:'🔒'}</div>`+
+      `<div class="ach-tx"><div class="ach-t">${a.title}</div><div class="ach-d">${a.desc}</div></div></div>`;
+  }).join('');
+  const cnt=ACHIEVEMENTS.filter(a=>have[a.id]).length;
+  document.getElementById('achieveBody').innerHTML=
+    `<div class="ach-count">解除 <b>${cnt}</b> / ${ACHIEVEMENTS.length}</div><div class="ach-grid">${grid}</div>`;
+  document.getElementById('achieveModal').classList.add('show');
+}
+function closeAchievements(){ document.getElementById('achieveModal').classList.remove('show'); }
 function closeChangelog(){ document.getElementById('changelogModal').classList.remove('show'); }
 
 const HISTORY_KEY='maskd_game_history_v1';
@@ -4702,6 +4812,9 @@ function endGame(){
   saveGameToHistory(youFinal, cpuFinal, s);
   const gameMVP = computeGameMVP(roundLog);
   const streak = computeStreaksAndRate(loadGameHistory());
+  // 実績の判定(この試合の結果＋通算を渡す)
+  const newAch = checkAchievements({ win:youFinal>cpuFinal, youFinal, cpuFinal, youLP, cpuLP, roundLog,
+    agg:computeAggregateStats(loadGameHistory()), streak, missionsCleared:missionsCleared() });
   // 得点内訳テーブル(上から順にカウントアップ演出)
   const numCell=(v,pre,who)=>`<span class="sb-n ${who}">${pre?`<span class="sb-pre">${pre}</span>`:''}<span class="num" data-t="${v}">0</span></span>`;
   const rowHTML=(label,sub,yv,cv,pre,cls)=>`<div class="${cls}"><span class="sb-l">${label}${sub?`<span class="sb-sub">${sub}</span>`:''}</span>${numCell(yv,pre,'you')}${numCell(cv,pre,'cpu')}</div>`;
@@ -4743,8 +4856,13 @@ function endGame(){
     <div class="ms-row"><span>通算成績</span><span>${streak.wins}勝 / ${streak.total}戦 （勝率 ${streak.winRate.toFixed(0)}%）</span></div>
     <div class="ms-row"><span>連勝</span><span>現在 ${streak.currentStreak} ／ 最高 ${streak.maxStreak}${bestNote}</span></div>
   </div>`;
+  const achSection = newAch.length ? `<div class="match-summary milestone">
+    <div class="ms-row" style="justify-content:center;color:var(--gold-bright);font-weight:700;">🎉 実績を解除！</div>
+    ${newAch.map(a=>`<div class="ms-row"><span>${a.icon} ${a.title}</span><span>${a.desc}</span></div>`).join('')}
+  </div>` : '';
   const extra=`<div id="ovExtra">
     ${milestoneSection}
+    ${achSection}
     ${roundSection}
     ${remainSection}
     <div class="match-summary">
@@ -4753,10 +4871,11 @@ function endGame(){
       <div class="ms-row"><span>Air使用</span><span>あなた${s.youAir}回 ／ 相手${s.cpuAir}回</span></div>
       <div class="ms-row"><span>Kaos使用</span><span>あなた${s.youKaos}回 ／ 相手${s.cpuKaos}回</span></div>
     </div>
-    <div style="display:flex;gap:6px;margin-top:12px;width:100%;max-width:300px;">
-      <div class="btn ghost" style="white-space:nowrap;padding:10px 4px;" onclick="openHistory()">今回の履歴</div>
-      <div class="btn ghost" style="white-space:nowrap;padding:10px 4px;" onclick="openMatchLog()">対戦ログ一覧</div>
-      <div class="btn ghost" style="white-space:nowrap;padding:10px 4px;" onclick="openStats()">通算統計</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;width:100%;max-width:300px;">
+      <div class="btn ghost" style="white-space:nowrap;padding:10px 4px;flex:1 1 45%;" onclick="openAchievements()">🏅 実績</div>
+      <div class="btn ghost" style="white-space:nowrap;padding:10px 4px;flex:1 1 45%;" onclick="openStats()">通算統計</div>
+      <div class="btn ghost" style="white-space:nowrap;padding:10px 4px;flex:1 1 45%;" onclick="openHistory()">今回の履歴</div>
+      <div class="btn ghost" style="white-space:nowrap;padding:10px 4px;flex:1 1 45%;" onclick="openMatchLog()">対戦ログ一覧</div>
     </div>
   </div>`;
   document.getElementById('ovScore').innerHTML=tbl+extra;
