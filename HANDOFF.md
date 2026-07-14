@@ -94,7 +94,8 @@
 - v0.36.0: 初心者オンボーディング（初回R1〜R3のみラウンド開始モーダルに「🔰今回のポイント」＝`onboardTip`/`ONBOARD_KEY`）。
 - v0.37.0: **ミッション形式チュートリアル**（実際に操作して学ぶ）。データ＝`TUT_MISSIONS`、エンジン＝`openMissions`/`renderMission`/`tutPlayCard`/`tutDecide`/`tutFinish`、専用オーバーレイ `#tutMissionOverlay`（本編エンジンとは独立、`judge()`で答え合わせ）。タイトルの「🎓 ミッションで学ぶ」から起動。`MISSIONS_DONE_KEY`。
 - v0.38.0: ①初回ウェルカム画面 `#welcomeModal`＋`welcomeChoose()`（初回はスライド自動表示をやめ、ミッション/遊び方/対戦を選択）。②ミッション追加で全8問に（role `swap`＝入替、`strict`＝温存判定を engine に追加）。③**効果音**（WebAudio合成、`sfx(name)`/`toggleSound()`、キー `maskd_sound`、フッター `#soundToggle`）。フック: `fireImpact`(win/lose)・`resolveFightJudge`(draw)・`fireKaosFlash`/`fireAirFlash`・`playYouCard`・`tutShowResult`/`tutPlayCard`。
-- **v0.39.0（現在）**: ①**実績システム**（`ACHIEVEMENTS` 全12種・`checkAchievements(ctx)`・`openAchievements()`・キー `maskd_achievements_v1`・モーダル `#achieveModal`）。フック: `endGame`（試合結果＋通算のctxで判定→結果画面に表示）・`tutFinish`（全ミッションクリア）。導線: タイトル/結果画面の「🏅 実績」。②ミッション3追加で全11問（role `forceDecide`＝奇襲を追加、終盤2倍・Kaos5弱点は既存roleで）。
+- v0.39.0: ①**実績システム**（`ACHIEVEMENTS`・`checkAchievements(ctx)`・`openAchievements()`・キー `maskd_achievements_v1`・モーダル `#achieveModal`）。フック: `endGame`・`tutFinish`。導線: タイトル/結果画面の「🏅 実績」。②ミッション3追加で全11問（role `forceDecide`＝奇襲を追加）。
+- **v0.40.0（現在）**: ①**上級ミッション** `TUT_ADVANCED`（本格派4問）。エンジンは `tutList`/`tutSet` で基本(`TUT_MISSIONS`)/上級を切替、`openMissions('advanced')`、`ADVANCED_DONE_KEY`/`advancedCleared()`。導線: タイトル「⚔️ 上級ミッション」＋基本修了後の誘導。②実績6追加で**全18種**（`_maxDeficit`等のヘルパー追加、`endGame`ctxに `summary`/`advancedCleared` を追加）。③対戦画面の「あなたの手札／相手の手札」見出しを削除（`handTitle` 既定空、`ohs-label` 撤去）。④**admin.html**: 対戦ログ表に「名前」列＋検索＋詳細に `playerName` を表示。
 
 ## 9. 次にやり得ること（未確定・候補）
 

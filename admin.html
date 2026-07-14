@@ -315,7 +315,7 @@ function filtered(){
     if(s.fWinner && g.winner!==s.fWinner) return false;
     if(s.fDiff && g.cpuDifficulty!==s.fDiff) return false;
     if(s.fVer && g.version!==s.fVer) return false;
-    if(s.q){ const hay=(g.playerId||'')+' '+(g.version||''); if(!hay.toLowerCase().includes(s.q.toLowerCase())) return false; }
+    if(s.q){ const hay=(g.playerName||'')+' '+(g.playerId||'')+' '+(g.version||''); if(!hay.toLowerCase().includes(s.q.toLowerCase())) return false; }
     return true;
   });
   const k=s.sortKey, dir=s.sortDir;
@@ -330,11 +330,11 @@ function tableUI(){
     <select id="fWinner"><option value="">勝者:すべて</option>${opt(['player','cpu','draw'],tableState.fWinner,{player:'プレイヤー',cpu:'CPU',draw:'引分'})}</select>
     <select id="fDiff"><option value="">難易度:すべて</option>${opt(['weak','normal','strong'],tableState.fDiff,DIFF)}</select>
     <select id="fVer"><option value="">バージョン:すべて</option>${opt(vers,tableState.fVer)}</select>
-    <input id="fq" placeholder="ID/ver 検索" value="${esc(tableState.q)}">
+    <input id="fq" placeholder="名前/ID/ver 検索" value="${esc(tableState.q)}">
     <span class="muted" id="rowCount"></span>
   </div>
   <div class="tbl-wrap"><table><thead><tr>
-    ${th('ts','日時')}${th('version','ver')}${th('winner','勝者')}${th('playerFinal','P')}${th('cpuFinal','C')}${th('margin','差')}
+    ${th('ts','日時')}${th('version','ver')}${th('winner','勝者')}${th('playerName','名前')}${th('playerFinal','P')}${th('cpuFinal','C')}${th('margin','差')}
     ${th('cpuDifficulty','難易度')}${th('cpuStrategy','性格')}${th('playTimeMs','時間')}<th>ID</th>
   </tr></thead><tbody id="tbody"></tbody></table></div>`;
 }
@@ -350,16 +350,17 @@ function renderRows(){
     const tm=typeof g.playTimeMs==='number'?Math.round(g.playTimeMs/1000)+'s':'-';
     return `<tr class="row" data-i="${idx}">
       <td>${esc(t)}</td><td>${esc(g.version||'')}</td><td><span class="tag ${wl}">${wt}</span></td>
+      <td>${esc(g.playerName||'-')}</td>
       <td>${esc(g.playerFinal)}</td><td>${esc(g.cpuFinal)}</td><td>${esc((g.playerFinal||0)-(g.cpuFinal||0))}</td>
       <td>${esc(DIFF[g.cpuDifficulty]||g.cpuDifficulty||'')}</td><td>${esc(TYPE[g.cpuStrategy]||g.cpuStrategy||'')}</td>
       <td>${tm}</td><td>${esc((g.playerId||'').slice(0,8))}</td></tr>`;
-  }).join('') || '<tr><td colspan="10" class="muted" style="text-align:center;padding:16px;">該当なし</td></tr>';
+  }).join('') || '<tr><td colspan="11" class="muted" style="text-align:center;padding:16px;">該当なし</td></tr>';
   document.querySelectorAll('#tbody .row').forEach(tr=>tr.onclick=()=>showDetail(Number(tr.dataset.i)));
 }
 function setHead(){
   const tb=$('tbody'); if(!tb) return;
   const head=tb.closest('table').querySelector('thead');
-  head.innerHTML=`<tr>${th('ts','日時')}${th('version','ver')}${th('winner','勝者')}${th('playerFinal','P')}${th('cpuFinal','C')}${th('margin','差')}${th('cpuDifficulty','難易度')}${th('cpuStrategy','性格')}${th('playTimeMs','時間')}<th>ID</th></tr>`;
+  head.innerHTML=`<tr>${th('ts','日時')}${th('version','ver')}${th('winner','勝者')}${th('playerName','名前')}${th('playerFinal','P')}${th('cpuFinal','C')}${th('margin','差')}${th('cpuDifficulty','難易度')}${th('cpuStrategy','性格')}${th('playTimeMs','時間')}<th>ID</th></tr>`;
   head.querySelectorAll('th[data-k]').forEach(el=>{
     el.onclick=()=>{ const k=el.dataset.k; if(tableState.sortKey===k)tableState.sortDir*=-1; else {tableState.sortKey=k;tableState.sortDir=-1;} setHead(); renderRows(); };
   });
@@ -391,6 +392,7 @@ function showDetail(i){
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
       <h2 style="margin:0;">対戦詳細</h2><span class="btn" id="closeDetail">閉じる</span></div>
     <div class="muted" style="font-size:12px;margin-bottom:10px;">
+      プレイヤー <b style="color:var(--goldb)">${esc(g.playerName||'（名前なし）')}</b><br>
       ${esc((g.ts||'').replace('T',' ').slice(0,19))} ／ ${esc(g.version||'')} ／ CPU:${esc(TYPE[g.cpuStrategy]||g.cpuStrategy)}/${esc(DIFF[g.cpuDifficulty]||g.cpuDifficulty)}<br>
       最終 P<b style="color:var(--goldb)">${esc(g.playerFinal)}</b> - C<b style="color:var(--goldb)">${esc(g.cpuFinal)}</b>
       ／ ID ${esc((g.playerId||'').slice(0,12))}

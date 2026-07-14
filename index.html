@@ -1443,6 +1443,7 @@
 
     <div class="top-info-btns">
       <div class="btn" onclick="openMissions()">🎓 ミッションで学ぶ</div>
+      <div class="btn ghost" onclick="openMissions('advanced')">⚔️ 上級ミッション</div>
       <div class="btn ghost" onclick="openAchievements()">🏅 実績</div>
       <div class="btn ghost" onclick="openTutorial()">遊び方</div>
       <div class="btn ghost" onclick="openRules()">ルール説明</div>
@@ -1736,7 +1737,6 @@
   </div>
 
   <div class="opp-hand-strip">
-    <div class="ohs-label">相手の手札</div>
     <div class="ohs-cards" id="oppHandStrip"></div>
   </div>
 
@@ -1797,7 +1797,7 @@
   </div>
 
   <div class="hand-wrap" id="handWrap">
-    <div class="hand-title" id="handTitle">あなたの手札</div>
+    <div class="hand-title" id="handTitle"></div>
     <div class="hand" id="hand"></div>
   </div>
 
@@ -2538,7 +2538,7 @@ function renderHandModalContext(){
 
 function renderHand(){
   const h=document.getElementById('hand'); h.innerHTML='';
-  document.getElementById('handTitle').textContent = swapSelecting ? '入替する札をタップ' : 'あなたの手札';
+  document.getElementById('handTitle').textContent = swapSelecting ? '入替する札をタップ' : '';
   renderDeckChip();
   renderOppDeckChip();
   const indexed = youHand.map((c,i)=>({c,i}));
@@ -3640,8 +3640,14 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.39.0';
+const GAME_VERSION = 'v0.40.0';
 const CHANGELOG = [
+  { version:'v0.40.0', date:'2026-07-14', items:[
+    '<b>上級ミッション</b>を追加（本格派の4問）：🃏風を斬る刃（KaosはAirを斬る）、⚖️同値の落とし穴（Kaosは同値だと負け）、🌪️Airの過信（AirはKaosに通じない）、🎯三択の見極め（相性＞数字を総合判断）。タイトルの「⚔️ 上級ミッション」から挑戦。',
+    '<b>実績を6種追加（全18種に）</b>：🎖️上級突破・💯完全試合（決戦で無敗勝利）・🔄大逆転（4点差から勝利）・🌫️風の使い手（Air3回使用）・🏛️百戦の猛者・🏵️覇者（勝率70%）。',
+    '対戦画面の文言を整理：「あなたの手札」「相手の手札」の見出しを削除してすっきりと（機能は変更なし）。',
+    '管理ページ（対戦ログ）に<b>プレイヤー名</b>の列と検索を追加（詳細画面にも表示）。',
+  ]},
   { version:'v0.39.0', date:'2026-07-14', items:[
     '<b>実績（アチーブメント）</b>を追加：初勝利・三/五連勝・大勝・完封・混沌の一撃（Kaos0/1で5を食う）・静寂の風（Airで引分）・終盤の一撃・修練の達人（全ミッションクリア）・歴戦・実力者 など全12種。試合終了やミッション修了で自動解除し、結果画面で通知。タイトル／結果画面の「🏅 実績」から一覧を確認できる（進捗も表示）。長く遊ぶ目標に。',
     'ミッションを3つ追加（全11問に）：<b>⚡ 奇襲でしとめる</b>（子が親の撤退を強制決戦に）、<b>🔥 終盤は2倍</b>（R7・R8の決戦は得点2倍）、<b>⚠️ Kaos5の弱点</b>（Kaos5は1に負ける）。',
@@ -4193,10 +4199,14 @@ const TUT_MISSIONS=[
     ngMsg:'<b class="kaos">Kaos5</b>は特殊弱点で<b>1</b>に敗北します。万能ではありません。相性で勝てる<b class="dark">DARK✌3</b>を選びましょう。' },
 ];
 const MISSIONS_DONE_KEY='maskd_missions_done_v1';
+const ADVANCED_DONE_KEY='maskd_advanced_done_v1';
 let tutMi=0, tutLocked=false;
+let tutList=TUT_MISSIONS, tutSet='basic'; // 現在挑戦中のミッションセット
 // チュートリアル用のカード描画(常に初心者表示＝じゃんけん記号+数字+属性名で分かりやすく)
 function tutCardHTML(c){ return `<div class="card faceup bcard ${c.attr}">${beginnerInner(c)}</div>`; }
-function openMissions(){
+function openMissions(which){
+  tutSet = (which==='advanced') ? 'advanced' : 'basic';
+  tutList = (tutSet==='advanced') ? TUT_ADVANCED : TUT_MISSIONS;
   tutMi=0;
   document.getElementById('tutMissionOverlay').classList.add('show');
   renderMission();
@@ -4204,10 +4214,10 @@ function openMissions(){
 function closeMissions(){ document.getElementById('tutMissionOverlay').classList.remove('show'); }
 function renderMission(){
   tutLocked=false;
-  const m=TUT_MISSIONS[tutMi];
-  document.getElementById('tutmCount').textContent=`${tutMi+1}/${TUT_MISSIONS.length}`;
+  const m=tutList[tutMi];
+  document.getElementById('tutmCount').textContent=`${tutMi+1}/${tutList.length}`;
   document.getElementById('tutmTitle').innerHTML=`${m.icon} ${m.title}`;
-  document.getElementById('tutmProgress').innerHTML=TUT_MISSIONS.map((_,i)=>
+  document.getElementById('tutmProgress').innerHTML=tutList.map((_,i)=>
     `<div class="tp-dot${i<tutMi?' done':(i===tutMi?' cur':'')}"></div>`).join('');
   document.getElementById('tutmIntro').innerHTML=m.intro;
   document.getElementById('tutmObjective').innerHTML=m.objective||'';
@@ -4252,7 +4262,7 @@ function renderMission(){
 function tutShowResult(success, chosenCardEl){
   tutLocked=true;
   sfx(success?'win':'lose');
-  const m=TUT_MISSIONS[tutMi];
+  const m=tutList[tutMi];
   const fb=document.getElementById('tutmFeedback');
   fb.className='tutm-feedback show '+(success?'ok':'ng');
   fb.innerHTML=(success?'✅ ':'❌ ')+(success?m.okMsg:(m.ngMsg||m.okMsg));
@@ -4260,7 +4270,7 @@ function tutShowResult(success, chosenCardEl){
   document.getElementById('tutmActions').innerHTML='';
   const ctrl=document.getElementById('tutmControls'); ctrl.innerHTML='';
   if(success){
-    const last=(tutMi>=TUT_MISSIONS.length-1);
+    const last=(tutMi>=tutList.length-1);
     const next=document.createElement('div'); next.className='btn';
     next.textContent=last?'修了！':'次のミッション ›';
     next.onclick=()=> last?tutFinish():tutNextMission();
@@ -4275,7 +4285,7 @@ function tutShowResult(success, chosenCardEl){
 }
 function tutPlayCard(i){
   if(tutLocked) return;
-  const m=TUT_MISSIONS[tutMi]; const c=m.hand[i];
+  const m=tutList[tutMi]; const c=m.hand[i];
   sfx('place');
   const cards=document.querySelectorAll('#tutmHand .tutm-card');
   if(cards[i]) cards[i].classList.add('pick');
@@ -4290,7 +4300,7 @@ function tutPlayCard(i){
 }
 function tutDecide(fight){
   if(tutLocked) return;
-  const m=TUT_MISSIONS[tutMi];
+  const m=tutList[tutMi];
   const fightResult=judge(m.you, m.cpu); // あなたが親
   const fightWins=(fightResult==='dealer');
   const success = fight ? fightWins : !fightWins; // 勝てるなら決戦、勝てない(負け/引分)なら撤退が正解
@@ -4298,7 +4308,7 @@ function tutDecide(fight){
 }
 function tutForceDecide(force){
   if(tutLocked) return;
-  const m=TUT_MISSIONS[tutMi];
+  const m=tutList[tutMi];
   const res=judge(m.cpu, m.you); // m.cpuが親、m.youが子(あなた)
   const youWin=(res==='child');
   const success = force ? youWin : !youWin; // 勝てるなら奇襲、勝てないなら見送りが正解
@@ -4306,19 +4316,55 @@ function tutForceDecide(force){
 }
 function tutNextMission(){ tutMi++; renderMission(); }
 function tutFinish(){
-  try{ localStorage.setItem(MISSIONS_DONE_KEY,'1'); }catch(e){}
-  const fresh=checkAchievements({ missionsCleared:true, agg:computeAggregateStats(loadGameHistory()), streak:computeStreaksAndRate(loadGameHistory()) });
+  const isAdv=(tutSet==='advanced');
+  try{ localStorage.setItem(isAdv?ADVANCED_DONE_KEY:MISSIONS_DONE_KEY,'1'); }catch(e){}
+  const fresh=checkAchievements({ missionsCleared:missionsCleared(), advancedCleared:advancedCleared(),
+    agg:computeAggregateStats(loadGameHistory()), streak:computeStreaksAndRate(loadGameHistory()) });
   const achNote = fresh.length ? `<div class="tutm-intro" style="text-align:center;margin-top:10px;border-color:rgba(201,162,74,.5);background:rgba(201,162,74,.08);">🎉 実績解除：${fresh.map(a=>a.icon+' '+a.title).join(' / ')}</div>` : '';
+  const advBtn = (!isAdv && !advancedCleared())
+    ? `<div class="btn danger" style="width:100%;" onclick="openMissions('advanced')">⚔️ 上級ミッションに挑戦</div>` : '';
+  const body = isAdv
+    ? '<b>上級ミッション</b>を制覇！ Kaosの弱点や特殊相性まで読み切る、上級者の一手を身につけました。'
+    : 'お疲れさまでした。基本操作と<b>じゃんけん・数字・撤退・Kaos・Air・入替・奇襲</b>を身につけました。次は<b>上級ミッション</b>に挑戦！';
   const box=document.querySelector('#tutMissionOverlay .tutm-box');
-  box.innerHTML=`<div class="tutm-head"><span class="tutm-title" style="text-align:center;">🎓 全ミッション修了！</span></div>
-    <div class="tutm-intro" style="text-align:center;margin-top:14px;">お疲れさまでした。基本操作と<b>じゃんけん・数字・撤退・Kaos・Air・入替・奇襲</b>を身につけました。<br>あとは実戦で腕を試しましょう！</div>
+  box.innerHTML=`<div class="tutm-head"><span class="tutm-title" style="text-align:center;flex:1;">${isAdv?'⚔️ 上級ミッション制覇！':'🎓 全ミッション修了！'}</span></div>
+    <div class="tutm-intro" style="text-align:center;margin-top:14px;">${body}</div>
     ${achNote}
-    <div class="tutm-controls" style="margin-top:16px;">
-      <div class="btn" onclick="closeMissions(); beginMatchSetup();">対戦を始める</div>
-      <div class="btn ghost" onclick="closeMissions()">閉じる</div>
+    <div class="tutm-controls" style="flex-direction:column;margin-top:16px;">
+      ${advBtn}
+      <div class="btn" style="width:100%;" onclick="closeMissions(); beginMatchSetup();">対戦を始める</div>
+      <div class="btn ghost" style="width:100%;" onclick="closeMissions()">閉じる</div>
     </div>`;
 }
 function missionsCleared(){ try{ return localStorage.getItem(MISSIONS_DONE_KEY)==='1'; }catch(e){ return false; } }
+function advancedCleared(){ try{ return localStorage.getItem(ADVANCED_DONE_KEY)==='1'; }catch(e){ return false; } }
+// ===== 上級ミッション(本格派：ルールを総合して読み切る) =====
+const TUT_ADVANCED=[
+  { icon:'🃏', title:'風を斬る刃', role:'child',
+    intro:'<b class="air">Air</b>は必ず引き分け…ただし<b class="kaos">Kaos</b>だけは例外。<b class="kaos">Kaos</b>は数字を問わず<b class="air">Air</b>を斬り伏せます。',
+    cpu:{attr:'air',num:5}, hand:[{attr:'kaos',num:2},{attr:'moon',num:4}], goal:'win', correct:0,
+    objective:'相手は <b class="air">AIR5</b>。引き分けにされる前に、<b>勝ち切れる</b>札は？',
+    okMsg:'正解！<b class="kaos">Kaos</b>は<b class="air">Air</b>の引き分けを破って勝利。Air絶対の常識を覆す一手です。',
+    ngMsg:'<b class="moon">MOON✊4</b>は<b class="air">Air</b>相手だと引き分け。ここは<b class="kaos">Kaos2</b>でAirを斬り、勝ち切りましょう。' },
+  { icon:'⚖️', title:'同値の落とし穴', role:'child',
+    intro:'<b class="kaos">Kaos</b>は数字勝負で強力ですが、<b>同じ数字だと負け</b>ます（引き分けにもならない）。過信は禁物。',
+    cpu:{attr:'moon',num:3}, hand:[{attr:'kaos',num:3},{attr:'sun',num:4}], goal:'win', correct:1,
+    objective:'相手は <b class="moon">MOON✊3</b>。<b class="kaos">Kaos3</b>で数字勝負を挑む？それとも…',
+    okMsg:'正解！<b class="kaos">Kaos3</b>は同値の<b>3</b>に負けます。ここは相性で勝てる<b class="sun">SUN✋4</b>が正着（太陽✋＞月✊）。',
+    ngMsg:'<b class="kaos">Kaos3</b>は同じ数字の<b class="moon">MOON3</b>に敗北。Kaosは同値だと負けます。相性勝ちの<b class="sun">SUN✋4</b>を。' },
+  { icon:'🌪️', title:'Airの過信', role:'child',
+    intro:'困った時の<b class="air">Air</b>頼み…でも相手が<b class="kaos">Kaos</b>なら要注意。<b class="kaos">Kaos</b>は<b class="air">Air</b>を打ち破ります。',
+    cpu:{attr:'kaos',num:3}, hand:[{attr:'air',num:2},{attr:'moon',num:4}], goal:'win', correct:1,
+    objective:'相手は <b class="kaos">KAOS3</b>。<b class="air">Air</b>で引き分け狙い…は危険。正しい一手は？',
+    okMsg:'正解！<b class="air">Air</b>は<b class="kaos">Kaos</b>に負けるので、ここは数字で上回る<b class="moon">MOON✊4</b>。相手がKaosの時はAirを避けて。',
+    ngMsg:'<b class="air">Air2</b>は<b class="kaos">Kaos</b>に斬られて敗北…。Airの引き分けはKaosには通じません。<b class="moon">MOON✊4</b>で数字勝ちを。' },
+  { icon:'🎯', title:'三択の見極め', role:'child',
+    intro:'実戦の3択。数字の大きさに惑わされず、<b>相性</b>と<b>特殊ルール</b>を総合して勝てる1枚を見抜こう。',
+    cpu:{attr:'dark',num:3}, hand:[{attr:'sun',num:5},{attr:'moon',num:1},{attr:'kaos',num:2}], goal:'win', correct:1,
+    objective:'相手は <b class="dark">DARK✌3</b>。3枚のうち、勝てるのは？',
+    okMsg:'正解！<b class="moon">MOON✊1</b>は数字が低くても<b class="dark">DARK✌</b>に勝ちます（月✊＞闇✌）。相性を見抜くのが上級者。',
+    ngMsg:'不正解。<b class="sun">SUN✋5</b>は闇に負け、<b class="kaos">Kaos2</b>も数字で負け。勝てるのは相性で上回る<b class="moon">MOON✊1</b>だけ。' },
+];
 
 // ===== 実績(アチーブメント)システム：長く遊ぶ目標 =====
 const ACHIEVE_KEY='maskd_achievements_v1';
@@ -4328,7 +4374,17 @@ function saveAchievements(o){ try{ localStorage.setItem(ACHIEVE_KEY, JSON.string
 function _myRoundCard(r){ return r.dealerIsYou? r.dealerCard : r.childCard; }
 function _oppRoundCard(r){ return r.dealerIsYou? r.childCard : r.dealerCard; }
 function _myWinRound(r){ return !r.passed && r.result && r.result!=='draw' && ((r.result==='dealer')===r.dealerIsYou); }
+function _oppWinRound(r){ return !r.passed && r.result && r.result!=='draw' && !((r.result==='dealer')===r.dealerIsYou); }
 function _hasWinRound(c, pred){ return (c.roundLog||[]).some(r=> _myWinRound(r) && pred(r)); }
+// 決戦得点の推移(残り手札ボーナス等は含まない、逆転判定用)
+function _maxDeficit(roundLog){
+  let y=0,c=0,md=0;
+  (roundLog||[]).forEach(r=>{
+    if(_myWinRound(r)) y+=r.dmg||0; else if(_oppWinRound(r)) c+=r.dmg||0;
+    md=Math.max(md, c-y);
+  });
+  return md;
+}
 const ACHIEVEMENTS=[
   { id:'rookie',   icon:'🎭', title:'仮面の新入り', desc:'はじめてプレイする',            check:c=>c.agg&&c.agg.totalGames>=1 },
   { id:'firstwin', icon:'🏆', title:'初勝利',       desc:'はじめて勝利する',            check:c=>c.agg&&c.agg.youWins>=1 },
@@ -4342,6 +4398,12 @@ const ACHIEVEMENTS=[
   { id:'missions', icon:'🎓', title:'修練の達人',   desc:'全ミッションをクリアする',     check:c=>c.missionsCleared },
   { id:'veteran',  icon:'🎲', title:'歴戦の仮面',   desc:'通算25戦プレイする',          check:c=>c.agg&&c.agg.totalGames>=25 },
   { id:'skilled',  icon:'📈', title:'実力者',       desc:'通算10戦以上で勝率50%以上',   check:c=>c.agg&&c.agg.totalGames>=10&&c.streak&&c.streak.winRate>=50 },
+  { id:'advanced', icon:'🎖️', title:'上級突破',     desc:'上級ミッションを全てクリアする', check:c=>c.advancedCleared },
+  { id:'perfect',  icon:'💯', title:'完全試合',     desc:'決戦で一度も負けずに勝つ',     check:c=>c.win && !(c.roundLog||[]).some(_oppWinRound) },
+  { id:'comeback', icon:'🔄', title:'大逆転',       desc:'決戦得点で4点以上ビハインドから勝つ', check:c=>c.win && _maxDeficit(c.roundLog)>=4 },
+  { id:'airmaster',icon:'🌫️', title:'風の使い手',   desc:'1試合でAirを3回以上使う',      check:c=>c.summary && c.summary.youAir>=3 },
+  { id:'games50',  icon:'🏛️', title:'百戦の猛者',   desc:'通算50戦プレイする',          check:c=>c.agg&&c.agg.totalGames>=50 },
+  { id:'grandmaster',icon:'🏵️', title:'覇者',       desc:'通算20戦以上で勝率70%以上',   check:c=>c.agg&&c.agg.totalGames>=20&&c.streak&&c.streak.winRate>=70 },
 ];
 // ctxを渡して未解除の実績を判定・解除。新規解除ぶんを返す
 function checkAchievements(ctx){
@@ -4813,8 +4875,8 @@ function endGame(){
   const gameMVP = computeGameMVP(roundLog);
   const streak = computeStreaksAndRate(loadGameHistory());
   // 実績の判定(この試合の結果＋通算を渡す)
-  const newAch = checkAchievements({ win:youFinal>cpuFinal, youFinal, cpuFinal, youLP, cpuLP, roundLog,
-    agg:computeAggregateStats(loadGameHistory()), streak, missionsCleared:missionsCleared() });
+  const newAch = checkAchievements({ win:youFinal>cpuFinal, youFinal, cpuFinal, youLP, cpuLP, roundLog, summary:s,
+    agg:computeAggregateStats(loadGameHistory()), streak, missionsCleared:missionsCleared(), advancedCleared:advancedCleared() });
   // 得点内訳テーブル(上から順にカウントアップ演出)
   const numCell=(v,pre,who)=>`<span class="sb-n ${who}">${pre?`<span class="sb-pre">${pre}</span>`:''}<span class="num" data-t="${v}">0</span></span>`;
   const rowHTML=(label,sub,yv,cv,pre,cls)=>`<div class="${cls}"><span class="sb-l">${label}${sub?`<span class="sb-sub">${sub}</span>`:''}</span>${numCell(yv,pre,'you')}${numCell(cv,pre,'cpu')}</div>`;
