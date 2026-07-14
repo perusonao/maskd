@@ -512,6 +512,11 @@
   .pi-pt b{ font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; color:var(--gold-bright); line-height:1; margin:0 1px;
     text-shadow:0 1px 6px rgba(0,0,0,0.5); }
   .pi-pt .pt-unit{ font-size:9px; color:var(--ink-dim); letter-spacing:0.08em; }
+  /* 得点リードの可視化 */
+  .pi-pt b.leading{ color:var(--gold-bright); text-shadow:0 0 12px rgba(232,200,119,.6); }
+  .lead-mark{ display:none; font-size:9px; font-weight:700; color:#1a1608; background:var(--gold-bright);
+    border-radius:6px; padding:1px 5px; letter-spacing:.02em; margin-left:2px; }
+  .lead-mark.show{ display:inline-block; }
   /* #7 空になった上部コンテキスト枠を消す */
   .hmc-context:empty{ display:none; }
   /* #8 手札選択モーダル: 1列で5枚 */
@@ -979,6 +984,19 @@
   .action-banner.kessen{ color:var(--lose); }
   .action-banner.tettai{ color:var(--ink-dim); }
   .action-banner.kishuu{ color:var(--kaos); animation:bannerShake .5s ease; }
+  /* CPU思考中インジケータ(待ち時間を可視化してテンポを出す) */
+  .cpu-thinking{ position:absolute; top:7%; left:50%; transform:translateX(-50%); z-index:6; display:none;
+    align-items:center; gap:8px; padding:6px 15px; border-radius:20px; white-space:nowrap;
+    background:rgba(8,7,12,.72); border:1px solid rgba(201,162,74,.4); font-size:12px; color:var(--gold-bright); }
+  .cpu-thinking.show{ display:inline-flex; animation:ctFade .3s ease; }
+  @keyframes ctFade{ from{opacity:0;transform:translate(-50%,-6px);} to{opacity:1;transform:translate(-50%,0);} }
+  .cpu-thinking .ct-mask{ font-size:15px; display:inline-block; animation:ctBob 1.4s ease-in-out infinite; }
+  @keyframes ctBob{ 0%,100%{transform:translateY(0) rotate(-5deg);} 50%{transform:translateY(-2px) rotate(5deg);} }
+  .cpu-thinking .ct-dots{ display:inline-flex; gap:3px; }
+  .cpu-thinking .ct-dots i{ width:4px; height:4px; border-radius:50%; background:var(--gold-bright); animation:ctDot 1.1s infinite; }
+  .cpu-thinking .ct-dots i:nth-child(2){ animation-delay:.18s; }
+  .cpu-thinking .ct-dots i:nth-child(3){ animation-delay:.36s; }
+  @keyframes ctDot{ 0%,60%,100%{opacity:.25; transform:scale(.8);} 30%{opacity:1; transform:scale(1);} }
   @keyframes bannerPop{ 0%{ transform:scale(0.6); opacity:0; } 60%{ transform:scale(1.08); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
   @keyframes bannerShake{
     0%,100%{ transform:translateX(0); } 15%{ transform:translateX(-6px) scale(1.05); } 30%{ transform:translateX(6px); }
@@ -1761,7 +1779,7 @@
         <div class="slot-row" id="cpuSlot"><div class="empty-slot">待機</div></div>
         <div class="pinfo cpu" id="cpuCell">
           <span class="pi-role" id="cpuDealerTag">親</span>
-          <span class="pi-pt"><span class="pi-name" id="cpuNameLbl">相手</span> <b id="cpuLP">0</b><span class="pt-unit">pt</span></span>
+          <span class="pi-pt"><span class="pi-name" id="cpuNameLbl">相手</span> <b id="cpuLP">0</b><span class="pt-unit">pt</span><span class="lead-mark" id="cpuLeadMark"></span></span>
           <div class="deck-chip opp" id="deckBarOpp" onclick="event.stopPropagation(); openOppDeckModal()"></div>
           <div class="pi-ctr"><div class="lp-bar-wrap cpu" id="cpuBarWrap"></div></div>
           <span class="pi-token" id="cpuToken"></span>
@@ -1777,7 +1795,7 @@
         <div class="slot-row" id="youSlot"><div class="empty-slot">あなた</div></div>
         <div class="pinfo you" id="youCell">
           <span class="pi-role" id="youDealerTag">子</span>
-          <span class="pi-pt"><span class="pi-name" id="youNameLbl">あなた</span> <b id="youLP">0</b><span class="pt-unit">pt</span></span>
+          <span class="pi-pt"><span class="pi-name" id="youNameLbl">あなた</span> <b id="youLP">0</b><span class="pt-unit">pt</span><span class="lead-mark" id="youLeadMark"></span></span>
           <div class="deck-chip" id="deckBar" onclick="event.stopPropagation(); openDeckModal()"></div>
           <div class="pi-ctr"><div class="lp-bar-wrap you" id="youBarWrap"></div></div>
           <span class="pi-token" id="youToken"></span>
@@ -1786,6 +1804,7 @@
       </div>
       <div class="zone-wrap"><div class="zone-hint" id="youCardHint"></div></div>
       <div class="action-banner" id="actionBanner"><div class="ab-icon"></div><div class="ab-text"></div></div>
+      <div class="cpu-thinking" id="cpuThinking"><span class="ct-mask">🎭</span><span>相手 思考中</span><span class="ct-dots"><i></i><i></i><i></i></span></div>
       <div class="kaos-flash" id="kaosFlash"><div class="kf-label"></div></div>
       <div class="air-flash" id="airFlash"><div class="kf-label"></div></div>
       <div class="center-toast" id="centerToast"></div>
@@ -2289,6 +2308,8 @@ function showRoundStartModal(){
   if(tipEl){ const t=onboardTip(); tipEl.innerHTML=t; tipEl.style.display = t ? 'block' : 'none'; }
   document.getElementById('roundStartModal').classList.add('show');
 }
+function showCpuThinking(){ const el=document.getElementById('cpuThinking'); if(el) el.classList.add('show'); }
+function hideCpuThinking(){ const el=document.getElementById('cpuThinking'); if(el) el.classList.remove('show'); }
 function beginRoundPlay(){
   document.getElementById('roundStartModal').classList.remove('show');
   if(youIsDealer){
@@ -2297,7 +2318,8 @@ function beginRoundPlay(){
   } else {
     phase='wait';
     renderHand(); renderActions();
-    setTimeout(cpuActAsDealer, 500);
+    showCpuThinking();
+    setTimeout(cpuActAsDealer, 700);
   }
 }
 
@@ -2331,6 +2353,16 @@ function renderScore(){
   document.getElementById('roundN').textContent=round;
   document.getElementById('youLP').textContent=youLP;
   document.getElementById('cpuLP').textContent=cpuLP;
+  // 得点リードを一目で: リード側の点数を強調し「▲リード N」を表示
+  { const yEl=document.getElementById('youLP'), cEl=document.getElementById('cpuLP');
+    const yM=document.getElementById('youLeadMark'), cM=document.getElementById('cpuLeadMark');
+    const diff=youLP-cpuLP;
+    if(yEl&&cEl){ yEl.classList.toggle('leading', diff>0); cEl.classList.toggle('leading', diff<0); }
+    if(yM&&cM){
+      yM.textContent = diff>0 ? `▲ +${diff}` : ''; yM.classList.toggle('show', diff>0);
+      cM.textContent = diff<0 ? `▲ +${-diff}` : ''; cM.classList.toggle('show', diff<0);
+    }
+  }
   { const yn=document.getElementById('youNameLbl'); if(yn) yn.textContent=youDisplayName();
     const cn=document.getElementById('cpuNameLbl'); if(cn) cn.textContent=cpuMaskName(); }
   // 戦略カウンターの増減を検出して演出(前回描画時との差分)
@@ -2893,18 +2925,21 @@ function playYouCard(idx){
     renderYouSlot(card);
     hint('相手が子として札を選んでいます…');
     phase='wait'; renderHand(); renderActions();
-    setTimeout(cpuActAsChild, 700);
+    showCpuThinking();
+    setTimeout(cpuActAsChild, 800);
   } else {
     childCard=card;
     renderYouSlot(card);
     hint('相手（親）が判断しています…');
     phase='wait'; renderHand(); renderActions();
-    setTimeout(cpuDecide, 700);
+    showCpuThinking();
+    setTimeout(cpuDecide, 800);
   }
 }
 
 // ===== CPUが親として最初に出す =====
 function cpuActAsDealer(){
+  hideCpuThinking();
   const idx=cpuChooseCard(cpuHand, null);
   const card=cpuHand.splice(idx,1)[0]; card.owner='cpu';
   dealerCard=card;
@@ -2927,6 +2962,7 @@ function showChildCoach(oppNum){
 
 // ===== CPUが子として、親(あなた)の数字を見て出す =====
 function cpuActAsChild(){
+  hideCpuThinking();
   const idx=cpuChooseCard(cpuHand, dealerCard.num);
   const card=cpuHand.splice(idx,1)[0]; card.owner='cpu';
   childCard=card;
@@ -3097,6 +3133,7 @@ function cpuDealerLeadValue(c){
 
 // ===== CPUが親として、勝負するか決める(推理+LP状況+戦略パターン考慮) =====
 function cpuDecide(){
+  hideCpuThinking();
   const S=cpuStrategy, lm=scoreMultiplier(); // 終盤2倍を意識(勝ちの価値・負けの痛みが倍)
   // 親の特権「入替」: 子の数字を見てから、より期待値の高い札があれば入替を検討(1ラウンド1回まで)
   if(!cpuSwapUsedThisRound && cpuTrust>=SWAP_COST && cpuHand.length>0){
@@ -3654,8 +3691,12 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.41.0';
+const GAME_VERSION = 'v0.42.0';
 const CHANGELOG = [
+  { version:'v0.42.0', date:'2026-07-14', items:[
+    'CPUの手番に「🎭 相手 思考中 …」インジケータを表示（考えている間が分かり、テンポが良くなる）。',
+    '得点のリードを可視化：リードしている側の点数を強調し「▲ +N」バッジを表示（数字を読まなくても優勢が一目で分かる）。',
+  ]},
   { version:'v0.41.0', date:'2026-07-14', items:[
     'トップページのレイアウトを整理：上部のボタンを「🎓ミッションで学ぶ＋⚔️上級」と「🏅実績／📖遊び方／📜ルール」の2段に整頓し、折り返しの崩れを解消（更新履歴はタイトル「MASKD」タップで開けるため統合）。',
     '結果画面のレイアウトを見直し：勝敗・最終スコア・MVP・連勝・実績を上部にまとめ、各ラウンドの内訳／残り手札／統計は「📊 …を見る」で折りたたみに。初期表示を短くして「もう一度」までスクロールせず届くように。',
