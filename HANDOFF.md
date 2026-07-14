@@ -92,7 +92,8 @@
 - v0.34.0: 勝敗演出のジュース化（3Dめくり `flipIn`／設置 `card-place`／決着インパクト `fireImpact`＋ハプティクス）。`prefers-reduced-motion` で抑制。
 - v0.35.0: リザルト/統計拡充（MVPカード・勝率・連勝＝`computeGameMVP`/`computeStreaksAndRate`）＋ 決戦/撤退の公開演出中のnull参照に安全装置。
 - v0.36.0: 初心者オンボーディング（初回R1〜R3のみラウンド開始モーダルに「🔰今回のポイント」＝`onboardTip`/`ONBOARD_KEY`）。
-- **v0.37.0（現在）**: **ミッション形式チュートリアル**（実際に操作して学ぶ6ミッション）。データ＝`TUT_MISSIONS`、エンジン＝`openMissions`/`renderMission`/`tutPlayCard`/`tutDecide`/`tutFinish`、専用オーバーレイ `#tutMissionOverlay`（本編エンジンとは独立、`judge()`で答え合わせ）。タイトルの「🎓 ミッションで学ぶ」から起動。`MISSIONS_DONE_KEY`。
+- v0.37.0: **ミッション形式チュートリアル**（実際に操作して学ぶ）。データ＝`TUT_MISSIONS`、エンジン＝`openMissions`/`renderMission`/`tutPlayCard`/`tutDecide`/`tutFinish`、専用オーバーレイ `#tutMissionOverlay`（本編エンジンとは独立、`judge()`で答え合わせ）。タイトルの「🎓 ミッションで学ぶ」から起動。`MISSIONS_DONE_KEY`。
+- **v0.38.0（現在）**: ①初回ウェルカム画面 `#welcomeModal`＋`welcomeChoose()`（初回はスライド自動表示をやめ、ミッション/遊び方/対戦を選択）。②ミッション追加で全8問に（role `swap`＝入替、`strict`＝温存判定を engine に追加）。③**効果音**（WebAudio合成、`sfx(name)`/`toggleSound()`、キー `maskd_sound`、フッター `#soundToggle`）。フック: `fireImpact`(win/lose)・`resolveFightJudge`(draw)・`fireKaosFlash`/`fireAirFlash`・`playYouCard`・`tutShowResult`/`tutPlayCard`。
 
 ## 9. 次にやり得ること（未確定・候補）
 

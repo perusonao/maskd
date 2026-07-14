@@ -1574,6 +1574,19 @@
     </div>
   </div>
 
+  <!-- 初回プレイの案内(ミッションへ誘導) -->
+  <div class="tutm-overlay" id="welcomeModal">
+    <div class="tutm-box" style="max-width:340px;">
+      <div class="tutm-head"><span class="tutm-title" style="text-align:center;flex:1;">MASKD へようこそ</span></div>
+      <div class="tutm-intro" style="text-align:center;margin-top:12px;">仮面舞踏会の<b>心理戦・推理カードゲーム</b>。<br>まずは<b>ミッション</b>で、操作とルールを手を動かして覚えるのがおすすめです。</div>
+      <div class="tutm-controls" style="flex-direction:column;margin-top:16px;">
+        <div class="btn" style="width:100%;" onclick="welcomeChoose('missions')">🎓 ミッションで学ぶ（おすすめ）</div>
+        <div class="btn ghost" style="width:100%;" onclick="welcomeChoose('slides')">📖 遊び方を読む</div>
+        <div class="btn ghost" style="width:100%;" onclick="welcomeChoose('play')">すぐに対戦する</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ミッション形式のチュートリアル(実際に操作しながらルールを覚える) -->
   <div class="tutm-overlay" id="tutMissionOverlay">
     <div class="tutm-box">
@@ -1776,6 +1789,7 @@
     <div class="top-right">
       <div class="grid-btn toggle-btn" id="styleToggle" onclick="toggleCardStyle()" title="カードの表示を切り替え"></div>
       <div class="grid-btn toggle-btn" id="hintToggle" onclick="toggleHints()" title="ヒント表示の切り替え"></div>
+      <div class="grid-btn toggle-btn" id="soundToggle" onclick="toggleSound()" title="効果音の切り替え"></div>
       <div class="grid-btn" onclick="openRules()">ルール</div>
       <div class="grid-btn" onclick="openTracker()">一覧表</div>
       <div class="grid-btn" onclick="openHistory()">履歴 ↺</div>
@@ -1961,6 +1975,8 @@ function updateFooterToggles(){
   if(s) s.textContent = (cardStyle==='beginner') ? '🎴 初心者' : '🎴 上級者';
   const h=document.getElementById('hintToggle');
   if(h){ h.textContent = hintsEnabled ? '💡 ヒントON' : '💡 ヒントOFF'; h.classList.toggle('off', !hintsEnabled); }
+  const sd=document.getElementById('soundToggle');
+  if(sd){ sd.textContent = sfxEnabled ? '🔊 音ON' : '🔇 音OFF'; sd.classList.toggle('off', !sfxEnabled); }
 }
 // (initCpuSettingUI()はスクリプト末尾で呼び出す。変数宣言より先に実行されるのを防ぐため)
 
@@ -2656,6 +2672,45 @@ function numBadge(num, sz){ return `<span class="cnum-badge ${sz||''}">${num}</s
 let cardStyle='beginner';
 try{ cardStyle=(localStorage.getItem('maskd_cardstyle')||'beginner')==='rich'?'rich':'beginner'; }catch(e){}
 function useRichCards(){ return hasCardImg() && cardStyle==='rich'; }
+
+// ===== 効果音(WebAudioで合成。音声ファイル不要でindex.html単体を維持) =====
+let sfxEnabled=true; try{ sfxEnabled=(localStorage.getItem('maskd_sound')||'on')!=='off'; }catch(e){}
+let _actx=null;
+function _audioCtx(){
+  if(!_actx){ try{ _actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } }
+  if(_actx && _actx.state==='suspended'){ try{ _actx.resume(); }catch(e){} }
+  return _actx;
+}
+function _tone(freq, start, dur, type, peak){
+  const ac=_audioCtx(); if(!ac) return;
+  const o=ac.createOscillator(), g=ac.createGain();
+  o.type=type||'sine'; o.frequency.value=freq;
+  const t=ac.currentTime+start;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak||0.18, t+0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+dur+0.03);
+}
+function sfx(name){
+  if(!sfxEnabled) return;
+  if(!_audioCtx()) return;
+  switch(name){
+    case 'select': _tone(660,0,0.06,'triangle',0.10); break;
+    case 'place':  _tone(300,0,0.07,'sine',0.16); _tone(150,0,0.10,'sine',0.10); break;
+    case 'win':    [523.25,659.25,783.99,1046.5].forEach((f,i)=>_tone(f,i*0.08,0.24,'triangle',0.15)); break;
+    case 'lose':   _tone(220,0,0.5,'sawtooth',0.13); _tone(146,0.06,0.55,'sawtooth',0.11); break;
+    case 'draw':   _tone(392,0,0.16,'sine',0.13); _tone(392,0.11,0.2,'sine',0.09); break;
+    case 'kaos':   _tone(174,0,0.42,'sawtooth',0.15); _tone(184,0,0.44,'square',0.08); break;
+    case 'air':    _tone(880,0,0.5,'sine',0.09); _tone(1320,0.05,0.45,'sine',0.05); break;
+    case 'button': _tone(520,0,0.05,'triangle',0.08); break;
+  }
+}
+function toggleSound(){
+  sfxEnabled=!sfxEnabled;
+  try{ localStorage.setItem('maskd_sound', sfxEnabled?'on':'off'); }catch(e){}
+  updateFooterToggles();
+  if(sfxEnabled) sfx('select'); // ONにした合図
+}
 const BEG_RPS={moon:'✊',dark:'✌️',sun:'✋'};   // 大きく表示するじゃんけん(絵文字表現)
 const ROLE_LABEL={kaos:'特殊', air:'引分'};      // じゃんけん外の属性の役割
 // 候補属性をモード対応で描画: 初心者は月/闇/太陽を「じゃんけん」、Kaos/Airは小アイコン。上級者は全て小アイコン。
@@ -2739,6 +2794,7 @@ function fireKaosFlash(label){
   fl.querySelector('.kf-label').textContent=label||'混沌';
   fl.classList.remove('fire'); void fl.offsetWidth; // アニメ再始動
   fl.classList.add('fire');
+  sfx('kaos');
   try{ if(navigator.vibrate) navigator.vibrate([0,20,30,20]); }catch(e){}
   setTimeout(()=>fl.classList.remove('fire'), 950);
 }
@@ -2748,10 +2804,12 @@ function fireAirFlash(label){
   fl.querySelector('.kf-label').textContent=label||'AIR';
   fl.classList.remove('fire'); void fl.offsetWidth;
   fl.classList.add('fire');
+  sfx('air');
   setTimeout(()=>fl.classList.remove('fire'), 1000);
 }
 // 決着の「ドン！」: 盤面を短く揺らし、勝敗色の光を弾けさせ、端末を軽く振動させる
 function fireImpact(kind){ // kind: 'win' | 'lose'
+  sfx(kind==='win'?'win':'lose');
   const field=document.querySelector('.field'); if(!field) return;
   field.classList.remove('impact'); void field.offsetWidth; field.classList.add('impact');
   const fl=document.createElement('div'); fl.className='impact-flash '+kind; field.appendChild(fl);
@@ -2793,6 +2851,7 @@ function refillCpuHand(){
 function playYouCard(idx){
   const card=youHand.splice(idx,1)[0];
   card.owner='you';
+  sfx('place');
   youCardPeeking=false;
   clearCoach();
   showYouCardHint(card.num);
@@ -3346,7 +3405,7 @@ function resolveFightJudge(){
         : '';
 
       if(result==='draw'){
-        cls='draw'; title='引き分け';
+        cls='draw'; title='引き分け'; sfx('draw');
         detail=`${ALABEL[dealerCard.attr]}(親) と ${ALABEL[childCard.attr]}(子)<br>${why}<br>得点増減なし${airBonusNote}`;
       } else {
         const dealerIsYou = dealerCard.owner==='you';
@@ -3562,8 +3621,13 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.37.0';
+const GAME_VERSION = 'v0.38.0';
 const CHANGELOG = [
+  { version:'v0.38.0', date:'2026-07-14', items:[
+    '初回プレイの案内を刷新：起動時にスライドを自動表示する代わりに、<b>「🎓 ミッションで学ぶ（おすすめ）／遊び方を読む／すぐに対戦」</b>を選べるウェルカム画面を表示。実践で覚えたい人をミッションへ誘導。',
+    'ミッションを2つ追加（全8問に）：<b>♻️ 入替で逆転</b>（親が子の数字を見て有利な札に差し替える）と <b>🏆 高い札を温存</b>（勝てる時は低い札で済ませ、高い札を残り手札ボーナスへ回す）。',
+    '効果音を追加：カードを出す/決戦の勝ち・負け・引き分け/Kaos・Air発動/ミッション正誤などに、<b>WebAudioで合成した効果音</b>（音声ファイル不要）。フッターの <b>🔊音ON/🔇音OFF</b> でいつでも切替（設定は保存）。',
+  ]},
   { version:'v0.37.0', date:'2026-07-14', items:[
     'ミッション形式のチュートリアルを追加：読むだけでなく、<b>実際にカードを出して操作とルールを覚える</b>6つのミッション（①基本操作 ②じゃんけん＝3すくみ ③同属性は数字勝負 ④不利なら撤退 ⑤Kaosの特殊効果 ⑥Airで引き分け）。本物の勝敗判定で答え合わせし、間違えると理由つき解説＋おすすめ札を表示してリトライ可。タイトルの「🎓 ミッションで学ぶ」から開始。',
   ]},
@@ -4022,9 +4086,17 @@ function openTutorial(){ tutStep=0; renderTutStep(); document.getElementById('tu
 function closeTutorial(){ document.getElementById('tutorialOverlay').classList.remove('show'); try{ localStorage.setItem(TUT_KEY,'1'); }catch(e){} }
 function tutNext(){ if(tutStep>=TUTORIAL_STEPS.length-1){ closeTutorial(); return; } tutStep++; renderTutStep(); }
 function tutPrev(){ if(tutStep>0){ tutStep--; renderTutStep(); } }
+// 初回プレイ: スライドを自動表示する代わりに「ミッションで学ぶ」を薦める案内を出す
 function maybeShowTutorialFirstTime(){
   let seen=false; try{ seen=localStorage.getItem(TUT_KEY)==='1'; }catch(e){}
-  if(!seen) setTimeout(openTutorial, 450);
+  if(!seen) setTimeout(()=>{ const w=document.getElementById('welcomeModal'); if(w) w.classList.add('show'); }, 450);
+}
+function welcomeChoose(what){
+  try{ localStorage.setItem(TUT_KEY,'1'); }catch(e){} // 初回案内は一度きり
+  const w=document.getElementById('welcomeModal'); if(w) w.classList.remove('show');
+  if(what==='missions') openMissions();
+  else if(what==='slides') openTutorial();
+  // 'play' はそのまま設定画面へ
 }
 
 // ===== ミッション形式チュートリアル(実際に操作しながらルールを覚える) =====
@@ -4066,6 +4138,18 @@ const TUT_MISSIONS=[
     objective:'相手は強力な <b class="dark">DARK✌5</b>。まともにぶつかると負け。被害を防ぐには？',
     okMsg:'正解！<b class="air">Air</b>で<b>引き分け</b>に持ち込み、5点の失点を回避（さらに戦略カウンター+1）。守りの名手です。',
     ngMsg:'<b class="sun">SUN✋1</b>は<b class="dark">DARK✌</b>に負けます（闇✌＞太陽✋）。勝てない相手は<b class="air">Air</b>で引き分けに持ち込みましょう。' },
+  { icon:'♻️', title:'入替で逆転', role:'swap',
+    intro:'親は<b>入替</b>で、子の数字を見てから自分の札を<b>より強い1枚に交換</b>できます（戦略カウンター−2で決戦確定）。',
+    you:{attr:'moon',num:1}, cpu:{attr:'sun',num:2}, hand:[{attr:'dark',num:3},{attr:'moon',num:0}], goal:'win', correct:0,
+    objective:'今のあなたは <b class="moon">MOON✊1</b>で、相手の <b class="sun">SUN✋2</b> に負けそう…。どの札に入替える？',
+    okMsg:'正解！<b class="dark">DARK✌3</b>に入替えれば<b class="sun">SUN✋</b>に相性勝ち（闇✌＞太陽✋）。不利な手を有利な札へ差し替えるのが入替です。',
+    ngMsg:'<b class="moon">MOON✊0</b>だと<b class="sun">SUN✋</b>に負けたまま（太陽✋＞月✊）。ここは<b class="dark">DARK✌3</b>で相性勝ちを狙いましょう。' },
+  { icon:'🏆', title:'高い札を温存', role:'child', strict:true,
+    intro:'使わず残した手札は最後に<b>ボーナス点</b>（非Airの<b>上位2枚</b>＋Air各2点）。勝てる時は<b>低い札で済ませ</b>、高い札は温存しよう。',
+    cpu:{attr:'moon',num:2}, hand:[{attr:'moon',num:3},{attr:'moon',num:5}], goal:'win', correct:0,
+    objective:'相手は <b class="moon">MOON✊2</b>。<b>勝ちつつ、高い札を残す</b>にはどちらで勝つ？',
+    okMsg:'正解！<b class="moon">MOON✊3</b>で十分勝てます。最強の<b>5</b>は温存して<b>残り手札ボーナス</b>に回すのが上手い戦い方。',
+    ngMsg:'<b class="moon">MOON✊5</b>でも勝てますが、<b>5は貴重なボーナス札</b>。勝てるなら<b>低い札（3）</b>で済ませ、5は温存しましょう。' },
 ];
 const MISSIONS_DONE_KEY='maskd_missions_done_v1';
 let tutMi=0, tutLocked=false;
@@ -4091,11 +4175,13 @@ function renderMission(){
   const cpuSlot=document.getElementById('tutmCpuSlot'), youSlot=document.getElementById('tutmYouSlot');
   const hand=document.getElementById('tutmHand'), actions=document.getElementById('tutmActions');
   hand.className='tutm-hand'; hand.innerHTML=''; actions.innerHTML='';
-  if(m.role==='child'){
-    document.getElementById('tutmCpuLbl').textContent='相手（親）';
-    document.getElementById('tutmYouLbl').textContent='あなた（子）';
+  if(m.role==='child' || m.role==='swap'){
+    const isSwap=(m.role==='swap');
+    document.getElementById('tutmCpuLbl').textContent=isSwap?'相手（子）':'相手（親）';
+    document.getElementById('tutmYouLbl').textContent=isSwap?'あなた（親）':'あなた（子）';
     cpuSlot.className='tutm-slot'; cpuSlot.innerHTML=tutCardHTML(m.cpu);
-    youSlot.className='tutm-slot empty'; youSlot.innerHTML='？';
+    if(isSwap){ youSlot.className='tutm-slot'; youSlot.innerHTML=tutCardHTML(m.you); } // 現在の親札を表示(入替で差し替わる)
+    else { youSlot.className='tutm-slot empty'; youSlot.innerHTML='？'; }
     m.hand.forEach((c,i)=>{
       const el=document.createElement('div'); el.className='tutm-card'; el.innerHTML=tutCardHTML(c);
       el.onclick=()=>tutPlayCard(i); hand.appendChild(el);
@@ -4114,6 +4200,7 @@ function renderMission(){
 }
 function tutShowResult(success, chosenCardEl){
   tutLocked=true;
+  sfx(success?'win':'lose');
   const m=TUT_MISSIONS[tutMi];
   const fb=document.getElementById('tutmFeedback');
   fb.className='tutm-feedback show '+(success?'ok':'ng');
@@ -4129,7 +4216,7 @@ function tutShowResult(success, chosenCardEl){
     ctrl.appendChild(next);
   } else {
     // 不正解: 正解カードを示してもう一度
-    if(m.role==='child'){ const cards=document.querySelectorAll('#tutmHand .tutm-card'); if(cards[m.correct]) cards[m.correct].classList.add('correct'); }
+    if(m.role==='child' || m.role==='swap'){ const cards=document.querySelectorAll('#tutmHand .tutm-card'); if(cards[m.correct]) cards[m.correct].classList.add('correct'); }
     const retry=document.createElement('div'); retry.className='btn ghost'; retry.textContent='もう一度';
     retry.onclick=()=>renderMission();
     ctrl.appendChild(retry);
@@ -4138,13 +4225,16 @@ function tutShowResult(success, chosenCardEl){
 function tutPlayCard(i){
   if(tutLocked) return;
   const m=TUT_MISSIONS[tutMi]; const c=m.hand[i];
+  sfx('place');
   const cards=document.querySelectorAll('#tutmHand .tutm-card');
   if(cards[i]) cards[i].classList.add('pick');
   document.getElementById('tutmYouSlot').className='tutm-slot';
   document.getElementById('tutmYouSlot').innerHTML=tutCardHTML(c);
-  const res=judge(m.cpu, c); // m.cpuが親、cが子
-  const win=(res==='child'), draw=(res==='draw');
-  const success=(m.goal==='win'&&win)||(m.goal==='draw'&&draw);
+  let win, draw;
+  if(m.role==='swap'){ const res=judge(c, m.cpu); win=(res==='dealer'); draw=(res==='draw'); } // あなた(親)がcで勝負
+  else { const res=judge(m.cpu, c); win=(res==='child'); draw=(res==='draw'); }               // 相手(親)cpu vs あなた(子)c
+  let success=(m.goal==='win'&&win)||(m.goal==='draw'&&draw);
+  if(m.strict) success = success && (i===m.correct); // 温存など「正解の1枚」まで問うミッション
   tutShowResult(success, cards[i]);
 }
 function tutDecide(fight){
