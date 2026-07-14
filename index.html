@@ -343,13 +343,16 @@
     border:1px solid rgba(201,162,74,.4); overflow:hidden; justify-content:flex-start;
   }
   .opp-card.facedown .opp-num{
-    position:relative; z-index:2; margin-top:2px;
+    position:relative; z-index:3; margin-top:2px;
     color:var(--gold-bright); text-shadow:0 1px 4px #000, 0 0 6px rgba(0,0,0,.85);
+    background:rgba(8,6,14,.6); border-radius:6px; padding:0 5px;
   }
   .opp-card.facedown .opp-poss{
     position:absolute; left:0; right:0; bottom:2px; z-index:2;
     padding:1px 2px; background:linear-gradient(0deg,rgba(8,6,14,.82),rgba(8,6,14,0));
+    flex-wrap:nowrap; overflow:hidden; /* 候補は必ず1行に収め、上部の数字を隠さない */
   }
+  .opp-card.facedown .opp-poss .opp-rps-g{ font-size:11px; }
   .opp-card .opp-num{ font-family:'Cormorant Garamond',serif; font-size:16px; font-weight:600; color:var(--ink); line-height:1; }
   .opp-card .opp-rps-g{ font-size:13px; line-height:1; filter:drop-shadow(0 1px 1px rgba(0,0,0,.75)); }
   .opp-card .opp-poss{ display:flex; gap:2px; flex-wrap:wrap; justify-content:center; align-items:center; min-height:12px; }
@@ -3932,8 +3935,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.45.0';
+const GAME_VERSION = 'v0.45.1';
 const CHANGELOG = [
+  { version:'v0.45.1', date:'2026-07-14', items:[
+    '不具合修正：v0.45.0で相手の伏せ札の候補記号を大きくした際、初心者表示で候補が複数行に折り返して<b>カード上部の数字を覆い隠していた</b>問題を修正。数字に専用の背景バッジを付けて常に読めるようにし、候補記号は<b>1行に固定</b>してカード下部に収めるよう調整。',
+  ]},
   { version:'v0.45.0', date:'2026-07-14', items:[
     'プレイヤーの疑問に対応（2点）。①<b>「相手の可能性」候補の見やすさ改善</b>：初心者表示で、これまで小さな点だった<b class="kaos">Kaos🌀</b>・<b class="air">Air🌬</b>を、じゃんけん記号（✊✌✋）と同じ大きさで表示。相手の伏せ札の候補（＝山札からあなたの札を除いた全属性）が漏れなく等しく見えるようにし、「予想に無い札が出た」という誤解を解消（候補は数学的に常に完全）。',
     '②<b>奇襲の発生条件を明確化</b>：奇襲は<b>相手（親）が撤退を選んだ時だけ</b>現れる子の一手だとメッセージ・ルール解説を改善。発生時は「⚡奇襲チャンス！相手が勝負を降りようとしている。戦略2で強制決戦」と明示し、戦略カウンター不足で出せない場合も理由を一言表示。',
