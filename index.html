@@ -1180,6 +1180,15 @@
   .match-summary.milestone{ border-color:rgba(201,162,74,.55); background:linear-gradient(180deg,rgba(201,162,74,.08),transparent);
     box-shadow:0 0 14px rgba(201,162,74,.12); }
   .match-summary.milestone .ms-row{ font-size:12px; }
+  /* 結果画面の詳細折りたたみ(初期表示を短く) */
+  .ov-details{ width:100%; max-width:340px; margin-top:10px; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .ov-details summary{ cursor:pointer; padding:11px 14px; font-size:12px; color:var(--gold-bright); background:rgba(201,162,74,.06); text-align:center; user-select:none; list-style:none; }
+  .ov-details summary::-webkit-details-marker{ display:none; }
+  .ov-details summary::before{ content:'▸ '; }
+  .ov-details[open] summary::before{ content:'▾ '; }
+  .ov-details[open] summary{ border-bottom:1px solid var(--line); }
+  .ov-details-body{ display:flex; flex-direction:column; align-items:center; padding:10px 10px 4px; gap:2px; }
+  .ov-details-body .round-points{ margin-top:6px; }
 
   /* 結果画面: 得点内訳テーブル(上からカウントアップ) */
   .score-tbl{ width:100%; max-width:300px; margin:6px auto 2px; }
@@ -1256,8 +1265,12 @@
     color:var(--ink-dim); letter-spacing:0; vertical-align:middle;
   }
   /* トップページの「ルール説明」「更新履歴」ボタン行(押すとモーダル表示) */
-  .top-info-btns{ display:flex; gap:8px; margin:8px 0; }
-  .top-info-btns .btn{ font-size:12px; }
+  .top-learn-btns{ display:flex; gap:8px; margin:10px 0 6px; }
+  .top-learn-btns .btn{ font-size:13px; padding:12px 6px; }
+  .top-learn-btns .btn:first-child{ flex:2.4; }
+  .top-learn-btns .btn:last-child{ flex:1; }
+  .top-info-btns{ display:flex; gap:6px; margin:0 0 8px; }
+  .top-info-btns .btn.mini{ flex:1; font-size:11.5px; padding:9px 2px; white-space:nowrap; }
   /* ルール説明モーダル内の書式(.instructionsのh3/ul/liスコープが効かないため個別指定) */
   .rules-body{ text-align:left; }
   .rules-body h3{ font-size:12px; color:var(--gold-bright); letter-spacing:0.1em; margin-top:14px; }
@@ -1441,13 +1454,14 @@
     <h2>MASKD <span class="version-inline" id="versionTagTop"></span></h2>
     <p class="lead">全8ラウンド、<b>毎ラウンド親が交代</b>。親は先に置き、子は後から置く。親だけが「決戦か撤退か」を決められる。</p>
 
-    <div class="top-info-btns">
+    <div class="top-learn-btns">
       <div class="btn" onclick="openMissions()">🎓 ミッションで学ぶ</div>
-      <div class="btn ghost" onclick="openMissions('advanced')">⚔️ 上級ミッション</div>
-      <div class="btn ghost" onclick="openAchievements()">🏅 実績</div>
-      <div class="btn ghost" onclick="openTutorial()">遊び方</div>
-      <div class="btn ghost" onclick="openRules()">ルール説明</div>
-      <div class="btn ghost" onclick="openChangelog()">更新履歴</div>
+      <div class="btn ghost" onclick="openMissions('advanced')">⚔️ 上級</div>
+    </div>
+    <div class="top-info-btns">
+      <div class="btn ghost mini" onclick="openAchievements()">🏅 実績</div>
+      <div class="btn ghost mini" onclick="openTutorial()">📖 遊び方</div>
+      <div class="btn ghost mini" onclick="openRules()">📜 ルール</div>
     </div>
 
     <h3>対戦相手の設定</h3>
@@ -3640,8 +3654,12 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.40.0';
+const GAME_VERSION = 'v0.41.0';
 const CHANGELOG = [
+  { version:'v0.41.0', date:'2026-07-14', items:[
+    'トップページのレイアウトを整理：上部のボタンを「🎓ミッションで学ぶ＋⚔️上級」と「🏅実績／📖遊び方／📜ルール」の2段に整頓し、折り返しの崩れを解消（更新履歴はタイトル「MASKD」タップで開けるため統合）。',
+    '結果画面のレイアウトを見直し：勝敗・最終スコア・MVP・連勝・実績を上部にまとめ、各ラウンドの内訳／残り手札／統計は「📊 …を見る」で折りたたみに。初期表示を短くして「もう一度」までスクロールせず届くように。',
+  ]},
   { version:'v0.40.0', date:'2026-07-14', items:[
     '<b>上級ミッション</b>を追加（本格派の4問）：🃏風を斬る刃（KaosはAirを斬る）、⚖️同値の落とし穴（Kaosは同値だと負け）、🌪️Airの過信（AirはKaosに通じない）、🎯三択の見極め（相性＞数字を総合判断）。タイトルの「⚔️ 上級ミッション」から挑戦。',
     '<b>実績を6種追加（全18種に）</b>：🎖️上級突破・💯完全試合（決戦で無敗勝利）・🔄大逆転（4点差から勝利）・🌫️風の使い手（Air3回使用）・🏛️百戦の猛者・🏵️覇者（勝率70%）。',
@@ -4922,17 +4940,23 @@ function endGame(){
     <div class="ms-row" style="justify-content:center;color:var(--gold-bright);font-weight:700;">🎉 実績を解除！</div>
     ${newAch.map(a=>`<div class="ms-row"><span>${a.icon} ${a.title}</span><span>${a.desc}</span></div>`).join('')}
   </div>` : '';
+  // 要点（MVP・通算・実績）は上部に。細かい内訳は折りたたみで初期表示を短く。
   const extra=`<div id="ovExtra">
     ${milestoneSection}
     ${achSection}
-    ${roundSection}
-    ${remainSection}
-    <div class="match-summary">
-      <div class="ms-row"><span>勝敗</span><span>あなた${s.youWins}勝 － ${s.cpuWins}勝相手 （引分${s.draws}）</span></div>
-      <div class="ms-row"><span>撤退回数</span><span>${s.passes}回</span></div>
-      <div class="ms-row"><span>Air使用</span><span>あなた${s.youAir}回 ／ 相手${s.cpuAir}回</span></div>
-      <div class="ms-row"><span>Kaos使用</span><span>あなた${s.youKaos}回 ／ 相手${s.cpuKaos}回</span></div>
-    </div>
+    <details class="ov-details">
+      <summary>📊 各ラウンドの内訳・残り手札・統計を見る</summary>
+      <div class="ov-details-body">
+        ${roundSection}
+        ${remainSection}
+        <div class="match-summary">
+          <div class="ms-row"><span>勝敗</span><span>あなた${s.youWins}勝 － ${s.cpuWins}勝相手 （引分${s.draws}）</span></div>
+          <div class="ms-row"><span>撤退回数</span><span>${s.passes}回</span></div>
+          <div class="ms-row"><span>Air使用</span><span>あなた${s.youAir}回 ／ 相手${s.cpuAir}回</span></div>
+          <div class="ms-row"><span>Kaos使用</span><span>あなた${s.youKaos}回 ／ 相手${s.cpuKaos}回</span></div>
+        </div>
+      </div>
+    </details>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;width:100%;max-width:300px;">
       <div class="btn ghost" style="white-space:nowrap;padding:10px 4px;flex:1 1 45%;" onclick="openAchievements()">🏅 実績</div>
       <div class="btn ghost" style="white-space:nowrap;padding:10px 4px;flex:1 1 45%;" onclick="openStats()">通算統計</div>
