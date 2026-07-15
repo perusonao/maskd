@@ -1464,6 +1464,16 @@
   .star-item .st-new{ margin-left:auto; font-size:9px; font-weight:700; color:#1a1608; background:var(--gold-bright); padding:1px 6px; border-radius:6px; }
   .star-clear{ text-align:center; color:var(--gold-bright); font-weight:700; font-size:12.5px; margin-top:6px; }
   .star-newnote{ text-align:center; color:var(--gold-bright); font-size:12px; margin-top:8px; }
+  /* レベル解放の演出ブロック */
+  .unlock-block{ margin:12px auto 0; max-width:320px; padding:12px 14px; border-radius:12px; text-align:center;
+    border:1px solid var(--gold-bright); background:linear-gradient(180deg,rgba(201,162,74,.16),rgba(201,162,74,.05));
+    box-shadow:0 0 18px rgba(201,162,74,.25); animation:confirmPop .35s ease; }
+  .unlock-block .ub-h{ font-size:14px; color:var(--gold-bright); font-weight:700; }
+  .unlock-block .ub-h b{ font-size:16px; letter-spacing:1px; }
+  .unlock-block .ub-line{ font-size:11.5px; color:#d8c9a6; line-height:1.6; margin-top:5px; }
+  .unlock-block .ub-learn{ margin-top:8px; font-size:11.5px; color:var(--gold-bright); cursor:pointer;
+    border:1px solid rgba(201,162,74,.5); border-radius:8px; padding:5px 10px; display:inline-block; }
+  .unlock-block .ub-learn:active{ background:rgba(201,162,74,.2); }
   /* ===== 仮面あて(予想)チップ ===== */
   .pred-lb{ font-size:11px; color:var(--gold-bright); margin-right:4px; }
   .pred-row{ display:inline-flex; align-items:center; gap:5px; vertical-align:middle; }
@@ -2573,8 +2583,10 @@ function saveProgress(o){ try{ localStorage.setItem(PROGRESS_KEY, JSON.stringify
 function updateProgress(levelKey, win){
   const p=loadProgress();
   p.readHitsTotal += youReadHits;
-  if(win) p.rivalBeaten[levelKey]=true;
+  let newBeat=false;
+  if(win && !p.rivalBeaten[levelKey]){ p.rivalBeaten[levelKey]=true; newBeat=true; }
   saveProgress(p);
+  return { newBeat };
 }
 function buildTitleCtx(){
   const stars={ beginner:starCount('beginner'), inter:starCount('inter'), adv:starCount('adv') };
@@ -2653,8 +2665,9 @@ function endPracticeMode(youFinal, cpuFinal, st){
   const meta=LEVEL_META[levelKey];
   const ctx=buildStarCtx(youFinal, cpuFinal);
   const res=applyStars(levelKey, ctx);
-  updateProgress(levelKey, win);           // 見破り累計・ライバル撃破を記録
+  const prog=updateProgress(levelKey, win); // 見破り累計・ライバル撃破を記録
   const freshTitles=unlockTitles();        // 称号アンロック判定
+  const unlock = (win && prog.newBeat) ? UNLOCKS[levelKey] : null; // 初撃破で次レベル解放
   const rivalLine = win?meta.rival.win : (draw?'引き分け。次こそ決着を。':meta.rival.lose);
   const gotNew = res.newly.some(Boolean);
   stageConfig=null; deckAttrs=ATTRS5; matchRounds=TOTAL_ROUNDS; // 本戦に影響しないよう解除
@@ -2669,9 +2682,14 @@ function endPracticeMode(youFinal, cpuFinal, st){
     ${starBlockHTML(levelKey, res)}
     ${gotNew?'<div class="star-newnote">🎉 新しい★を獲得！</div>':''}
     ${freshTitles.length?`<div class="star-newnote">🎖 称号アンロック：${freshTitles.map(t=>t.name).join('・')}</div>`:''}
-    <div class="tutm-intro" style="margin-top:8px;text-align:center;font-size:11px;">練習モードは通算成績・実績には記録しません（★は保存されます）。成績を残すなら<b>上級2（本戦）</b>へ。</div>
+    ${unlock?`<div class="unlock-block">
+      <div class="ub-h">🎉 新しい札が解放！ <b>${unlock.element}</b></div>
+      <div class="ub-line">${unlock.line}</div>
+      ${unlock.missionIdx!=null?`<div class="ub-learn" onclick="openMissionLesson(${unlock.missionIdx})">▷ ${unlock.element}を1問で学ぶ</div>`:''}
+    </div>`:''}
     <div class="tutm-controls" style="flex-direction:column;margin-top:12px;">
-      <div class="btn" style="width:100%;" onclick="replayPractice()">もう一度</div>
+      ${unlock?`<div class="btn" style="width:100%;" onclick="challengeNextLevel('${unlock.next}')">▶ ${unlock.nextName}に挑戦</div>`:''}
+      <div class="btn ${unlock?'ghost':''}" style="width:100%;" onclick="replayPractice()">もう一度</div>
       <div class="btn ghost" style="width:100%;" onclick="backToTitle()">モード選択にもどる</div>
     </div>`;
   document.getElementById('learnOverlay').classList.add('show');
@@ -4635,8 +4653,12 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.53.0';
+const GAME_VERSION = 'v0.54.0';
 const CHANGELOG = [
+  { version:'v0.54.0', date:'2026-07-15', items:[
+    '<b>チュートリアルを核だけに短縮（オンボーディングその2）</b>：基本ミッションを11問→<b>核4問</b>（出す・じゃんけん・数字・親の決戦/撤退）に。Air・Kaos・入替・奇襲・終盤などは、そのレベルに到達した時に<b>1問だけ学ぶ</b>（just-in-time）形へ。上級4問は任意の腕試しのまま。',
+    '<b>レベル解放の演出（その3）</b>：初級のライバルに勝つと<b>「🎉 新しい札が解放：AIR」</b>、中級を勝つと<b>KAOS</b>が解放。その場で「▷ 1問で学ぶ」ミニレッスンと「▶ 次のレベルに挑戦」へ進める。遊びながら少しずつ覚える導線に。',
+  ]},
   { version:'v0.53.0', date:'2026-07-15', items:[
     '<b>初回体験を「遊びながら」へ（オンボーディング再設計・その1）</b>：新機能は追加せず、既存の段階システムを初見の既定ルートに配線。<b>初めての人は「対戦する」でモード画面を飛ばして初級（3色・基本）へ直行</b>し、いきなり全ルールを浴びない形に。',
     'ゲームモードの<b>既定を進行度で自動繰り上げ</b>：新規＝初級／ライバルを倒すごとに中級・上級・本戦へと既定が上がる（手動で選べば従来通りその設定を優先）。',
@@ -5194,24 +5216,24 @@ function welcomeChoose(what){
 // role:'child' … 相手(親)の札cpuに対し、手札handから1枚選んでgoal(勝ち/引分)を達成する
 // role:'dealerDecide' … あなた(親)の札youと相手(子)の札cpuを見て、決戦/撤退を選ぶ
 const TUT_MISSIONS=[
-  { icon:'🎴', title:'出してみよう', role:'child',
+  { icon:'🎴', title:'出してみよう', role:'child', core:true,
     intro:'まずは基本操作。<b>手札のカードをタップ</b>すると場に出せます。相手の札より強い1枚を出してみましょう。',
     cpu:{attr:'sun',num:2}, hand:[{attr:'dark',num:3}], goal:'win', correct:0,
     objective:'相手は <b class="sun">SUN✋2</b>。手札の <b class="dark">DARK✌3</b> をタップして出そう。',
     okMsg:'できました！<b class="dark">DARK✌</b>は<b class="sun">SUN✋</b>に勝ちます（闇✌＞太陽✋）。これがカードの出し方です。' },
-  { icon:'✊', title:'じゃんけんで勝つ', role:'child',
+  { icon:'✊', title:'じゃんけんで勝つ', role:'child', core:true,
     intro:'異なる属性どうしは<b>じゃんけん（3すくみ）</b>で決まり、<b>数字は関係ありません</b>。<br>月✊＞闇✌＞太陽✋＞月…',
     cpu:{attr:'sun',num:4}, hand:[{attr:'moon',num:5},{attr:'dark',num:1}], goal:'win', correct:1,
     objective:'相手は <b class="sun">SUN✋4</b>。じゃんけんで<b>勝てる</b>のはどっち？',
     okMsg:'正解！<b class="dark">DARK✌1</b>は数字が低くても<b class="sun">SUN✋</b>に勝ちます。異属性は<b>じゃんけんが最優先</b>です。',
     ngMsg:'惜しい！<b class="moon">MOON✊5</b>は数字は高いけれど<b class="sun">SUN✋</b>に負けます（太陽✋＞月✊）。数字より<b>じゃんけんの相性</b>が大事。' },
-  { icon:'🔢', title:'数字で勝つ（同属性）', role:'child',
+  { icon:'🔢', title:'数字で勝つ（同属性）', role:'child', core:true,
     intro:'<b>同じ属性</b>どうしがぶつかった時は、<b>数字が大きい方</b>が勝ちます。',
     cpu:{attr:'moon',num:2}, hand:[{attr:'moon',num:4},{attr:'dark',num:1}], goal:'win', correct:0,
     objective:'相手は <b class="moon">MOON✊2</b>。勝てる札はどっち？',
     okMsg:'正解！同属性の <b class="moon">MOON✊4</b> は数字で上回り勝ち。<br>（<b class="dark">DARK✌1</b>だと闇は月に負けます＝月✊＞闇✌）',
     ngMsg:'<b class="dark">DARK✌1</b>は<b class="moon">MOON✊</b>に負けます（月✊＞闇✌）。同属性なら<b>数字が大きい札</b>で勝てます。' },
-  { icon:'🏳', title:'不利なら撤退', role:'dealerDecide',
+  { icon:'🏳', title:'不利なら撤退', role:'dealerDecide', core:true,
     intro:'あなたは<b>親</b>。親だけが<b>決戦</b>（勝負）か<b>撤退</b>（見送り）を選べます。不利な時に撤退すれば<b>失点ゼロ</b>（戦略カウンター−1のみ）で切り抜けられます。',
     you:{attr:'sun',num:5}, cpu:{attr:'dark',num:2},
     objective:'あなたの <b class="sun">SUN✋5</b> vs 相手の <b class="dark">DARK✌2</b>。<br>闇✌は太陽✋に強い…さあどうする？',
@@ -5266,12 +5288,34 @@ let tutMi=0, tutLocked=false;
 let tutList=TUT_MISSIONS, tutSet='basic'; // 現在挑戦中のミッションセット
 // チュートリアル用のカード描画(常に初心者表示＝じゃんけん記号+数字+属性名で分かりやすく)
 function tutCardHTML(c){ return `<div class="card faceup bcard ${c.attr}">${beginnerInner(c)}</div>`; }
+// 基本チュートリアルは「核」だけに絞る(Air/Kaos/上級系は解放時のjust-in-timeで教える)
+const TUT_CORE=TUT_MISSIONS.filter(m=>m.core);
 function openMissions(which){
   tutSet = (which==='advanced') ? 'advanced' : 'basic';
-  tutList = (tutSet==='advanced') ? TUT_ADVANCED : TUT_MISSIONS;
+  tutList = (tutSet==='advanced') ? TUT_ADVANCED : TUT_CORE;
   tutMi=0;
   document.getElementById('tutMissionOverlay').classList.add('show');
   renderMission();
+}
+// 解放時などに、特定の1問だけを「その場で1つ学ぶ」ミニレッスンとして開く
+function openMissionLesson(idx){
+  const el=document.getElementById('learnOverlay'); if(el) el.classList.remove('show');
+  tutSet='lesson'; tutList=[TUT_MISSIONS[idx]]; tutMi=0;
+  document.getElementById('tutMissionOverlay').classList.add('show');
+  renderMission();
+}
+// レベル解放の定義(初級→中級=AIR / 中級→上級=KAOS)。本戦は最上位なので解放演出なし
+const UNLOCKS={
+  beginner:{ next:'r2', nextName:'中級', element:'AIR', line:'AIRが絡むと必ず引き分け。強い相手を受け流す「流れを止める札」です。', missionIdx:5 },
+  inter:{ next:'r3', nextName:'上級', element:'KAOS', line:'KAOSは属性を問わず数字勝負。0と1は最強の5を食う特殊札です。', missionIdx:4 },
+};
+// 解放時: 次レベルに挑戦(＝そのモードで即開始)
+function challengeNextLevel(rule){
+  const el=document.getElementById('learnOverlay'); if(el) el.classList.remove('show');
+  const rov=document.getElementById('resultOv'); if(rov) rov.classList.remove('show');
+  document.getElementById('overlay').classList.remove('show');
+  selectedRule=rule; selectedAction='basic';
+  beginMatchSetup();
 }
 function closeMissions(){ document.getElementById('tutMissionOverlay').classList.remove('show'); }
 function renderMission(){
