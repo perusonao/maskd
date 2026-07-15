@@ -1418,6 +1418,16 @@
   .home-settings-btn:active{ background:rgba(201,162,74,.14); }
   .home-settings-btn .hs-en{ font-size:8px; letter-spacing:2px; color:var(--ink-dim); }
   .home-settings-btn .hs-arrow{ margin-left:auto; color:var(--gold-dim); }
+  /* 画像ボタン(メニューを画像素材に差し替え) */
+  .home-cta-img{ width:100%; max-width:400px; aspect-ratio:830/174; cursor:pointer; margin-top:6px;
+    background:url(btn-duel.png) center/contain no-repeat; transition:transform .12s, filter .15s; }
+  .home-cta-img:active{ transform:scale(.99); filter:brightness(1.12); }
+  .home-menu .img-btn{ flex:1; min-width:0; aspect-ratio:346/146; cursor:pointer;
+    background-position:center; background-repeat:no-repeat; background-size:contain; transition:transform .12s, filter .15s; }
+  .home-menu .img-btn:active{ transform:scale(.98); filter:brightness(1.16); }
+  .home-set-img{ width:100%; max-width:400px; aspect-ratio:1070/110; cursor:pointer;
+    background:url(btn-setting.png) center/contain no-repeat; transition:filter .15s; }
+  .home-set-img:active{ filter:brightness(1.12); }
   .home-toast{ position:fixed; left:50%; bottom:15%; transform:translate(-50%,10px); z-index:60;
     padding:10px 18px; border-radius:999px; font-size:12.5px; color:var(--ink); white-space:nowrap;
     background:rgba(8,6,14,.92); border:1px solid rgba(201,162,74,.45); box-shadow:0 6px 20px rgba(0,0,0,.5);
@@ -1653,23 +1663,20 @@
 
     <div class="mask-fan" id="maskFan"></div>
 
-    <div class="home-cta" onclick="openMatchSetup()">
-      <div class="hc-jp"><span class="hc-ic">⚔</span> 対戦する</div>
-      <div class="hc-en">START DUEL</div>
-    </div>
+    <div class="home-cta-img" onclick="openMatchSetup()" role="button" tabindex="0" aria-label="対戦する START DUEL"></div>
     <div class="home-learn-link" onclick="openLearnLadder()">🎓 はじめての対戦（段階で覚える）</div>
 
     <div class="home-menu">
-      <div class="hm-btn" onclick="openMissions()"><span class="hm-ic">🎯</span><span class="hm-tx"><span class="hm-jp">ミッション</span><span class="hm-en">MISSION</span></span></div>
-      <div class="hm-btn" onclick="openAchievements()"><span class="hm-ic">🏆</span><span class="hm-tx"><span class="hm-jp">実績</span><span class="hm-en">ACHIEVEMENT</span></span></div>
-      <div class="hm-btn" onclick="homeRankSoon()"><span class="hm-ic">👑</span><span class="hm-tx"><span class="hm-jp">ランク</span><span class="hm-en">RANK</span></span></div>
+      <div class="img-btn" style="background-image:url(btn-mission.png)" onclick="openMissions()" role="button" tabindex="0" aria-label="ミッション"></div>
+      <div class="img-btn" style="background-image:url(btn-achieve.png)" onclick="openAchievements()" role="button" tabindex="0" aria-label="実績"></div>
+      <div class="img-btn" style="background-image:url(btn-rank.png)" onclick="homeRankSoon()" role="button" tabindex="0" aria-label="ランク"></div>
     </div>
     <div class="home-menu">
-      <div class="hm-btn" onclick="openTutorial()"><span class="hm-ic">📖</span><span class="hm-tx"><span class="hm-jp">遊び方</span><span class="hm-en">HOW TO PLAY</span></span></div>
-      <div class="hm-btn" onclick="openRules()"><span class="hm-ic">📜</span><span class="hm-tx"><span class="hm-jp">ルール</span><span class="hm-en">RULES</span></span></div>
-      <div class="hm-btn" onclick="openStats()"><span class="hm-ic">📈</span><span class="hm-tx"><span class="hm-jp">戦績</span><span class="hm-en">RECORD</span></span></div>
+      <div class="img-btn" style="background-image:url(btn-howto.png)" onclick="openTutorial()" role="button" tabindex="0" aria-label="遊び方"></div>
+      <div class="img-btn" style="background-image:url(btn-rules.png)" onclick="openRules()" role="button" tabindex="0" aria-label="ルール"></div>
+      <div class="img-btn" style="background-image:url(btn-record.png)" onclick="openStats()" role="button" tabindex="0" aria-label="戦績"></div>
     </div>
-    <div class="home-settings-btn" onclick="openAppSettings()"><span>⚙</span><span>設定 <span class="hs-en">SETTING</span></span><span class="hs-arrow">›</span></div>
+    <div class="home-set-img" onclick="openAppSettings()" role="button" tabindex="0" aria-label="設定 SETTING"></div>
   </div>
 
   <!-- ===== 対戦設定 ===== -->
@@ -4271,8 +4278,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.48.1';
+const GAME_VERSION = 'v0.48.2';
 const CHANGELOG = [
+  { version:'v0.48.2', date:'2026-07-15', items:[
+    '<b>ホームのボタンを画像素材に差し替え</b>：「⚔ 対戦する / START DUEL」の装飾フレームと、ミッション/実績/ランク・遊び方/ルール/戦績・設定の各ボタンを、金の意匠のボタン画像に変更（絵文字アイコンから置き換え）。',
+  ]},
   { version:'v0.48.1', date:'2026-07-15', items:[
     '<b>PWAアイコンを刷新</b>：ホーム画面に追加した時のアイコンを、仮プレースホルダ（金の◈）から<b>太陽の金仮面</b>に変更。あわせて<b>Web manifest</b>を追加し、iOSだけでなくAndroid/Chromeでもアプリ名「MASKD」・アイコン・テーマ色付きでインストールできるように（maskable対応）。',
   ]},
