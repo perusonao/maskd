@@ -1474,6 +1474,15 @@
   .pred-chip.sel{ border-color:var(--gold-bright); background:rgba(201,162,74,.22); box-shadow:0 0 8px rgba(201,162,74,.35); }
   .pred-hint{ font-size:10px; color:var(--ink-dim); margin-left:6px; }
   .pred-done{ font-size:11px; color:var(--gold-bright); margin-left:6px; font-weight:700; }
+  /* 確定(看破)・バレの強調バッジ */
+  .oh-confirmed{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:8px; font-size:12px; font-weight:700;
+    color:var(--gold-bright); border:1px solid var(--gold-bright); background:rgba(201,162,74,.16);
+    box-shadow:0 0 10px rgba(201,162,74,.3); animation:confirmPop .3s ease; }
+  .oh-confirmed .ohc-attr{ letter-spacing:.5px; }
+  .yh-exposed{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:8px; font-size:12px; font-weight:700;
+    color:#ff9a9a; border:1px solid rgba(216,120,120,.7); background:rgba(180,70,70,.16); animation:exposePulse 1.2s ease-in-out infinite; }
+  @keyframes confirmPop{ from{ transform:scale(.85); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  @keyframes exposePulse{ 0%,100%{ box-shadow:0 0 4px rgba(216,120,120,.25); } 50%{ box-shadow:0 0 12px rgba(216,120,120,.6); } }
   /* ===== クライマックス(最終ラウンド)バナー ===== */
   .rs-climax{ margin:6px auto 2px; padding:6px 14px; border-radius:8px; font-size:14px; color:var(--gold-bright);
     border:1px solid var(--gold-bright); background:linear-gradient(90deg,rgba(193,75,82,.18),rgba(201,162,74,.18));
@@ -3879,14 +3888,17 @@ function showAttrHint(num){
     el.innerHTML=`<span class="pred-lb">🎭 相手の仮面は？</span><span class="hint-icon-row pred-row">${cand}</span>${tail}`;
     return;
   }
-  const cand = options.map(a=>glyph(a)).join('');
-  if(cardStyle==='beginner'){
-    const conf = options.length===1 ? ' <b style="color:var(--gold-bright)">で確定</b>' : '';
-    el.innerHTML=`可能性: <span class="hint-icon-row" style="align-items:center;gap:4px;">${cand}</span>${conf}`;
+  // 候補が1つに絞れた＝相手の仮面を「看破（確定）」。目立つバッジで強調する
+  if(options.length===1){
+    const a=options[0];
+    const g = cardStyle==='beginner' ? (CAND_GLYPH[a]||'') : '';
+    const dot = cardStyle==='beginner' ? '' : `<span class="hint-icon ${a} confirmed" style="display:inline-block;vertical-align:middle;"></span>`;
+    el.innerHTML=`<span class="oh-confirmed">🔓 看破！ ${dot}<span class="ohc-attr">${g}${ALABEL[a]}</span> で確定</span>`;
     return;
   }
-  if(options.length===1){
-    el.innerHTML=`<span class="hint-icon-row">${cand}</span> <b style="color:var(--gold-bright)">で確定</b>`;
+  const cand = options.map(a=>glyph(a)).join('');
+  if(cardStyle==='beginner'){
+    el.innerHTML=`可能性: <span class="hint-icon-row" style="align-items:center;gap:4px;">${cand}</span>`;
   } else {
     el.innerHTML=`可能性: <span class="hint-icon-row">${cand}</span>`;
   }
@@ -3897,12 +3909,15 @@ function showAttrHint(num){
 function showYouCardHint(num){
   const el=document.getElementById('youCardHint');
   const options=cpuPossibleAttrsFor(num);
-  const iconsHTML = candAttrsHTML(options, true);
   if(options.length===0){
     el.innerHTML=`相手視点：<b style="color:var(--gold-bright)">全て公開済み</b>`;
   } else if(options.length===1){
-    el.innerHTML=`相手からは <span class="hint-icon-row">${iconsHTML}</span> <b style="color:var(--lose)">とバレている</b>`;
+    // 自分の仮面が相手に1つに絞られている＝「読まれている」。警告バッジで強調
+    const a=options[0];
+    const g = cardStyle==='beginner' ? (CAND_GLYPH[a]||'') : `<span class="hint-icon ${a}" style="display:inline-block;vertical-align:middle;"></span>`;
+    el.innerHTML=`<span class="yh-exposed">⚠ 相手に読まれている：${g}<span class="yhe-attr">${ALABEL[a]}</span></span>`;
   } else {
+    const iconsHTML = candAttrsHTML(options, true);
     el.innerHTML=`相手からの見え方: <span class="hint-icon-row">${iconsHTML}</span>`;
   }
 }
@@ -4593,8 +4608,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.51.0';
+const GAME_VERSION = 'v0.52.0';
 const CHANGELOG = [
+  { version:'v0.52.0', date:'2026-07-15', items:[
+    '<b>「看破（確定）」と「バレ」を強調表示</b>：公開・使用が進んで相手の仮面の候補が1つに絞れたら、控えめな「で確定」から<b>「🔓 看破！ ◯◯で確定」</b>の金バッジに変更。逆に、あなたの札が相手に1つへ絞られると<b>「⚠ 相手に読まれている：◯◯」</b>の警告バッジを表示。「相手にバレる／こっちがわかる条件」が一目で分かるように（ルール説明にも一行追加）。',
+  ]},
   { version:'v0.51.0', date:'2026-07-15', items:[
     '<b>ライバルにボス感</b>：各レベルの主に<b>専用AI（性格固定）</b>を設定（初級=道化アルル＝トリッキー／中級=風唄いゼファ＝慎重／上級=仮面卿ノクス＝積極的）。対戦開始前に<b>立ち絵＋名乗りの登場演出</b>を追加。CPUの種類選択は廃止し、強さ（弱い/普通/強い）だけ選ぶ形に。',
     '<b>称号アンロック</b>を追加：★集め・ライバル撃破・通算成績などで称号を獲得（例：三色の使い手／風読みの舞い手／混沌を制する者／看破者／主を退けし者／舞踏会の主 ほか）。実績画面で<b>装備の切替</b>ができ、装備した称号はホームのプレイヤーバッジに表示。結果画面で新規解除を通知。',
@@ -5070,6 +5088,7 @@ function renderRulesGuide(){
       <li><b>奇襲</b>は子の一手。<b>親（相手）が撤退を選んだ時だけ</b>選択肢が現れ、戦略カウンターを2消費して<b>撤退を無効化＝強制的に決戦</b>へ持ち込む。相手が撤退しなければ奇襲は起こらない。</li>
       <li>戦略カウンターが足りないと、その行動は<b>選べなくなる</b>（奇襲も、相手の撤退時にカウンターが2未満だと出せない）。</li>
       <li>Airを決戦に使うと、勝敗に関わらず戦略カウンターが<b>+1</b>される。</li>
+      <li><b>看破とバレ</b>：デッキは固定なので相手の<b>数字</b>は最初から分かる。<b>公開・使用が進む</b>と各数字の候補属性が減り、<b>1つに絞れたら相手の仮面は「🔓看破」で確定</b>。逆に、あなたの札も同じ理屈で相手に絞られ、絞られると<b>「⚠読まれている」</b>と表示される。</li>
     </ul>
   </div>`;
 }
