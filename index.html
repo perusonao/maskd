@@ -2670,6 +2670,8 @@ function endPracticeMode(youFinal, cpuFinal, st){
   const unlock = (win && prog.newBeat) ? UNLOCKS[levelKey] : null; // 初撃破で次レベル解放
   const rivalLine = win?meta.rival.win : (draw?'引き分け。次こそ決着を。':meta.rival.lose);
   const gotNew = res.newly.some(Boolean);
+  _abandonSent=true; // 完走したので離脱扱いにしない
+  maybeSendGameLog(youFinal, cpuFinal, computeMatchSummary()); // ★練習/レベル戦も計測(解除前に)
   stageConfig=null; deckAttrs=ATTRS5; matchRounds=TOTAL_ROUNDS; // 本戦に影響しないよう解除
   const rov=document.getElementById('resultOv'); if(rov) rov.classList.remove('show');
   document.getElementById('overlay').classList.remove('show');
@@ -3074,6 +3076,8 @@ function startGame(initialDealerIsYou, stage){
 
   youLP=START_LP; cpuLP=START_LP; round=1; youIsDealer=(initialDealerIsYou!==false); busy=false;
   matchStartTime=Date.now(); // プレイ時間計測用
+  _abandonSent=false;        // 新しい対戦の離脱フラグをリセット
+  { const m=logMeta(); logEvent('game_start', { level:m.level, isPractice:m.isPractice, rule:m.rule, action:m.action, matchRounds:m.matchRounds, cpuStrategy, cpuDifficulty }); } // ★開始を計測(完走とのペアで離脱率が出る)
   possibleAttrsByNum=computePossibleAttrs(youFullDeal);
   poolOwner={};
   youFullDeal.forEach(c=>{ poolOwner[c.attr+c.num]='you'; });
@@ -4653,8 +4657,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.54.0';
+const GAME_VERSION = 'v0.55.0';
 const CHANGELOG = [
+  { version:'v0.55.0', date:'2026-07-15', items:[
+    '<b>プレイログ計測の強化（ユーザーテスト準備）</b>：ゲーム表示・ルールは変更なし。分析用に、これまで<b>本戦しか記録していなかったプレイログを全レベル（初級〜本戦）で記録</b>し、<b>レベル/モード・実ラウンド数・仮面あて成績</b>を付与。さらに<b>セッション開始・対戦開始・離脱ラウンド・チュートリアル開始/完走</b>を軽量イベントとして記録（送信は従来どおり同意した場合のみ）。「どこで離脱するか・レベル別勝率・属性の使用/勝率」を測れるように。',
+  ]},
   { version:'v0.54.0', date:'2026-07-15', items:[
     '<b>チュートリアルを核だけに短縮（オンボーディングその2）</b>：基本ミッションを11問→<b>核4問</b>（出す・じゃんけん・数字・親の決戦/撤退）に。Air・Kaos・入替・奇襲・終盤などは、そのレベルに到達した時に<b>1問だけ学ぶ</b>（just-in-time）形へ。上級4問は任意の腕試しのまま。',
     '<b>レベル解放の演出（その3）</b>：初級のライバルに勝つと<b>「🎉 新しい札が解放：AIR」</b>、中級を勝つと<b>KAOS</b>が解放。その場で「▷ 1問で学ぶ」ミニレッスンと「▶ 次のレベルに挑戦」へ進める。遊びながら少しずつ覚える導線に。',
@@ -5294,6 +5301,7 @@ function openMissions(which){
   tutSet = (which==='advanced') ? 'advanced' : 'basic';
   tutList = (tutSet==='advanced') ? TUT_ADVANCED : TUT_CORE;
   tutMi=0;
+  logEvent('tutorial_start', { set: tutSet, count: tutList.length }); // ★チュートリアル開始を計測(完走とのペアで離脱率)
   document.getElementById('tutMissionOverlay').classList.add('show');
   renderMission();
 }
@@ -5423,6 +5431,7 @@ function tutForceDecide(force){
 function tutNextMission(){ tutMi++; renderMission(); }
 function tutFinish(){
   const isAdv=(tutSet==='advanced');
+  logEvent('tutorial_complete', { set: tutSet, count: tutList.length }); // ★チュートリアル完走を計測
   try{ localStorage.setItem(isAdv?ADVANCED_DONE_KEY:MISSIONS_DONE_KEY,'1'); }catch(e){}
   const fresh=checkAchievements({ missionsCleared:missionsCleared(), advancedCleared:advancedCleared(),
     agg:computeAggregateStats(loadGameHistory()), streak:computeStreaksAndRate(loadGameHistory()) });
@@ -5934,22 +5943,54 @@ function getPlayerId(){
     return id;
   }catch(e){ return 'anon'; }
 }
+// ゲーム/イベント共通のメタ(分析のセグメント用)。呼び出し時点のglobalから算出するので
+// endPracticeModeでは「stageConfigを解除する前」に呼ぶこと
+function logMeta(){
+  const isPractice = !!(stageConfig && stageConfig.practice);
+  const level = levelKeyFromAttrs(stageConfig ? stageConfig.attrs : ATTRS5);
+  return { level, isPractice, rule: selectedRule, action: selectedAction, matchRounds };
+}
 function buildGameLog(youFinal, cpuFinal, s){
+  const m=logMeta();
   return {
+    type:'game',
     version: GAME_VERSION,
     playerId: getPlayerId(),
     playerName: playerName || null,
     ts: new Date().toISOString(),
+    level: m.level, isPractice: m.isPractice, rule: m.rule, action: m.action,  // ★レベル/モードのセグメント
     winner: youFinal>cpuFinal?'player':(cpuFinal>youFinal?'cpu':'draw'),
     playerFinal: youFinal, cpuFinal: cpuFinal,
     playerScore: youLP, cpuScore: cpuLP,          // ボーナス前の獲得点
-    rounds: TOTAL_ROUNDS,
+    rounds: m.matchRounds,                        // ★実際のラウンド数(初級4/中級4/上級6/本戦8)
     cpuStrategy, cpuDifficulty,
     youWins: s.youWins, cpuWins: s.cpuWins, draws: s.draws, passes: s.passes,
     youAir: s.youAir, cpuAir: s.cpuAir, youKaos: s.youKaos, cpuKaos: s.cpuKaos,
+    readHits: youReadHits, readBonus: youReadBonus, // ★仮面あての使用/成果
     playTimeMs: matchStartTime? (Date.now()-matchStartTime) : null,
     log: JSON.parse(JSON.stringify(roundLog))     // ラウンド別の詳細(後から再分析用)
   };
+}
+// 軽量イベント計測(session/game_start/abandon/tutorial)。同意済みのみ送信
+function logEvent(type, extra){
+  try{
+    if(!window.__maskdSaveLog) return;
+    let consent=null; try{ consent=localStorage.getItem(LOG_CONSENT_KEY); }catch(e){}
+    if(consent!=='yes') return; // ゲーム終了時の同意フローは別(maybeSendGameLog)
+    window.__maskdSaveLog(Object.assign({ type, version:GAME_VERSION, playerId:getPlayerId(), ts:new Date().toISOString() }, extra||{}));
+  }catch(e){}
+}
+// 対戦中に離脱したか(ドロップオフ計測用): 盤面フェーズ中で結果未表示
+function gameInProgress(){
+  try{ return typeof phase!=='undefined' && ['pick','decide','wait','roundstart'].includes(phase)
+    && !document.getElementById('overlay').classList.contains('show'); }catch(e){ return false; }
+}
+let _abandonSent=false;
+function maybeLogAbandon(){
+  if(_abandonSent || !gameInProgress()) return;
+  _abandonSent=true;
+  const m=logMeta();
+  logEvent('abandon', { level:m.level, isPractice:m.isPractice, round, matchRounds:m.matchRounds });
 }
 function maybeSendGameLog(youFinal, cpuFinal, s){
   try{
@@ -6118,6 +6159,16 @@ applyCardStyleClass(); // 保存された表示モード(上級者/初心者)を
 applyLayout(); // 保存された盤面レイアウト(A/B)を反映
 updateFooterToggles(); // フッターの表示切替トグルの初期表示
 document.getElementById('versionTag').textContent = GAME_VERSION;
+// ===== 計測: セッション開始 と 対戦中の離脱(ドロップオフ) =====
+try{
+  const firstVisit = (function(){ try{ if(loadGameHistory().length>0) return false; return starCount('beginner')+starCount('inter')+starCount('adv')===0; }catch(e){ return false; } })();
+  logEvent('session_start', { firstVisit });
+}catch(e){}
+// タブが隠れる/閉じる瞬間に、対戦途中なら離脱ラウンドを送る(モバイル対応でvisibilitychangeを使用)
+try{
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') maybeLogAbandon(); });
+  window.addEventListener('pagehide', maybeLogAbandon);
+}catch(e){}
 document.getElementById('roundTotal').textContent = TOTAL_ROUNDS; // ラウンド総数をUIに反映
 // トップページのバージョン表記と、開閉式「更新履歴」の中身を初期化
 document.getElementById('versionTagTop').textContent = GAME_VERSION;
