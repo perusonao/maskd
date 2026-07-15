@@ -1981,7 +1981,7 @@
   <div class="tutm-overlay" id="welcomeModal">
     <div class="tutm-box" style="max-width:340px;">
       <div class="tutm-head"><span class="tutm-title" style="text-align:center;flex:1;">MASKD へようこそ</span></div>
-      <div class="tutm-intro" style="text-align:center;margin-top:12px;">仮面舞踏会の<b>心理戦・推理カードゲーム</b>。<br>まずは<b>ミッション</b>で、操作とルールを手を動かして覚えるのがおすすめです。</div>
+      <div class="tutm-intro" style="text-align:center;margin-top:12px;">仮面をかぶった騎士たちの<b>心理戦・推理カードゲーム</b>。<br>まずは<b>ミッション</b>で、操作とルールを手を動かして覚えるのがおすすめです。</div>
       <div class="tutm-controls" style="flex-direction:column;margin-top:16px;">
         <div class="btn" style="width:100%;" onclick="welcomeChoose('learn')">🎓 はじめての対戦（おすすめ）</div>
         <div class="btn ghost" style="width:100%;" onclick="welcomeChoose('missions')">🎯 ミッションで学ぶ</div>
@@ -2536,7 +2536,7 @@ function initModeUI(){
 // ===== レベルの「主(ライバル)」と ★クリア目標 =====
 const LEVEL_META={
   beginner:{ name:'初級', portrait:'dark', color:'var(--dark)', cpuType:'tricky',
-    rival:{ name:'三色の道化 アルル', role:'色の見習い', intro:'ふふ、色の読み合い…見習いの君に分かるかな？',
+    rival:{ name:'三色の見習い アルル', role:'色の見習い騎士', intro:'ふふ、色の読み合い…見習いの君に分かるかな？',
             win:'やるね！ 色を制する者は侮れない。', lose:'まだ早いよ。もう一度、色を見極めて。' },
     stars:[
       { label:'勝利する', check:c=>c.win },
@@ -2544,7 +2544,7 @@ const LEVEL_META={
       { label:'相手に決戦の得点を与えず勝利', check:c=>c.win && c.cpuLP===0 },
     ]},
   inter:{ name:'中級', portrait:'air', color:'var(--air)', cpuType:'cautious',
-    rival:{ name:'風唄いのゼファ', role:'風の舞い手', intro:'風は流れを変える。受け流せるかな？',
+    rival:{ name:'風唄いのゼファ', role:'風の騎士', intro:'風は流れを変える。受け流せるかな？',
             win:'見事。風を味方にしたね。', lose:'風に翻弄されたね。Airの使い所を掴んで。' },
     stars:[
       { label:'勝利する', check:c=>c.win },
@@ -2552,8 +2552,8 @@ const LEVEL_META={
       { label:'5点差以上で勝利', check:c=>c.win && (c.youFinal-c.cpuFinal)>=5 },
     ]},
   adv:{ name:'上級', portrait:'kaos', color:'var(--kaos)', cpuType:'aggressive',
-    rival:{ name:'仮面卿ノクス', role:'舞踏会の主', intro:'よくぞここまで。混沌の宴、見せてもらおう。',
-            win:'…見事だ。君こそ舞踏会の主にふさわしい。', lose:'混沌は甘くない。0と1、そして5の理を思い出せ。' },
+    rival:{ name:'仮面卿ノクス', role:'仮面騎士の頂点', intro:'よくぞここまで。混沌の戦い、見せてもらおう。',
+            win:'…見事だ。君こそ頂に立つ仮面騎士だ。', lose:'混沌は甘くない。0と1、そして5の理を思い出せ。' },
     stars:[
       { label:'勝利する', check:c=>c.win },
       { label:'Kaosの特殊ルールを決める', check:c=>c.kaosSpecials>=1 },
@@ -2562,14 +2562,14 @@ const LEVEL_META={
 };
 // ===== 称号(★・ライバル撃破・通算からアンロック。装備してホームに表示) =====
 const TITLES=[
-  { id:'newcomer',   name:'仮面舞踏会の新入り', desc:'はじめて勝利する',            check:c=>c.wins>=1 },
+  { id:'newcomer',   name:'見習い仮面騎士',     desc:'はじめて勝利する',            check:c=>c.wins>=1 },
   { id:'tricolor',   name:'三色の使い手',       desc:'初級で★を3つ集める',          check:c=>c.stars.beginner>=3 },
-  { id:'winddancer', name:'風読みの舞い手',     desc:'中級で★を3つ集める',          check:c=>c.stars.inter>=3 },
+  { id:'winddancer', name:'風読みの騎士',       desc:'中級で★を3つ集める',          check:c=>c.stars.inter>=3 },
   { id:'chaosbreaker',name:'混沌を制する者',    desc:'上級で★を3つ集める',          check:c=>c.stars.adv>=3 },
   { id:'seer',       name:'看破者',             desc:'仮面あてを通算20回的中させる', check:c=>c.readHitsTotal>=20 },
   { id:'rivalslayer',name:'主を退けし者',       desc:'3人のライバル全員に勝利する',  check:c=>c.allRivalsBeaten },
   { id:'champion',   name:'常勝の仮面',         desc:'本戦で通算15勝する',           check:c=>c.wins>=15 },
-  { id:'ballmaster', name:'舞踏会の主',         desc:'全レベルで★を集める(★9)',     check:c=>c.totalStars>=9 },
+  { id:'ballmaster', name:'仮面騎士の頂点',     desc:'全レベルで★を集める(★9)',     check:c=>c.totalStars>=9 },
 ];
 const TITLE_KEY='maskd_titles_v1';
 function loadTitles(){ try{ const o=JSON.parse(localStorage.getItem(TITLE_KEY)||'{}'); return {unlocked:o.unlocked||{}, active:o.active||null}; }catch(e){ return {unlocked:{}, active:null}; } }
@@ -4657,8 +4657,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.55.0';
+const GAME_VERSION = 'v0.55.1';
 const CHANGELOG = [
+  { version:'v0.55.1', date:'2026-07-15', items:[
+    'テーマの表記を統一：世界観は「仮面舞踏会」ではなく<b>仮面をかぶった騎士たちの戦い</b>。文言を騎士・決闘テーマに修正（ライバルの肩書き・称号・実績名・紹介文など）。ゲーム内容・ルールは変更なし。',
+  ]},
   { version:'v0.55.0', date:'2026-07-15', items:[
     '<b>プレイログ計測の強化（ユーザーテスト準備）</b>：ゲーム表示・ルールは変更なし。分析用に、これまで<b>本戦しか記録していなかったプレイログを全レベル（初級〜本戦）で記録</b>し、<b>レベル/モード・実ラウンド数・仮面あて成績</b>を付与。さらに<b>セッション開始・対戦開始・離脱ラウンド・チュートリアル開始/完走</b>を軽量イベントとして記録（送信は従来どおり同意した場合のみ）。「どこで離脱するか・レベル別勝率・属性の使用/勝率」を測れるように。',
   ]},
@@ -5519,7 +5522,7 @@ const ACHIEVEMENTS=[
   { id:'airmaster',icon:'🌫️', title:'風の使い手',   desc:'1試合でAirを3回以上使う',      check:c=>c.summary && c.summary.youAir>=3 },
   { id:'games50',  icon:'🏛️', title:'百戦の猛者',   desc:'通算50戦プレイする',          check:c=>c.agg&&c.agg.totalGames>=50 },
   { id:'grandmaster',icon:'🏵️', title:'覇者',       desc:'通算20戦以上で勝率70%以上',   check:c=>c.agg&&c.agg.totalGames>=20&&c.streak&&c.streak.winRate>=70 },
-  { id:'graduate', icon:'🎓', title:'仮面舞踏会デビュー', desc:'はじめての対戦(全4段階)をクリア', check:c=>c.learnDone },
+  { id:'graduate', icon:'🎓', title:'仮面騎士デビュー', desc:'はじめての対戦(全4段階)をクリア', check:c=>c.learnDone },
 ];
 // ctxを渡して未解除の実績を判定・解除。新規解除ぶんを返す
 function checkAchievements(ctx){
