@@ -1481,6 +1481,36 @@
   .rs-climax b{ font-size:16px; }
   @keyframes climaxPulse{ 0%,100%{ box-shadow:0 0 6px rgba(201,162,74,.25);} 50%{ box-shadow:0 0 16px rgba(232,200,119,.55);} }
   .round-start-modal.climax .rs-box{ border-color:var(--gold-bright); box-shadow:0 0 24px rgba(201,162,74,.3); }
+  /* ===== ライバル登場(ボス演出) ===== */
+  .rival-intro{ position:absolute; inset:0; z-index:40; display:none; align-items:center; justify-content:center;
+    background:radial-gradient(60% 50% at 50% 40%, rgba(20,14,28,.85), rgba(4,3,8,.96)); text-align:center; padding:24px; }
+  .rival-intro.show{ display:flex; animation:riFade .35s ease; }
+  @keyframes riFade{ from{ opacity:0; } to{ opacity:1; } }
+  .ri-box{ display:flex; flex-direction:column; align-items:center; gap:6px; max-width:340px; }
+  .ri-vs{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:26px; color:var(--gold-dim); letter-spacing:6px; }
+  .ri-portrait{ width:150px; height:210px; border-radius:14px; background-size:cover; background-position:center top;
+    border:2px solid var(--gold-bright); animation:riRise .5s cubic-bezier(.2,.9,.3,1.2); }
+  @keyframes riRise{ from{ transform:translateY(16px) scale(.9); opacity:0; } to{ transform:none; opacity:1; } }
+  .ri-role{ font-size:11px; letter-spacing:2px; color:var(--ink-dim); margin-top:10px; }
+  .ri-name{ font-family:'Cormorant Garamond',serif; font-size:26px; color:var(--gold-bright); font-weight:700;
+    text-shadow:0 0 18px rgba(232,200,119,.4); }
+  .ri-quote{ font-size:13px; color:#d8c9a6; font-style:italic; margin:4px 0 10px; line-height:1.6; }
+  .ri-go{ min-width:180px; }
+  /* ===== 称号 ===== */
+  .hb-title{ font-size:10.5px; color:var(--gold-bright); font-weight:600; }
+  .tt-section{ text-align:left; }
+  .tt-list{ display:flex; flex-direction:column; gap:5px; }
+  .tt-item{ display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px;
+    border:1px solid rgba(201,162,74,.18); background:rgba(255,255,255,.02); opacity:.55; }
+  .tt-item.on{ opacity:1; border-color:rgba(201,162,74,.4); background:rgba(201,162,74,.06); }
+  .tt-tx{ flex:1; min-width:0; }
+  .tt-name{ font-size:12.5px; color:var(--ink); }
+  .tt-item.on .tt-name{ color:var(--gold-bright); }
+  .tt-desc{ font-size:10.5px; color:var(--ink-dim); }
+  .tt-eq{ font-size:10px; color:#1a1608; background:var(--gold-bright); padding:3px 9px; border-radius:7px; white-space:nowrap; }
+  .tt-set{ font-size:10.5px; color:var(--gold-bright); cursor:pointer; border:1px solid rgba(201,162,74,.5); padding:3px 9px; border-radius:7px; white-space:nowrap; }
+  .tt-set:active{ background:rgba(201,162,74,.2); }
+  .tt-lock{ font-size:13px; }
   /* ===== 設定画面 共通ヘッダ ===== */
   .setup-head{ display:flex; align-items:center; width:100%; max-width:360px; margin:0 auto 2px; }
   .setup-back{ cursor:pointer; color:var(--gold-bright); font-size:14px; min-width:64px; text-align:left; }
@@ -1693,10 +1723,10 @@
   <!-- ===== ホーム(ロビー) ===== -->
   <div class="instructions home-screen" id="homeScreen">
     <div class="home-top">
-      <div class="home-badge">
+      <div class="home-badge" onclick="openAchievements()" title="称号・実績">
         <div class="hb-crest" id="hbCrest"></div>
         <div class="hb-info">
-          <div class="hb-line"><span class="hb-lv" id="hbLv">Lv.1</span></div>
+          <div class="hb-line"><span class="hb-lv" id="hbLv">Lv.1</span><span class="hb-title" id="hbTitle"></span></div>
           <div class="hb-line"><span id="hbRate">勝率 –%</span></div>
           <div class="hb-bar"><i id="hbBar" style="width:0%"></i></div>
         </div>
@@ -1762,13 +1792,7 @@
         </div>
       </div>
       <div class="cpu-setting-row">
-        <div class="cpu-setting-label">CPUの種類</div>
-        <div class="cpu-setting-opts" id="cpuTypeOpts">
-          <div class="cpu-opt" data-val="random">おまかせ</div>
-          <div class="cpu-opt" data-val="aggressive">積極的</div>
-          <div class="cpu-opt" data-val="cautious">慎重</div>
-          <div class="cpu-opt" data-val="tricky">トリッキー</div>
-        </div>
+        <div class="cpu-setting-label" style="text-align:center;line-height:1.6;">対戦相手は各レベルの<b style="color:var(--gold-bright)">ライバル（専用AI）</b>。強さ（弱い/普通/強い）だけ上で選べます。</div>
       </div>
     </details>
 
@@ -1906,6 +1930,18 @@
       <div class="rs-inst" id="rsInst"></div>
       <div class="rs-tip" id="rsTip" style="display:none;"></div>
       <div class="btn rs-go" onclick="beginRoundPlay()">はじめる</div>
+    </div>
+  </div>
+
+  <!-- ライバル登場(ボス演出): 対戦開始前に立ち絵＋名乗り -->
+  <div class="rival-intro" id="rivalIntro">
+    <div class="ri-box">
+      <div class="ri-vs">VS</div>
+      <div class="ri-portrait" id="riPortrait"></div>
+      <div class="ri-role" id="riRole"></div>
+      <div class="ri-name" id="riName"></div>
+      <div class="ri-quote" id="riQuote"></div>
+      <div class="btn ri-go" id="riGo">はじめる ▶</div>
     </div>
   </div>
 
@@ -2480,24 +2516,24 @@ function initModeUI(){
 // 練習モードの結果画面(通算・実績には残さない)
 // ===== レベルの「主(ライバル)」と ★クリア目標 =====
 const LEVEL_META={
-  beginner:{ name:'初級', portrait:'dark',
-    rival:{ name:'三色の道化 アルル', intro:'ふふ、色の読み合い…見習いの君に分かるかな？',
+  beginner:{ name:'初級', portrait:'dark', color:'var(--dark)', cpuType:'tricky',
+    rival:{ name:'三色の道化 アルル', role:'色の見習い', intro:'ふふ、色の読み合い…見習いの君に分かるかな？',
             win:'やるね！ 色を制する者は侮れない。', lose:'まだ早いよ。もう一度、色を見極めて。' },
     stars:[
       { label:'勝利する', check:c=>c.win },
       { label:'相手の仮面を3回見破る（仮面あて）', check:c=>c.readHits>=3 },
       { label:'相手に決戦の得点を与えず勝利', check:c=>c.win && c.cpuLP===0 },
     ]},
-  inter:{ name:'中級', portrait:'air',
-    rival:{ name:'風唄いのゼファ', intro:'風は流れを変える。受け流せるかな？',
+  inter:{ name:'中級', portrait:'air', color:'var(--air)', cpuType:'cautious',
+    rival:{ name:'風唄いのゼファ', role:'風の舞い手', intro:'風は流れを変える。受け流せるかな？',
             win:'見事。風を味方にしたね。', lose:'風に翻弄されたね。Airの使い所を掴んで。' },
     stars:[
       { label:'勝利する', check:c=>c.win },
       { label:'Airで引き分けに持ち込む', check:c=>c.youAir>=1 },
       { label:'5点差以上で勝利', check:c=>c.win && (c.youFinal-c.cpuFinal)>=5 },
     ]},
-  adv:{ name:'上級', portrait:'kaos',
-    rival:{ name:'仮面卿ノクス', intro:'よくぞここまで。混沌の宴、見せてもらおう。',
+  adv:{ name:'上級', portrait:'kaos', color:'var(--kaos)', cpuType:'aggressive',
+    rival:{ name:'仮面卿ノクス', role:'舞踏会の主', intro:'よくぞここまで。混沌の宴、見せてもらおう。',
             win:'…見事だ。君こそ舞踏会の主にふさわしい。', lose:'混沌は甘くない。0と1、そして5の理を思い出せ。' },
     stars:[
       { label:'勝利する', check:c=>c.win },
@@ -2505,6 +2541,48 @@ const LEVEL_META={
       { label:'大差(8点差)勝ち、または最終ラウンドを勝って締める', check:c=>c.win && ((c.youFinal-c.cpuFinal)>=8 || c.wonLastRound) },
     ]},
 };
+// ===== 称号(★・ライバル撃破・通算からアンロック。装備してホームに表示) =====
+const TITLES=[
+  { id:'newcomer',   name:'仮面舞踏会の新入り', desc:'はじめて勝利する',            check:c=>c.wins>=1 },
+  { id:'tricolor',   name:'三色の使い手',       desc:'初級で★を3つ集める',          check:c=>c.stars.beginner>=3 },
+  { id:'winddancer', name:'風読みの舞い手',     desc:'中級で★を3つ集める',          check:c=>c.stars.inter>=3 },
+  { id:'chaosbreaker',name:'混沌を制する者',    desc:'上級で★を3つ集める',          check:c=>c.stars.adv>=3 },
+  { id:'seer',       name:'看破者',             desc:'仮面あてを通算20回的中させる', check:c=>c.readHitsTotal>=20 },
+  { id:'rivalslayer',name:'主を退けし者',       desc:'3人のライバル全員に勝利する',  check:c=>c.allRivalsBeaten },
+  { id:'champion',   name:'常勝の仮面',         desc:'本戦で通算15勝する',           check:c=>c.wins>=15 },
+  { id:'ballmaster', name:'舞踏会の主',         desc:'全レベルで★を集める(★9)',     check:c=>c.totalStars>=9 },
+];
+const TITLE_KEY='maskd_titles_v1';
+function loadTitles(){ try{ const o=JSON.parse(localStorage.getItem(TITLE_KEY)||'{}'); return {unlocked:o.unlocked||{}, active:o.active||null}; }catch(e){ return {unlocked:{}, active:null}; } }
+function saveTitles(o){ try{ localStorage.setItem(TITLE_KEY, JSON.stringify(o)); }catch(e){} }
+function activeTitleName(){ const t=loadTitles(); if(!t.active) return null; const d=TITLES.find(x=>x.id===t.active); return d?d.name:null; }
+function setActiveTitle(id){ const t=loadTitles(); if(id && !t.unlocked[id]) return; t.active=id||null; saveTitles(t); renderHomeStats(); if(document.getElementById('achieveModal').classList.contains('show')) openAchievements(); }
+const PROGRESS_KEY='maskd_progress_v1';
+function loadProgress(){ try{ const o=JSON.parse(localStorage.getItem(PROGRESS_KEY)||'{}'); return {readHitsTotal:o.readHitsTotal||0, rivalBeaten:o.rivalBeaten||{}}; }catch(e){ return {readHitsTotal:0, rivalBeaten:{}}; } }
+function saveProgress(o){ try{ localStorage.setItem(PROGRESS_KEY, JSON.stringify(o)); }catch(e){} }
+// 試合終了時: 見破り累計・ライバル撃破を記録
+function updateProgress(levelKey, win){
+  const p=loadProgress();
+  p.readHitsTotal += youReadHits;
+  if(win) p.rivalBeaten[levelKey]=true;
+  saveProgress(p);
+}
+function buildTitleCtx(){
+  const stars={ beginner:starCount('beginner'), inter:starCount('inter'), adv:starCount('adv') };
+  const totalStars=stars.beginner+stars.inter+stars.adv;
+  let s={wins:0,total:0,winRate:0}; try{ s=computeStreaksAndRate(loadGameHistory()); }catch(e){}
+  const p=loadProgress(); const rb=p.rivalBeaten||{};
+  return { stars, totalStars, wins:s.wins, total:s.total, winRate:s.winRate,
+    readHitsTotal:p.readHitsTotal, allRivalsBeaten:!!(rb.beginner&&rb.inter&&rb.adv) };
+}
+// 未取得の称号を判定・解除。新規解除ぶんを返す(最初の解除は自動装備)
+function unlockTitles(){
+  const ctx=buildTitleCtx(); const t=loadTitles(); const fresh=[];
+  TITLES.forEach(x=>{ if(t.unlocked[x.id]) return; let ok=false; try{ ok=!!x.check(ctx); }catch(e){}
+    if(ok){ t.unlocked[x.id]=Date.now(); fresh.push(x); } });
+  if(fresh.length){ if(!t.active) t.active=fresh[0].id; saveTitles(t); }
+  return fresh;
+}
 function levelKeyFromAttrs(attrs){
   if(!attrs) return 'adv';
   if(attrs.includes('kaos')) return 'adv';
@@ -2566,6 +2644,8 @@ function endPracticeMode(youFinal, cpuFinal, st){
   const meta=LEVEL_META[levelKey];
   const ctx=buildStarCtx(youFinal, cpuFinal);
   const res=applyStars(levelKey, ctx);
+  updateProgress(levelKey, win);           // 見破り累計・ライバル撃破を記録
+  const freshTitles=unlockTitles();        // 称号アンロック判定
   const rivalLine = win?meta.rival.win : (draw?'引き分け。次こそ決着を。':meta.rival.lose);
   const gotNew = res.newly.some(Boolean);
   stageConfig=null; deckAttrs=ATTRS5; matchRounds=TOTAL_ROUNDS; // 本戦に影響しないよう解除
@@ -2579,6 +2659,7 @@ function endPracticeMode(youFinal, cpuFinal, st){
     ${rivalReactHTML(levelKey, rivalLine)}
     ${starBlockHTML(levelKey, res)}
     ${gotNew?'<div class="star-newnote">🎉 新しい★を獲得！</div>':''}
+    ${freshTitles.length?`<div class="star-newnote">🎖 称号アンロック：${freshTitles.map(t=>t.name).join('・')}</div>`:''}
     <div class="tutm-intro" style="margin-top:8px;text-align:center;font-size:11px;">練習モードは通算成績・実績には記録しません（★は保存されます）。成績を残すなら<b>上級2（本戦）</b>へ。</div>
     <div class="tutm-controls" style="flex-direction:column;margin-top:12px;">
       <div class="btn" style="width:100%;" onclick="replayPractice()">もう一度</div>
@@ -2640,6 +2721,8 @@ function renderHomeStats(){
   const crest=document.getElementById('hbCrest');
   if(crest && typeof CARD_IMG!=='undefined' && CARD_IMG.moon) crest.style.backgroundImage=`url(${CARD_IMG.moon})`;
   const lvEl=document.getElementById('hbLv'), rateEl=document.getElementById('hbRate'), barEl=document.getElementById('hbBar');
+  const titleEl=document.getElementById('hbTitle');
+  if(titleEl){ const tn=activeTitleName(); titleEl.textContent = tn?('・'+tn):''; }
   if(!lvEl) return;
   let s=null; try{ s=computeStreaksAndRate(loadGameHistory()); }catch(e){}
   const total=(s&&s.total)||0;
@@ -2736,18 +2819,37 @@ function beginMatchSetup(){
   const levelKey = m.rule==='r1'?'beginner':(m.rule==='r2'?'inter':'adv');
   hideTitleScreens();
   document.getElementById('overlay').classList.remove('show');
-  if(m.isTop){
-    // 上級2＝本戦(全ルール): 親決め→配札演出→ランク戦(成績記録)
-    document.getElementById('dealerDrawOverlay').classList.add('show');
-    setupDealerDraw();
-  } else {
-    // 練習モード(縮小ルール): 親はランダム、即開始(成績には記録しない)
-    _lastPracticeCfg={ practice:true, name:m.label, icon:m.icon, attrs:[...m.attrs], rounds:m.rounds,
-      swap:m.full, force:m.full, late2x:false, leftover:false, cpuDiff:selectedCpuDifficulty };
-    startGame(Math.random()<0.5, _lastPracticeCfg);
-  }
-  // レベルの主(ライバル)の登場ゼリフを一言
-  setTimeout(()=>{ const r=LEVEL_META[levelKey].rival; homeToast(`🎭 ${r.name}「${r.intro}」`); }, m.isTop?900:500);
+  // ライバル登場(ボス演出)→ 続けると対戦開始
+  showRivalIntro(levelKey, ()=>{
+    if(m.isTop){
+      // 上級2＝本戦(全ルール): 親決め→配札演出→ランク戦(成績記録)
+      document.getElementById('dealerDrawOverlay').classList.add('show');
+      setupDealerDraw();
+    } else {
+      // 練習モード(縮小ルール): 親はランダム、即開始(成績には記録しない)
+      _lastPracticeCfg={ practice:true, name:m.label, icon:m.icon, attrs:[...m.attrs], rounds:m.rounds,
+        swap:m.full, force:m.full, late2x:false, leftover:false, cpuDiff:selectedCpuDifficulty };
+      startGame(Math.random()<0.5, _lastPracticeCfg);
+    }
+  });
+}
+// ライバル登場のボス演出(立ち絵＋名乗り)。続行でcb()
+function showRivalIntro(levelKey, cb){
+  const meta=LEVEL_META[levelKey]; const r=meta.rival;
+  const img=(typeof CARD_IMG!=='undefined'&&CARD_IMG[meta.portrait])?CARD_IMG[meta.portrait]:'';
+  const ov=document.getElementById('rivalIntro');
+  const port=document.getElementById('riPortrait');
+  port.style.backgroundImage=`url(${img})`;
+  port.style.boxShadow=`0 0 26px ${meta.color||'rgba(201,162,74,.5)'}, 0 8px 24px rgba(0,0,0,.6)`;
+  document.getElementById('riRole').textContent=`${meta.name} ― ${r.role}`;
+  document.getElementById('riName').textContent=r.name;
+  document.getElementById('riQuote').textContent=`「${r.intro}」`;
+  const go=document.getElementById('riGo');
+  const proceed=()=>{ ov.classList.remove('show'); go.onclick=null; ov.onclick=null; if(typeof cb==='function') cb(); };
+  go.onclick=(e)=>{ e.stopPropagation(); proceed(); };
+  ov.onclick=proceed; // どこをタップしても進める
+  ov.classList.add('show');
+  try{ sfx('select'); }catch(e){}
 }
 function showNameModal(cb){
   _afterName=cb||null;
@@ -2935,9 +3037,11 @@ function startGame(initialDealerIsYou, stage){
   if(stageConfig && !stageConfig.practice){
     cpuStrategy='cautious'; cpuDifficulty=stageConfig.cpuDiff;
   } else {
-    cpuStrategy = selectedCpuType==='random'
-      ? CPU_STRATEGIES[Math.floor(Math.random()*CPU_STRATEGIES.length)]
-      : selectedCpuType;
+    // レベル対戦(練習・本戦)は、その階級のライバル専用AI(性格固定)＋ユーザーの強さ設定
+    const lvKey = levelKeyFromAttrs(stageConfig ? stageConfig.attrs : ATTRS5);
+    let strat = (LEVEL_META[lvKey] && LEVEL_META[lvKey].cpuType) || selectedCpuType;
+    if(strat==='random') strat = CPU_STRATEGIES[Math.floor(Math.random()*CPU_STRATEGIES.length)];
+    cpuStrategy = strat;
     cpuDifficulty = selectedCpuDifficulty;
   }
 
@@ -4489,8 +4593,12 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.50.0';
+const GAME_VERSION = 'v0.51.0';
 const CHANGELOG = [
+  { version:'v0.51.0', date:'2026-07-15', items:[
+    '<b>ライバルにボス感</b>：各レベルの主に<b>専用AI（性格固定）</b>を設定（初級=道化アルル＝トリッキー／中級=風唄いゼファ＝慎重／上級=仮面卿ノクス＝積極的）。対戦開始前に<b>立ち絵＋名乗りの登場演出</b>を追加。CPUの種類選択は廃止し、強さ（弱い/普通/強い）だけ選ぶ形に。',
+    '<b>称号アンロック</b>を追加：★集め・ライバル撃破・通算成績などで称号を獲得（例：三色の使い手／風読みの舞い手／混沌を制する者／看破者／主を退けし者／舞踏会の主 ほか）。実績画面で<b>装備の切替</b>ができ、装備した称号はホームのプレイヤーバッジに表示。結果画面で新規解除を通知。',
+  ]},
   { version:'v0.50.0', date:'2026-07-15', items:[
     '<b>仮面あて（予想）ボーナス</b>を追加：あなたの手番で、相手の伏せ札の候補をタップして<b>属性を予想</b>できるように（任意・ワンタップ・再タップで解除）。公開時に的中していれば<b>読みボーナス+2pt</b>。看板の「読み合い」が毎ラウンドの手応えある一手に。初級の★2目標も「相手の仮面を3回見破る」に刷新。',
     '<b>クライマックス（最終ラウンド）演出</b>を全レベルに：どのレベルでも<b>最終ラウンドは決戦の得点2倍</b>に。開始時に「⚔ 最終ラウンド ―×2！」の山場バナー＋演出。短い初級・中級にも“逆転できる締め”が生まれる。',
@@ -5329,8 +5437,21 @@ function openAchievements(){
       `<div class="ach-tx"><div class="ach-t">${a.title}</div><div class="ach-d">${a.desc}</div></div></div>`;
   }).join('');
   const cnt=ACHIEVEMENTS.filter(a=>have[a.id]).length;
+  // 称号セクション(獲得したものは装備切替できる)
+  const t=loadTitles();
+  const tcnt=TITLES.filter(x=>t.unlocked[x.id]).length;
+  const titleRows=TITLES.map(x=>{
+    const on=!!t.unlocked[x.id]; const eq=t.active===x.id;
+    const btn = on
+      ? (eq?'<span class="tt-eq">装備中</span>':`<span class="tt-set" onclick="setActiveTitle('${x.id}')">装備する</span>`)
+      : '<span class="tt-lock">🔒</span>';
+    return `<div class="tt-item${on?' on':''}"><div class="tt-tx"><div class="tt-name">${on?'🎖 ':''}${x.name}</div><div class="tt-desc">${x.desc}</div></div>${btn}</div>`;
+  }).join('');
+  const titleSection=`<div class="tt-section">
+    <div class="ach-count" style="margin-bottom:6px;">称号 <b>${tcnt}</b> / ${TITLES.length}　${t.active?'（装備中：'+(activeTitleName()||'')+'）':'（未装備）'}${t.active?' <span class="tt-set" onclick="setActiveTitle(null)">外す</span>':''}</div>
+    <div class="tt-list">${titleRows}</div></div>`;
   document.getElementById('achieveBody').innerHTML=
-    `<div class="ach-count">解除 <b>${cnt}</b> / ${ACHIEVEMENTS.length}</div><div class="ach-grid">${grid}</div>`;
+    `${titleSection}<div class="ach-count" style="margin-top:12px;">実績 解除 <b>${cnt}</b> / ${ACHIEVEMENTS.length}</div><div class="ach-grid">${grid}</div>`;
   document.getElementById('achieveModal').classList.add('show');
 }
 function closeAchievements(){ document.getElementById('achieveModal').classList.remove('show'); }
@@ -5836,7 +5957,9 @@ function endGame(){
   const _lvCtx=buildStarCtx(youFinal, cpuFinal);
   const _lvRes=applyStars(_lvKey, _lvCtx);
   const _lvLine=(youFinal>cpuFinal)?LEVEL_META[_lvKey].rival.win:(youFinal===cpuFinal?'引き分け。次こそ決着を。':LEVEL_META[_lvKey].rival.lose);
-  const starSection=`<div class="match-summary milestone">${rivalReactHTML(_lvKey,_lvLine)}${starBlockHTML(_lvKey,_lvRes)}${_lvRes.newly.some(Boolean)?'<div class="star-newnote">🎉 新しい★を獲得！</div>':''}</div>`;
+  updateProgress(_lvKey, youFinal>cpuFinal); // 見破り累計・ライバル(ノクス)撃破を記録
+  const _freshTitles=unlockTitles();
+  const starSection=`<div class="match-summary milestone">${rivalReactHTML(_lvKey,_lvLine)}${starBlockHTML(_lvKey,_lvRes)}${_lvRes.newly.some(Boolean)?'<div class="star-newnote">🎉 新しい★を獲得！</div>':''}${_freshTitles.length?`<div class="star-newnote">🎖 称号アンロック：${_freshTitles.map(t=>t.name).join('・')}</div>`:''}</div>`;
   // 要点（MVP・通算・実績）は上部に。細かい内訳は折りたたみで初期表示を短く。
   const extra=`<div id="ovExtra">
     ${milestoneSection}
