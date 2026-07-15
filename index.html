@@ -1342,6 +1342,47 @@
     border:1px solid rgba(201,162,74,0.28); border-radius:8px; background:rgba(201,162,74,0.06);
   }
   .mode-summary b{ color:var(--gold-bright); }
+  /* ===== ホーム(ロビー) ===== */
+  .home-screen{ justify-content:center; align-items:center; gap:14px; }
+  .home-crest{ text-align:center; }
+  .home-title{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:46px; letter-spacing:3px;
+    color:var(--gold-bright); text-shadow:0 0 26px rgba(232,200,119,.35); line-height:1; }
+  .home-title .version-inline{ font-size:12px; font-style:normal; letter-spacing:0; color:var(--ink-dim); }
+  .home-sub{ font-size:12.5px; color:var(--ink-dim); letter-spacing:4px; margin-top:8px; }
+  .home-stats{ font-size:12px; color:var(--ink); background:rgba(201,162,74,0.07);
+    border:1px solid rgba(201,162,74,0.22); border-radius:999px; padding:6px 16px; }
+  .home-stats b{ color:var(--gold-bright); font-family:'Cormorant Garamond',serif; font-size:15px; }
+  .home-cta{ width:100%; max-width:340px; padding:18px 0; border-radius:14px; cursor:pointer;
+    font-size:19px; font-weight:800; letter-spacing:2px; color:#1a1608; text-align:center;
+    background:linear-gradient(135deg,var(--gold-bright),var(--gold-dim));
+    box-shadow:0 6px 22px rgba(201,162,74,.32); border:1px solid var(--gold-bright);
+    transition:transform .12s, box-shadow .2s; }
+  .home-cta:active{ transform:scale(.98); box-shadow:0 3px 12px rgba(201,162,74,.3); }
+  .home-cta .hc-ic{ font-size:15px; }
+  .home-learn{ width:100%; max-width:340px; }
+  .home-learn .btn{ width:100%; }
+  .home-menu{ display:flex; gap:8px; width:100%; max-width:340px; }
+  .hm-btn{ flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer;
+    padding:11px 4px; border-radius:11px; font-size:12px; color:var(--ink);
+    border:1px solid rgba(201,162,74,0.28); background:rgba(255,255,255,0.02); transition:background .15s; }
+  .hm-btn:active{ background:rgba(201,162,74,0.12); }
+  .hm-btn .hm-ic{ font-size:19px; line-height:1; }
+  .home-foot{ margin-top:2px; }
+  .home-settings-btn{ font-size:12.5px; color:var(--ink-dim); cursor:pointer; padding:8px 18px;
+    border:1px solid rgba(201,162,74,0.18); border-radius:999px; }
+  .home-settings-btn:active{ color:var(--gold-bright); }
+  /* ===== 設定画面 共通ヘッダ ===== */
+  .setup-head{ display:flex; align-items:center; width:100%; max-width:360px; margin:0 auto 2px; }
+  .setup-back{ cursor:pointer; color:var(--gold-bright); font-size:14px; min-width:64px; text-align:left; }
+  .setup-title{ flex:1; text-align:center; font-family:'Cormorant Garamond',serif; font-size:22px; color:var(--ink); }
+  .setup-spacer{ min-width:64px; }
+  .beginner-quick{ flex:0 0 auto; width:100%; max-width:360px; margin:0 auto; display:flex; flex-direction:column; gap:2px; padding:12px 0; }
+  .beginner-quick .bq-sub{ font-size:10.5px; font-weight:400; opacity:.85; }
+  .setup-details{ width:100%; max-width:360px; margin:0 auto; border:1px solid rgba(201,162,74,0.2); border-radius:10px;
+    padding:4px 12px; background:rgba(255,255,255,0.015); }
+  .setup-details > summary{ cursor:pointer; font-size:13px; color:var(--gold-bright); padding:8px 0; list-style:none; text-align:center; }
+  .setup-details > summary::-webkit-details-marker{ display:none; }
+  .setup-details[open] > summary{ border-bottom:1px solid rgba(201,162,74,0.14); margin-bottom:6px; }
   .trust-table{ width:100%; border-collapse:collapse; font-size:11px; margin:4px 0; }
   .trust-table th{ color:var(--gold-dim); font-weight:600; text-align:left; padding:4px 6px; border-bottom:1px solid var(--line); font-size:10px; }
   .trust-table td{ padding:5px 6px; border-bottom:1px solid rgba(201,162,74,0.12); color:var(--ink-dim); }
@@ -1539,49 +1580,40 @@
 <body>
 <div class="app">
 
-  <div class="instructions" id="instructions">
-    <h2>MASKD <span class="version-inline" id="versionTagTop"></span></h2>
-    <p class="lead">全8ラウンド、<b>毎ラウンド親が交代</b>。親は先に置き、子は後から置く。親だけが「決戦か撤退か」を決められる。</p>
+  <!-- ===== ホーム(ロビー) ===== -->
+  <div class="instructions home-screen" id="homeScreen">
+    <div class="home-crest">
+      <div class="home-title">MASKD <span class="version-inline" id="versionTagTop"></span></div>
+      <div class="home-sub">仮面舞踏会へようこそ</div>
+    </div>
+    <div class="home-stats" id="homeStats"></div>
+    <div class="home-cta" onclick="openMatchSetup()"><span class="hc-ic">▶</span> 対戦する</div>
+    <div class="home-learn"><div class="btn ghost" onclick="openLearnLadder()">🎓 はじめての対戦</div></div>
+    <div class="home-menu">
+      <div class="hm-btn" onclick="openMissions()"><span class="hm-ic">🎯</span>ミッション</div>
+      <div class="hm-btn" onclick="openAchievements()"><span class="hm-ic">🏆</span>実績</div>
+      <div class="hm-btn" onclick="openStats()"><span class="hm-ic">📊</span>戦績</div>
+    </div>
+    <div class="home-menu">
+      <div class="hm-btn" onclick="openTutorial()"><span class="hm-ic">📖</span>遊び方</div>
+      <div class="hm-btn" onclick="openRules()"><span class="hm-ic">📜</span>ルール</div>
+      <div class="hm-btn" onclick="openHistory()"><span class="hm-ic">↺</span>履歴</div>
+    </div>
+    <div class="home-foot"><div class="home-settings-btn" onclick="openAppSettings()">⚙ 設定</div></div>
+  </div>
 
-    <div class="top-learn-btns">
-      <div class="btn" onclick="openLearnLadder()">🎓 はじめての対戦</div>
-    </div>
-    <div class="top-info-btns">
-      <div class="btn ghost mini" onclick="openMissions()">🎯 ミッション</div>
-      <div class="btn ghost mini" onclick="openMissions('advanced')">⚔️ 上級</div>
-      <div class="btn ghost mini" onclick="openAchievements()">🏅 実績</div>
-    </div>
-    <div class="top-info-btns">
-      <div class="btn ghost mini" onclick="openTutorial()">📖 遊び方</div>
-      <div class="btn ghost mini" onclick="openRules()">📜 ルール</div>
-    </div>
+  <!-- ===== 対戦設定 ===== -->
+  <div class="instructions" id="instructions" style="display:none;">
+    <div class="setup-head"><span class="setup-back" onclick="showHome()">‹ もどる</span><span class="setup-title">対戦設定</span><span class="setup-spacer"></span></div>
+    <div class="btn beginner-quick" onclick="startBeginnerPreset()">🔰 初心者ではじめる<span class="bq-sub">初級・弱いCPU・ヒントON</span></div>
 
-    <h3>ゲームモード</h3>
+    <h3>レベル</h3>
     <div class="cpu-setting-row">
-      <div class="cpu-setting-label">ルール（使う属性）</div>
+      <div class="cpu-setting-label">使う属性（むずかしさ）</div>
       <div class="cpu-setting-opts" id="ruleOpts">
-        <div class="cpu-opt" data-val="r1">属性のみ</div>
-        <div class="cpu-opt" data-val="r2">＋AIR</div>
-        <div class="cpu-opt" data-val="r3">＋AIR＋KAOS</div>
-      </div>
-    </div>
-    <div class="cpu-setting-row">
-      <div class="cpu-setting-label">アクション</div>
-      <div class="cpu-setting-opts" id="actionOpts">
-        <div class="cpu-opt" data-val="basic">基本（決戦・撤退）</div>
-        <div class="cpu-opt" data-val="full">フル（＋入替・奇襲）</div>
-      </div>
-    </div>
-    <div class="mode-summary" id="modeSummary"></div>
-
-    <h3>対戦相手の設定</h3>
-    <div class="cpu-setting-row">
-      <div class="cpu-setting-label">CPUの種類</div>
-      <div class="cpu-setting-opts" id="cpuTypeOpts">
-        <div class="cpu-opt" data-val="random">おまかせ</div>
-        <div class="cpu-opt" data-val="aggressive">積極的</div>
-        <div class="cpu-opt" data-val="cautious">慎重</div>
-        <div class="cpu-opt" data-val="tricky">トリッキー</div>
+        <div class="cpu-opt" data-val="r1">初級（属性のみ）</div>
+        <div class="cpu-opt" data-val="r2">中級（＋AIR）</div>
+        <div class="cpu-opt" data-val="r3">上級（＋KAOS）</div>
       </div>
     </div>
     <div class="cpu-setting-row">
@@ -1592,6 +1624,36 @@
         <div class="cpu-opt" data-val="strong">強い</div>
       </div>
     </div>
+    <div class="mode-summary" id="modeSummary"></div>
+
+    <details class="setup-details">
+      <summary>詳細設定 ▼</summary>
+      <div class="cpu-setting-row">
+        <div class="cpu-setting-label">アクション</div>
+        <div class="cpu-setting-opts" id="actionOpts">
+          <div class="cpu-opt" data-val="basic">基本（決戦・撤退）</div>
+          <div class="cpu-opt" data-val="full">フル（＋入替・奇襲）</div>
+        </div>
+      </div>
+      <div class="cpu-setting-row">
+        <div class="cpu-setting-label">CPUの種類</div>
+        <div class="cpu-setting-opts" id="cpuTypeOpts">
+          <div class="cpu-opt" data-val="random">おまかせ</div>
+          <div class="cpu-opt" data-val="aggressive">積極的</div>
+          <div class="cpu-opt" data-val="cautious">慎重</div>
+          <div class="cpu-opt" data-val="tricky">トリッキー</div>
+        </div>
+      </div>
+    </details>
+
+    <div class="btn-wrap" style="display:flex;gap:8px;margin-top:4px;">
+      <div class="btn" style="flex:1;" onclick="beginMatchSetup()">この設定で対戦 ▶</div>
+    </div>
+  </div>
+
+  <!-- ===== 設定(アプリ) ===== -->
+  <div class="instructions" id="appSettings" style="display:none;">
+    <div class="setup-head"><span class="setup-back" onclick="showHome()">‹ もどる</span><span class="setup-title">設定</span><span class="setup-spacer"></span></div>
     <div class="cpu-setting-row">
       <div class="cpu-setting-label">カード表示（じゃんけん・数字を大きく／リッチな絵）</div>
       <div class="cpu-setting-opts" id="cardStyleOpts">
@@ -1613,9 +1675,12 @@
         <div class="cpu-opt" data-val="b">メリハリB（上=スコア）</div>
       </div>
     </div>
-    <div class="btn-wrap" style="display:flex;gap:8px;">
-      <div class="btn" style="flex:2;" onclick="beginMatchSetup()">対戦を始める</div>
-      <div class="btn ghost" style="flex:1.2;" onclick="openStats()">通算成績・履歴</div>
+    <div class="cpu-setting-row">
+      <div class="cpu-setting-label">効果音</div>
+      <div class="cpu-setting-opts" id="soundOpts">
+        <div class="cpu-opt" data-val="on">ON</div>
+        <div class="cpu-opt" data-val="off">OFF</div>
+      </div>
     </div>
   </div>
 
@@ -1672,7 +1737,7 @@
     <div class="score-final" id="ovScore"></div>
     <div style="display:flex;gap:8px;width:100%;max-width:300px;">
       <div class="btn" style="padding:13px 0;" onclick="beginMatchSetup()">もう一度</div>
-      <div class="btn ghost" style="padding:13px 0;" onclick="tryCloseApp()">とじる</div>
+      <div class="btn ghost" style="padding:13px 0;" onclick="showHome()">🏠 ホーム</div>
     </div>
   </div>
 
@@ -2210,6 +2275,15 @@ function initCpuSettingUI(){
     };
     if(el.dataset.val===boardLayout) el.classList.add('selected');
   });
+  document.querySelectorAll('#soundOpts .cpu-opt').forEach(el=>{
+    el.onclick=()=>{
+      document.querySelectorAll('#soundOpts .cpu-opt').forEach(x=>x.classList.remove('selected'));
+      el.classList.add('selected'); sfxEnabled=(el.dataset.val==='on');
+      try{ localStorage.setItem('maskd_sound', sfxEnabled?'on':'off'); }catch(e){}
+      updateFooterToggles(); if(sfxEnabled) sfx('select');
+    };
+    if((el.dataset.val==='on')===sfxEnabled) el.classList.add('selected');
+  });
 }
 // ===== ゲームモード選択(ルール段階 × アクション) =====
 const MODE_ATTRS={ r1:['moon','sun','dark'], r2:['moon','sun','dark','air'], r3:['moon','sun','dark','kaos','air'] };
@@ -2283,7 +2357,51 @@ function backToTitle(){
   document.getElementById('learnOverlay').classList.remove('show');
   document.getElementById('overlay').classList.remove('show');
   const rov=document.getElementById('resultOv'); if(rov) rov.classList.remove('show');
-  const inst=document.getElementById('instructions'); if(inst) inst.style.display='';
+  showHome();
+}
+// ===== ホーム / 対戦設定 / 設定 の画面遷移 =====
+function hideTitleScreens(){
+  ['homeScreen','instructions','appSettings'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
+}
+function showHome(){
+  hideTitleScreens();
+  document.getElementById('overlay').classList.remove('show');
+  const h=document.getElementById('homeScreen'); if(h) h.style.display='flex';
+  renderHomeStats();
+}
+function openMatchSetup(){
+  hideTitleScreens();
+  const el=document.getElementById('instructions'); if(el) el.style.display='flex';
+  updateModeSummary();
+}
+function openAppSettings(){
+  hideTitleScreens();
+  const el=document.getElementById('appSettings'); if(el) el.style.display='flex';
+}
+// ホームの戦績サマリー(通算勝率・連勝)。まだ対戦がなければ案内を出す
+function renderHomeStats(){
+  const el=document.getElementById('homeStats'); if(!el) return;
+  let s=null; try{ s=computeStreaksAndRate(loadGameHistory()); }catch(e){}
+  if(!s || !s.total){ el.innerHTML='ようこそ ― 最初の対戦を始めましょう'; return; }
+  el.innerHTML=`勝率 <b>${s.winRate.toFixed(0)}%</b>（${s.wins}勝/${s.total}戦） ・ 連勝 <b>${s.currentStreak}</b>（最高 ${s.maxStreak}）`;
+}
+// 初心者プリセット: 初級・弱いCPU・初心者表示・ヒントON をまとめて適用して対戦へ
+function startBeginnerPreset(){
+  selectedRule='r1'; selectedAction='basic'; selectedCpuDifficulty='weak';
+  cardStyle='beginner'; hintsEnabled=true;
+  try{ localStorage.setItem('maskd_mode_rule','r1'); localStorage.setItem('maskd_mode_action','basic');
+    localStorage.setItem('maskd_cardstyle','beginner'); localStorage.setItem('maskd_hints','on'); }catch(e){}
+  syncSettingChips(); applyCardStyleClass();
+  beginMatchSetup();
+}
+// 選択チップ(UI)を現在の変数値に合わせて再描画する(プリセット適用後など)
+function syncSettingChips(){
+  const set=(sel,val)=>document.querySelectorAll(sel+' .cpu-opt').forEach(el=>el.classList.toggle('selected', el.dataset.val===val));
+  set('#ruleOpts', selectedRule); set('#actionOpts', selectedAction);
+  set('#cpuDiffOpts', selectedCpuDifficulty); set('#cpuTypeOpts', selectedCpuType);
+  set('#cardStyleOpts', cardStyle); set('#hintOpts', hintsEnabled?'on':'off');
+  set('#soundOpts', sfxEnabled?'on':'off'); set('#layoutOpts', boardLayout);
+  updateModeSummary();
 }
 // カード表示モードの切り替え時、対戦中なら見えている札を再描画する
 function applyCardStyleClass(){
@@ -2342,7 +2460,7 @@ function beginMatchSetup(){
   // 初回プレイ時: 名前が未登録ならまず名前入力を求める
   if(!playerName){ showNameModal(beginMatchSetup); return; }
   const m=currentModeConfig();
-  document.getElementById('instructions').style.display='none';
+  hideTitleScreens();
   document.getElementById('overlay').classList.remove('show');
   if(m.isTop){
     // 上級2＝本戦(全ルール): 親決め→配札演出→ランク戦(成績記録)
@@ -2561,7 +2679,7 @@ function startGame(initialDealerIsYou, stage){
   youAirUsedSum=0; cpuAirUsedSum=0;
   youPlayedCards=[];
   { const rt=document.getElementById('roundTotal'); if(rt) rt.textContent=matchRounds; } // ラウンド総数表示を更新
-  document.getElementById('instructions').style.display='none';
+  hideTitleScreens();
   document.getElementById('overlay').classList.remove('show');
   renderScore();
   renderYouPlayed();
@@ -4047,8 +4165,13 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.46.0';
+const GAME_VERSION = 'v0.47.0';
 const CHANGELOG = [
+  { version:'v0.47.0', date:'2026-07-15', items:[
+    '<b>画面構成を刷新：ホーム（ロビー）→ 対戦設定 → 対戦</b>の3段階に分離。トップは設定の羅列ではなく、大きな<b>「▶ 対戦する」</b>と戦績サマリー、ミッション/実績/戦績、遊び方/ルール/履歴、そして最下部に<b>⚙設定</b>を置いた“ゲームのロビー”に。',
+    '「対戦する」を押すと<b>対戦設定</b>へ：レベル（初級／中級／上級）とCPUの強さを選び、<b>詳細設定▼</b>にアクション（基本／フル）やCPUの種類をたたむ形に整理。<b>🔰初心者ではじめる</b>で「初級・弱いCPU・初心者表示・ヒントON」を一括適用。',
+    'カード表示・ヒント・レイアウト・効果音は<b>⚙設定</b>にまとめ、対戦設定と分離。今後の拡張（ランク・図鑑・イベント等）を見据えた導線に。',
+  ]},
   { version:'v0.46.0', date:'2026-07-14', items:[
     '<b>ゲームモード選択</b>を追加：タイトルで<b>ルール（属性のみ／＋AIR／＋AIR＋KAOS）</b>と<b>アクション（基本＝決戦・撤退／フル＝＋入替・奇襲）</b>を別々に選べるように。組み合わせで初級1〜上級2の6モードになり、覚えたい要素だけを切り出して練習できます。CPUの強さは今まで通り別に設定可能。',
     '<b>上級2＝本戦</b>（全属性＋入替・奇襲＋終盤2倍＋残り手札ボーナス）は通算成績・実績に記録。ほかの5モードは<b>練習</b>（記録なし）として気軽に反復できます。',
@@ -4563,7 +4686,7 @@ function welcomeChoose(what){
   if(what==='learn') openLearnLadder();
   else if(what==='missions') openMissions();
   else if(what==='slides') openTutorial();
-  // 'play' はそのまま設定画面へ
+  else if(what==='play') openMatchSetup();
 }
 
 // ===== ミッション形式チュートリアル(実際に操作しながらルールを覚える) =====
@@ -5422,6 +5545,7 @@ function animateScoreBreakdown(){
 
 initCpuSettingUI(); // 全ての変数・関数定義が済んだ後に呼び出す
 initModeUI();       // ゲームモード選択(ルール×アクション)の初期化
+renderHomeStats();  // ホームの戦績サマリーを描画
 applyCardStyleClass(); // 保存された表示モード(上級者/初心者)を反映
 applyLayout(); // 保存された盤面レイアウト(A/B)を反映
 updateFooterToggles(); // フッターの表示切替トグルの初期表示
