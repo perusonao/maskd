@@ -1433,21 +1433,23 @@
     background:rgba(8,6,14,.92); border:1px solid rgba(201,162,74,.45); box-shadow:0 6px 20px rgba(0,0,0,.5);
     opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; }
   .home-toast.show{ opacity:1; transform:translate(-50%,0); }
-  /* ===== レベルの主(ライバル) と ★クリア目標 ===== */
-  .level-info{ width:100%; max-width:360px; margin:2px auto 0; padding:10px 12px; border-radius:10px;
+  /* ===== レベルの主(ライバル) と ★クリア目標(1画面に収めるため縦を圧縮) ===== */
+  .level-info{ width:100%; max-width:360px; margin:2px auto 0; padding:8px 10px; border-radius:10px;
     border:1px solid rgba(201,162,74,.3); background:rgba(10,9,16,.5); text-align:left; }
-  .lv-head{ display:flex; align-items:center; gap:10px; }
-  .lv-face{ width:40px; height:40px; border-radius:50%; flex-shrink:0; background-size:cover; background-position:center top;
-    border:1px solid rgba(201,162,74,.5); box-shadow:0 0 8px rgba(201,162,74,.2); }
+  .lv-head{ display:flex; align-items:center; gap:8px; }
+  .lv-face{ width:30px; height:30px; border-radius:50%; flex-shrink:0; background-size:cover; background-position:center top;
+    border:1px solid rgba(201,162,74,.5); box-shadow:0 0 6px rgba(201,162,74,.2); }
   .lv-meta{ flex:1; min-width:0; }
-  .lv-vs{ font-size:9.5px; letter-spacing:2px; color:var(--ink-dim); }
-  .lv-name{ font-size:14px; color:var(--gold-bright); font-weight:700; }
-  .lv-stars{ font-size:14px; letter-spacing:2px; }
+  .lv-name{ font-size:13px; color:var(--gold-bright); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lv-stars{ font-size:11px; letter-spacing:1px; margin-left:5px; }
   .lv-star{ color:#4a4550; } .lv-star.got{ color:var(--gold-bright); }
-  .lv-quote{ font-size:11px; color:#c9bfa8; font-style:italic; margin:6px 0 4px; }
-  .lv-goals{ display:flex; flex-direction:column; gap:2px; }
-  .lv-goal{ font-size:11px; color:var(--ink-dim); }
-  .lv-goal.got{ color:var(--ink); }
+  .lv-quote{ font-size:10px; color:#c9bfa8; font-style:italic; margin-top:1px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lv-goals-line{ margin-top:6px; padding-top:5px; border-top:1px solid rgba(201,162,74,.12);
+    font-size:10px; color:var(--ink-dim); line-height:1.5;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lv-goal.got{ color:var(--ink); font-weight:600; }
+  .lv-goal-sep{ margin:0 3px; opacity:.5; }
   /* 結果画面のライバル反応＋★ */
   .rival-react{ display:flex; align-items:center; gap:10px; margin:10px auto 4px; max-width:320px; text-align:left;
     padding:8px 10px; border-radius:10px; background:rgba(201,162,74,.06); border:1px solid rgba(201,162,74,.25); }
@@ -1535,26 +1537,27 @@
   .setup-back{ cursor:pointer; color:var(--gold-bright); font-size:14px; min-width:64px; text-align:left; }
   .setup-title{ flex:1; text-align:center; font-family:'Cormorant Garamond',serif; font-size:22px; color:var(--ink); }
   .setup-spacer{ min-width:64px; }
-  .beginner-quick{ flex:0 0 auto; width:100%; max-width:360px; margin:0 auto; display:flex; flex-direction:column; gap:2px; padding:12px 0; }
-  .beginner-quick .bq-sub{ font-size:10.5px; font-weight:400; opacity:.85; }
-  /* ===== 対戦設定: 番号ステップのカード ===== */
-  .setup-step{ width:100%; max-width:360px; margin:8px auto 0; padding:12px 14px; border-radius:12px;
+  .beginner-quick{ flex:0 0 auto; width:100%; max-width:360px; margin:0 auto; display:flex; flex-direction:column; gap:1px; padding:8px 0; }
+  .beginner-quick .bq-sub{ font-size:10px; font-weight:400; opacity:.85; }
+  /* ===== 対戦設定: 番号ステップのカード(1画面に収めるため縦を圧縮) ===== */
+  .setup-step{ width:100%; max-width:360px; margin:5px auto 0; padding:8px 11px; border-radius:12px;
     border:1px solid rgba(201,162,74,0.22); background:rgba(255,255,255,0.015); text-align:left; }
-  .setup-step .step-head{ display:flex; align-items:center; gap:9px; margin-bottom:9px; }
-  .setup-step .step-num{ width:20px; height:20px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
-    background:var(--gold-bright); color:#1a1608; font-size:11px; font-weight:800; }
-  .setup-step .step-title{ font-size:13px; color:var(--gold-bright); font-weight:700; letter-spacing:.02em; }
+  .setup-step .step-head{ display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+  .setup-step .step-num{ width:18px; height:18px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    background:var(--gold-bright); color:#1a1608; font-size:10px; font-weight:800; }
+  .setup-step .step-title{ font-size:12.5px; color:var(--gold-bright); font-weight:700; letter-spacing:.02em; }
   .setup-step .cpu-setting-label{ text-align:center; }
+  .setup-step .cpu-setting-row{ margin:5px 0; }
   .setup-step .mode-summary, .setup-step .level-info{ margin:0 auto; }
   /* ルールの内訳をチップで表示(長文パラグラフの代わり) */
-  .rule-chips{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
-  .rule-chip{ display:flex; align-items:center; gap:5px; padding:5px 10px; border-radius:8px; font-size:11px;
+  .rule-chips{ display:flex; flex-wrap:wrap; gap:5px; justify-content:center; }
+  .rule-chip{ display:flex; align-items:center; gap:4px; padding:4px 8px; border-radius:8px; font-size:10px;
     border:1px solid rgba(201,162,74,0.3); background:rgba(201,162,74,0.06); color:var(--ink); white-space:nowrap; }
-  .rule-chip .rc-ic{ font-size:13px; line-height:1; }
+  .rule-chip .rc-ic{ font-size:12px; line-height:1; }
   .rule-chip.top{ border-color:var(--gold-bright); background:rgba(201,162,74,.14); color:var(--gold-bright); font-weight:700; }
-  .rule-rounds{ text-align:center; font-size:11px; color:var(--ink-dim); margin-top:8px; padding-top:8px; border-top:1px solid rgba(201,162,74,.14); }
   /* このレベルの主: CPUの強さとライバルの関係を短い注記で */
-  .lv-note{ font-size:10px; color:var(--ink-dim); margin-top:8px; padding-top:6px; border-top:1px solid rgba(201,162,74,.12); line-height:1.5; }
+  .lv-note{ font-size:9.5px; color:var(--ink-dim); margin-top:4px; line-height:1.4;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .lv-note b{ color:var(--gold-dim); }
   /* アクション設定: ボタンに一言キャプションを添える */
   #actionOpts.cpu-setting-opts{ gap:8px; flex-wrap:nowrap; }
@@ -1802,9 +1805,9 @@
       <div class="step-head"><span class="step-num">1</span><span class="step-title">レベルを選ぶ</span></div>
       <div class="cpu-setting-label">使う属性（むずかしさ）</div>
       <div class="cpu-setting-opts" id="ruleOpts">
-        <div class="cpu-opt" data-val="r1">初級（属性のみ）</div>
-        <div class="cpu-opt" data-val="r2">中級（＋AIR）</div>
-        <div class="cpu-opt" data-val="r3">上級（＋KAOS）</div>
+        <div class="cpu-opt" data-val="r1">初級</div>
+        <div class="cpu-opt" data-val="r2">中級（+AIR）</div>
+        <div class="cpu-opt" data-val="r3">上級（+KAOS）</div>
       </div>
     </div>
 
@@ -1835,7 +1838,7 @@
       </div>
     </div>
 
-    <div class="btn-wrap" style="display:flex;gap:8px;margin-top:10px;">
+    <div class="btn-wrap" style="display:flex;gap:8px;margin-top:6px;">
       <div class="btn" style="flex:1;" onclick="beginMatchSetup()">この設定で対戦 ▶</div>
     </div>
   </div>
@@ -2501,22 +2504,23 @@ function currentModeConfig(){
   return { rule, full, isTop, attrs:MODE_ATTRS[rule], label:`${tier}${full?2:1}`,
            icon, rounds: isTop?8:(MODE_ROUNDS[rule]||6) };
 }
-// ルールの内訳をチップで表示(長文パラグラフの代わり)
+// ルールの内訳をチップで表示(長文パラグラフの代わり)。1画面に収めるため短い文言で1〜2行に
 function updateModeSummary(){
   const el=document.getElementById('modeSummary'); if(!el) return;
   const m=currentModeConfig();
-  const attrTxt = m.rule==='r1'?'月・太陽・闇（じゃんけん＋数字）'
-                : m.rule==='r2'?'月・太陽・闇 ＋ AIR（引き分け札）'
-                : '全属性 ＋ KAOS（特殊ルール）';
+  const attrTxt = m.rule==='r1'?'月・太陽・闇'
+                : m.rule==='r2'?'+AIR'
+                : '+KAOS（特殊）';
   const chips=[
     `<span class="rule-chip"><span class="rc-ic">${m.icon}</span>${attrTxt}</span>`,
-    m.full ? `<span class="rule-chip"><span class="rc-ic">⚔️</span>入替・奇襲あり</span>`
-           : `<span class="rule-chip"><span class="rc-ic">🗡️</span>決戦・撤退のみ</span>`,
-    m.isTop ? `<span class="rule-chip top"><span class="rc-ic">🏆</span>本戦（記録あり）</span>`
-            : `<span class="rule-chip"><span class="rc-ic">📝</span>練習（記録なし）</span>`,
+    m.full ? `<span class="rule-chip"><span class="rc-ic">⚔️</span>入替/奇襲</span>`
+           : `<span class="rule-chip"><span class="rc-ic">🗡️</span>基本のみ</span>`,
+    m.isTop ? `<span class="rule-chip top"><span class="rc-ic">🏆</span>本戦</span>`
+            : `<span class="rule-chip"><span class="rc-ic">📝</span>練習</span>`,
+    `<span class="rule-chip"><span class="rc-ic">📋</span>${m.rounds}R制</span>`,
   ];
-  if(m.isTop) chips.push(`<span class="rule-chip top"><span class="rc-ic">⚡</span>終盤2倍・残り手札ボーナス</span>`);
-  el.innerHTML=`<div class="rule-chips">${chips.join('')}</div><div class="rule-rounds">${m.rounds}ラウンド制</div>`;
+  if(m.isTop) chips.push(`<span class="rule-chip top"><span class="rc-ic">⚡</span>終盤×2</span>`);
+  el.innerHTML=`<div class="rule-chips">${chips.join('')}</div>`;
   renderLevelInfo();
 }
 // 対戦設定: 選択中レベルの「主(ライバル)」と★の獲得状況を表示
@@ -2528,13 +2532,13 @@ function renderLevelInfo(){
   const img=(typeof CARD_IMG!=='undefined'&&CARD_IMG[meta.portrait])?CARD_IMG[meta.portrait]:'';
   const earned=starsEarned(levelKey);
   const pips=earned.map((g,i)=>`<span class="lv-star${g?' got':''}" title="${meta.stars[i].label}">${g?'★':'☆'}</span>`).join('');
-  const goals=meta.stars.map((s,i)=>`<div class="lv-goal${earned[i]?' got':''}">${earned[i]?'★':'☆'} ${s.label}</div>`).join('');
+  // 目標は1行に圧縮(短縮ラベル)。詳細な文言は対戦中/結果画面の★表示で確認できる
+  const goalsLine=meta.stars.map((s,i)=>`<span class="lv-goal${earned[i]?' got':''}" title="${s.label}">${earned[i]?'★':'☆'}${s.short||s.label}</span>`).join('<span class="lv-goal-sep">・</span>');
   el.innerHTML=`
     <div class="lv-head"><div class="lv-face" style="background-image:url(${img})"></div>
-      <div class="lv-meta"><div class="lv-vs">このレベルの主</div><div class="lv-name">${meta.rival.name}</div><div class="lv-stars">${pips}</div></div></div>
-    <div class="lv-quote">「${meta.rival.intro}」</div>
-    <div class="lv-goals">${goals}</div>
-    <div class="lv-note">対戦相手は<b>${meta.name}</b>専用のライバル。上の「CPUの強さ」は、この相手の手加減を変えるだけです（相手自体は変わりません）。</div>`;
+      <div class="lv-meta"><div class="lv-name">${meta.rival.name}<span class="lv-stars">${pips}</span></div><div class="lv-quote">「${meta.rival.intro}」</div></div></div>
+    <div class="lv-goals-line">${goalsLine}</div>
+    <div class="lv-note">※CPUの強さ＝<b>相手の手加減のみ</b>変更（相手は固定）</div>`;
 }
 function initModeUI(){
   document.querySelectorAll('#ruleOpts .cpu-opt').forEach(el=>{
@@ -2564,25 +2568,25 @@ const LEVEL_META={
     rival:{ name:'三色の見習い アルル', role:'色の見習い騎士', intro:'ふふ、色の読み合い…見習いの君に分かるかな？',
             win:'やるね！ 色を制する者は侮れない。', lose:'まだ早いよ。もう一度、色を見極めて。' },
     stars:[
-      { label:'勝利する', check:c=>c.win },
-      { label:'相手の仮面を3回見破る（仮面あて）', check:c=>c.readHits>=3 },
-      { label:'相手に決戦の得点を与えず勝利', check:c=>c.win && c.cpuLP===0 },
+      { label:'勝利する', short:'勝利', check:c=>c.win },
+      { label:'相手の仮面を3回見破る（仮面あて）', short:'3回見破る', check:c=>c.readHits>=3 },
+      { label:'相手に決戦の得点を与えず勝利', short:'完封勝ち', check:c=>c.win && c.cpuLP===0 },
     ]},
   inter:{ name:'中級', portrait:'air', color:'var(--air)', cpuType:'cautious',
     rival:{ name:'風唄いのゼファ', role:'風の騎士', intro:'風は流れを変える。受け流せるかな？',
             win:'見事。風を味方にしたね。', lose:'風に翻弄されたね。Airの使い所を掴んで。' },
     stars:[
-      { label:'勝利する', check:c=>c.win },
-      { label:'Airで引き分けに持ち込む', check:c=>c.youAir>=1 },
-      { label:'5点差以上で勝利', check:c=>c.win && (c.youFinal-c.cpuFinal)>=5 },
+      { label:'勝利する', short:'勝利', check:c=>c.win },
+      { label:'Airで引き分けに持ち込む', short:'Airで引分け', check:c=>c.youAir>=1 },
+      { label:'5点差以上で勝利', short:'5点差勝ち', check:c=>c.win && (c.youFinal-c.cpuFinal)>=5 },
     ]},
   adv:{ name:'上級', portrait:'kaos', color:'var(--kaos)', cpuType:'aggressive',
     rival:{ name:'仮面卿ノクス', role:'仮面騎士の頂点', intro:'よくぞここまで。混沌の戦い、見せてもらおう。',
             win:'…見事だ。君こそ頂に立つ仮面騎士だ。', lose:'混沌は甘くない。0と1、そして5の理を思い出せ。' },
     stars:[
-      { label:'勝利する', check:c=>c.win },
-      { label:'Kaosの特殊ルールを決める', check:c=>c.kaosSpecials>=1 },
-      { label:'大差(8点差)勝ち、または最終ラウンドを勝って締める', check:c=>c.win && ((c.youFinal-c.cpuFinal)>=8 || c.wonLastRound) },
+      { label:'勝利する', short:'勝利', check:c=>c.win },
+      { label:'Kaosの特殊ルールを決める', short:'Kaos特殊', check:c=>c.kaosSpecials>=1 },
+      { label:'大差(8点差)勝ち、または最終ラウンドを勝って締める', short:'大差/最終R勝ち', check:c=>c.win && ((c.youFinal-c.cpuFinal)>=8 || c.wonLastRound) },
     ]},
 };
 // ===== 称号(★・ライバル撃破・通算からアンロック。装備してホームに表示) =====
@@ -4682,8 +4686,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.57.0';
+const GAME_VERSION = 'v0.57.1';
 const CHANGELOG = [
+  { version:'v0.57.1', date:'2026-07-15', items:[
+    '<b>対戦設定画面を1画面に収まるよう圧縮</b>：文言短縮・余白詰め・チップ表示の簡素化により、標準的なスマホ画面ではスクロールせずに①〜⑤の全ステップと「対戦」ボタンが収まるように調整。',
+  ]},
   { version:'v0.57.0', date:'2026-07-15', items:[
     '<b>対戦設定画面を番号ステップに再構成</b>：①レベルを選ぶ→②CPUの強さ→③このレベルのルール→④このレベルの主→⑤アクション設定、の5ステップに整理。③は長文の説明文をやめ、アイコンチップ（属性／アクション／記録の有無／終盤2倍）で一目で分かる表示に変更。旧「詳細設定」の折りたたみは廃止し、アクション設定を常時表示のステップに格上げ。',
     '④のライバル紹介に、CPUの強さとの関係を正しく説明する注記を追加（「CPUの強さは同じ相手の手加減を変えるだけで、対戦相手自体は変わらない」）。',

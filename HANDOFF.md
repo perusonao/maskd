@@ -1,7 +1,7 @@
 # MASKD 開発引き継ぎ資料
 
 > 別セッション／別担当への引き継ぎ用。この1枚を最初に読めば、すぐに開発を再開できるようにまとめています。
-> 最終更新: 2026-07-15 / 到達バージョン: **v0.57.0**
+> 最終更新: 2026-07-15 / 到達バージョン: **v0.57.1**
 
 ---
 
@@ -102,7 +102,8 @@
 - v0.44.0: **段階的ルール開放「はじめての対戦」**。`LEARN_STAGES`(4段階)＋`stageConfig`/`deckAttrs`/`matchRounds`＋`stageAllows()`。縮小デッキ`dealHandsStage()`、`computePossibleAttrs`は`deckAttrs`基準に変更、`startGame(dealer, stage)`でステージ設定、`TOTAL_ROUNDS`→`matchRounds`(通常は8)、`scoreMultiplier`/`isLateGame`は`late2x`フラグ＋`matchRounds-1`でゲート、`renderActions`/`cpuWantsForce`/resolveFightで入替・奇襲をゲート、`endGame`でステージ時は`endLearnStage()`へ（履歴/実績/統計に残さない）。UI: `#learnOverlay`＋`openLearnLadder`/`showStageIntro`/`startLearnStage`/`endLearnStage`、`LEARN_KEY`(進捗)。実績`graduate`。導線: タイトル/ウェルカムの「🎓 はじめての対戦」。※タイトルのボタン構成も再編。
 - v0.45〜v0.55: 表示改善の細部修正、ホーム画面のロビー化、ゲームモード選択（初級/中級/上級/本戦）とレベル別ライバル・★実績・仮面あて予想、進行度に応じたオンボーディング、プレイログ計測強化、テーマ文言を「仮面舞踏会」から「仮面騎士の戦い」へ統一。詳細はアプリ内 `CHANGELOG` を参照。
 - v0.56.0: **v1.0前の画面整理**。①`openLearnLadder`（「はじめての対戦」4段ラダー）への導線をホーム/ウェルカムから撤去（新しいレベル制と内容が重複していたため）。`LEARN_STAGES`関連の関数・DOM(`#learnOverlay`は練習モード結果画面と共用のため存置)は到達不能なコードとして残置＝**復活させる場合はホームの`.home-learn-link`とウェルカムの選択肢を戻すだけでよい**。②結果画面の下部ボタンを「🏅実績」「📊戦績」の2つに集約（`openHistory`/`openMatchLog`は結果画面から除去、`openMatchLog`は`#statsModal`内に残置）。③`#statsModal`から「みんなの統計（クラウド）」ボタンを除去（`openGlobalStats`/`#globalStatsModal`は到達不能のまま残置）。④`#welcomeModal`を「▶さっそく対戦する」中心の2択に簡素化。⑤`#tutorialOverlay`（遊び方）に「⚔️上級ミッションに挑戦」を常設リンクとして追加（従来は基本ミッション完走後のみ到達可能だった）。⑥①の影響で解除不能になった実績`graduate`（仮面騎士デビュー）を`ACHIEVEMENTS`から削除（19種→18種）。
-- **v0.57.0（現在）**: **対戦設定画面(`#instructions`)の再構成**。ユーザー提案のモックアップを元に、番号ステップ`.setup-step`（①レベル→②CPU強さ→③ルール→④ライバル→⑤アクション）に再編。旧`.setup-details`（折りたたみ「詳細設定」）は廃止しCSSごと削除、アクション設定は常時表示のステップ⑤に格上げ。③`updateModeSummary()`は長文パラグラフをやめ`.rule-chips`（属性/アクション/記録/終盤2倍のアイコンチップ）＋`.rule-rounds`（ラウンド数）に変更。④`renderLevelInfo()`に`.lv-note`を追加し、「CPUの強さはライバル自体を変えない（同じ相手の手加減のみ変える）」ことを正確に説明（旧モックアップ案にあった「対戦相手はこの強さのライバルになる」という誤った表現は採用せず修正）。「詳細を見る」ボタン（飛び先未定義）とモックアップの下部タブバー（ホーム/デッキ/対戦/成績/設定＝未実装のナビ構造）は範囲外として見送り。
+- v0.57.0: **対戦設定画面(`#instructions`)の再構成**。ユーザー提案のモックアップを元に、番号ステップ`.setup-step`（①レベル→②CPU強さ→③ルール→④ライバル→⑤アクション）に再編。旧`.setup-details`（折りたたみ「詳細設定」）は廃止しCSSごと削除、アクション設定は常時表示のステップ⑤に格上げ。③`updateModeSummary()`は長文パラグラフをやめ`.rule-chips`（属性/アクション/記録/終盤2倍のアイコンチップ）＋`.rule-rounds`（ラウンド数）に変更。④`renderLevelInfo()`に`.lv-note`を追加し、「CPUの強さはライバル自体を変えない（同じ相手の手加減のみ変える）」ことを正確に説明（旧モックアップ案にあった「対戦相手はこの強さのライバルになる」という誤った表現は採用せず修正）。「詳細を見る」ボタン（飛び先未定義）とモックアップの下部タブバー（ホーム/デッキ/対戦/成績/設定＝未実装のナビ構造）は範囲外として見送り。
+- **v0.57.1（現在）**: **対戦設定画面を1画面(スクロールなし)に圧縮**。`#instructions`は`.app{height:min(920px,97vh)}`の枠に`inset:0`で収まる構造(`overflow-y:auto`)なので、実際の可視高はビューポートではなく`.app`の高さで決まる点に注意。文言短縮（レベルボタンラベル・ルールチップ・★目標=`LEVEL_META.stars[].short`を新設し1行連結表示・注記1行化）と余白圧縮（`.setup-step`padding/margin・`.lv-*`各要素）で実施。`.lv-name`/`.lv-quote`/`.lv-goals-line`/`.lv-note`に`white-space:nowrap`＋`text-overflow:ellipsis`を付与し、内容量に関わらず行数を固定(高さの予測可能性を担保)。検証は幅402px×高さ820/844px系で全6通り(r1/r2/r3×basic/full)ともscrollHeight===clientHeight(スクロール不要)を確認。ただしiPhone SE等の小型端末(高さ667px前後)では`.app`高が97vh制約で縮むため約130px分の内部スクロールが残る(既知の制約、フォント読み込みタイミングにより実測値は多少変動しうる)。
 
 ## 9. 次にやり得ること（未確定・候補）
 
