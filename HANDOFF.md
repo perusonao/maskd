@@ -1,7 +1,7 @@
 # MASKD 開発引き継ぎ資料
 
 > 別セッション／別担当への引き継ぎ用。この1枚を最初に読めば、すぐに開発を再開できるようにまとめています。
-> 最終更新: 2026-07-15 / 到達バージョン: **v0.55.0**
+> 最終更新: 2026-07-15 / 到達バージョン: **v0.56.0**
 
 ---
 
@@ -99,7 +99,9 @@
 - v0.41.0: レイアウト見直し。①トップ: 上部ボタンを `top-learn-btns`（ミッション/上級）＋ `top-info-btns.mini`（実績/遊び方/ルール）の2段に整頓（更新履歴はフッター`MASKD`タップに集約）。②結果画面(`endGame`): 各ラウンド内訳/残り手札/統計を `<details class="ov-details">` で折りたたみ（要点＝スコア/MVP/連勝/実績は上部固定）。「もう一度/とじる」が初期表示内に収まるように。
 - **v0.42.0（現在）**: ①CPU思考中インジケータ `#cpuThinking`（`showCpuThinking`/`hideCpuThinking`。CPU手番のsetTimeout前に表示、`cpuActAsDealer`/`cpuActAsChild`/`cpuDecide` 冒頭で解除。CPU待ちは 700/800ms）。②得点リード可視化（`renderScore` でリード側 `#youLP`/`#cpuLP` に `.leading`、`#youLeadMark`/`#cpuLeadMark` に「▲ +N」）。
 - **v0.43.0（現在）**: ①盤面レイアウト切替 A(標準)/B(メリハリ)。`boardLayout`/`maskd_layout`、`applyLayout()`/`setBoardLayout()`/`toggleLayout()`、`.app.layout-b` CSS、上段スコアバー `#topScoreBar`（`renderScore`が同期、Bでは `.pinfo .pi-pt` を隠す）。導線: トップ設定 `#layoutOpts`＋フッター `#layoutToggle`。②Kaos/Air演出強化（`.kaos-flash` に紫の衝撃波リング`::before`＋ラベルpop、`.air-flash` のAIRラベルをふわっと浮上）。③**不具合修正**: `.hist-scroll > *{flex-shrink:0}` で対戦ログ一覧の行つぶれ（縦フレックスのshrink）を解消。
-- **v0.44.0（現在）**: **段階的ルール開放「はじめての対戦」**。`LEARN_STAGES`(4段階)＋`stageConfig`/`deckAttrs`/`matchRounds`＋`stageAllows()`。縮小デッキ`dealHandsStage()`、`computePossibleAttrs`は`deckAttrs`基準に変更、`startGame(dealer, stage)`でステージ設定、`TOTAL_ROUNDS`→`matchRounds`(通常は8)、`scoreMultiplier`/`isLateGame`は`late2x`フラグ＋`matchRounds-1`でゲート、`renderActions`/`cpuWantsForce`/resolveFightで入替・奇襲をゲート、`endGame`でステージ時は`endLearnStage()`へ（履歴/実績/統計に残さない）。UI: `#learnOverlay`＋`openLearnLadder`/`showStageIntro`/`startLearnStage`/`endLearnStage`、`LEARN_KEY`(進捗)。実績`graduate`。導線: タイトル/ウェルカムの「🎓 はじめての対戦」。※タイトルのボタン構成も再編。
+- v0.44.0: **段階的ルール開放「はじめての対戦」**。`LEARN_STAGES`(4段階)＋`stageConfig`/`deckAttrs`/`matchRounds`＋`stageAllows()`。縮小デッキ`dealHandsStage()`、`computePossibleAttrs`は`deckAttrs`基準に変更、`startGame(dealer, stage)`でステージ設定、`TOTAL_ROUNDS`→`matchRounds`(通常は8)、`scoreMultiplier`/`isLateGame`は`late2x`フラグ＋`matchRounds-1`でゲート、`renderActions`/`cpuWantsForce`/resolveFightで入替・奇襲をゲート、`endGame`でステージ時は`endLearnStage()`へ（履歴/実績/統計に残さない）。UI: `#learnOverlay`＋`openLearnLadder`/`showStageIntro`/`startLearnStage`/`endLearnStage`、`LEARN_KEY`(進捗)。実績`graduate`。導線: タイトル/ウェルカムの「🎓 はじめての対戦」。※タイトルのボタン構成も再編。
+- v0.45〜v0.55: 表示改善の細部修正、ホーム画面のロビー化、ゲームモード選択（初級/中級/上級/本戦）とレベル別ライバル・★実績・仮面あて予想、進行度に応じたオンボーディング、プレイログ計測強化、テーマ文言を「仮面舞踏会」から「仮面騎士の戦い」へ統一。詳細はアプリ内 `CHANGELOG` を参照。
+- **v0.56.0（現在）**: **v1.0前の画面整理**。①`openLearnLadder`（「はじめての対戦」4段ラダー）への導線をホーム/ウェルカムから撤去（新しいレベル制と内容が重複していたため）。`LEARN_STAGES`関連の関数・DOM(`#learnOverlay`は練習モード結果画面と共用のため存置)は到達不能なコードとして残置＝**復活させる場合はホームの`.home-learn-link`とウェルカムの選択肢を戻すだけでよい**。②結果画面の下部ボタンを「🏅実績」「📊戦績」の2つに集約（`openHistory`/`openMatchLog`は結果画面から除去、`openMatchLog`は`#statsModal`内に残置）。③`#statsModal`から「みんなの統計（クラウド）」ボタンを除去（`openGlobalStats`/`#globalStatsModal`は到達不能のまま残置）。④`#welcomeModal`を「▶さっそく対戦する」中心の2択に簡素化。⑤`#tutorialOverlay`（遊び方）に「⚔️上級ミッションに挑戦」を常設リンクとして追加（従来は基本ミッション完走後のみ到達可能だった）。⑥①の影響で解除不能になった実績`graduate`（仮面騎士デビュー）を`ACHIEVEMENTS`から削除（19種→18種）。
 
 ## 9. 次にやり得ること（未確定・候補）
 

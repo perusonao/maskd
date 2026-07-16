@@ -1761,7 +1761,6 @@
     <div class="mask-fan" id="maskFan"></div>
 
     <div class="home-cta-img" onclick="onHomePlay()" role="button" tabindex="0" aria-label="対戦する START DUEL"></div>
-    <div class="home-learn-link" onclick="openLearnLadder()">🎓 はじめての対戦（段階で覚える）</div>
 
     <div class="home-menu">
       <div class="img-btn" style="background-image:url(btn-mission.png)" onclick="openMissions()" role="button" tabindex="0" aria-label="ミッション"></div>
@@ -1865,6 +1864,7 @@
         <div class="tut-btn" id="tutNext" onclick="tutNext()">次へ ›</div>
       </div>
       <div class="tut-skip" onclick="closeTutorial()">スキップして閉じる</div>
+      <div class="tut-skip" style="margin-top:4px;" onclick="closeTutorial(); openMissions('advanced');">⚔️ 上級ミッションに挑戦（任意の腕試し）</div>
     </div>
   </div>
 
@@ -1922,7 +1922,6 @@
     <div class="match-summary" id="statsBody" style="margin:10px 0;"></div>
     <div style="display:flex;gap:6px;margin-bottom:6px;">
       <div class="btn" style="flex:1;font-size:12px;" onclick="openMatchLog()">対戦ログ一覧を見る</div>
-      <div class="btn ghost" style="flex:1;font-size:12px;" onclick="openGlobalStats()">みんなの統計（クラウド）</div>
     </div>
     <div style="display:flex;gap:6px;">
       <div class="btn ghost" style="flex:1;font-size:12px;" onclick="exportStatsJSON()">JSONをコピー</div>
@@ -1981,11 +1980,10 @@
   <div class="tutm-overlay" id="welcomeModal">
     <div class="tutm-box" style="max-width:340px;">
       <div class="tutm-head"><span class="tutm-title" style="text-align:center;flex:1;">MASKD へようこそ</span></div>
-      <div class="tutm-intro" style="text-align:center;margin-top:12px;">仮面をかぶった騎士たちの<b>心理戦・推理カードゲーム</b>。<br>まずは<b>ミッション</b>で、操作とルールを手を動かして覚えるのがおすすめです。</div>
+      <div class="tutm-intro" style="text-align:center;margin-top:12px;">仮面をかぶった騎士たちの<b>心理戦・推理カードゲーム</b>。<br>まずは遊びながら覚えていきましょう。</div>
       <div class="tutm-controls" style="flex-direction:column;margin-top:16px;">
-        <div class="btn" style="width:100%;" onclick="welcomeChoose('learn')">🎓 はじめての対戦（おすすめ）</div>
-        <div class="btn ghost" style="width:100%;" onclick="welcomeChoose('missions')">🎯 ミッションで学ぶ</div>
-        <div class="btn ghost" style="width:100%;" onclick="welcomeChoose('play')">すぐに対戦する</div>
+        <div class="btn" style="width:100%;" onclick="welcomeChoose('play')">▶ さっそく対戦する</div>
+        <div class="btn ghost" style="width:100%;" onclick="welcomeChoose('missions')">🎯 先にミッションで学ぶ</div>
       </div>
     </div>
   </div>
@@ -4657,8 +4655,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.55.1';
+const GAME_VERSION = 'v0.56.0';
 const CHANGELOG = [
+  { version:'v0.56.0', date:'2026-07-15', items:[
+    '<b>v1.0前の画面整理（重複・未完成要素の除外）</b>：新機能は追加せず、各画面の「できること」を棚卸しして整理。①「はじめての対戦」ラダーを除外（新しいレベル制と教える内容が重複していたため）。②結果画面のボタンを実績／戦績の2つに集約（今回の履歴・対戦ログ一覧は戦績の中へ）。③「みんなの統計（クラウド）」を除外（運用前提の機能のため）。④初回ウェルカムを簡素化（「▶さっそく対戦する」中心に）。⑤上級ミッションの入口を「遊び方」画面に常設し、いつでも挑戦できるように。⑥①の影響で解除条件を失った実績「仮面騎士デビュー」を一覧から除外（実績19種→18種、達成不能な実績を整理）。',
+  ]},
   { version:'v0.55.1', date:'2026-07-15', items:[
     'テーマの表記を統一：世界観は「仮面舞踏会」ではなく<b>仮面をかぶった騎士たちの戦い</b>。文言を騎士・決闘テーマに修正（ライバルの肩書き・称号・実績名・紹介文など）。ゲーム内容・ルールは変更なし。',
   ]},
@@ -5522,7 +5523,6 @@ const ACHIEVEMENTS=[
   { id:'airmaster',icon:'🌫️', title:'風の使い手',   desc:'1試合でAirを3回以上使う',      check:c=>c.summary && c.summary.youAir>=3 },
   { id:'games50',  icon:'🏛️', title:'百戦の猛者',   desc:'通算50戦プレイする',          check:c=>c.agg&&c.agg.totalGames>=50 },
   { id:'grandmaster',icon:'🏵️', title:'覇者',       desc:'通算20戦以上で勝率70%以上',   check:c=>c.agg&&c.agg.totalGames>=20&&c.streak&&c.streak.winRate>=70 },
-  { id:'graduate', icon:'🎓', title:'仮面騎士デビュー', desc:'はじめての対戦(全4段階)をクリア', check:c=>c.learnDone },
 ];
 // ctxを渡して未解除の実績を判定・解除。新規解除ぶんを返す
 function checkAchievements(ctx){
@@ -6118,9 +6118,7 @@ function endGame(){
     </details>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;width:100%;max-width:300px;">
       <div class="btn ghost" style="white-space:nowrap;padding:10px 4px;flex:1 1 45%;" onclick="openAchievements()">🏅 実績</div>
-      <div class="btn ghost" style="white-space:nowrap;padding:10px 4px;flex:1 1 45%;" onclick="openStats()">通算統計</div>
-      <div class="btn ghost" style="white-space:nowrap;padding:10px 4px;flex:1 1 45%;" onclick="openHistory()">今回の履歴</div>
-      <div class="btn ghost" style="white-space:nowrap;padding:10px 4px;flex:1 1 45%;" onclick="openMatchLog()">対戦ログ一覧</div>
+      <div class="btn ghost" style="white-space:nowrap;padding:10px 4px;flex:1 1 45%;" onclick="openStats()">📊 戦績</div>
     </div>
   </div>`;
   document.getElementById('ovScore').innerHTML=tbl+extra;
