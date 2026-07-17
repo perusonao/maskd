@@ -131,7 +131,7 @@ const DIFF={weak:'やさしい',normal:'普通',strong:'強い'};
 const TYPE={aggressive:'攻撃的',cautious:'慎重',tricky:'トリッキー',random:'おまかせ'};
 const ATTRS=['moon','sun','dark','kaos','air'];
 
-let fb=null, allLogs=[], totalCount=null, allSurveys=[], surveyLoadError=null;
+let fb=null, allLogs=[], totalCount=null, allSurveys=[], surveyLoadError=null, allPlayers=[], totalPlayers=null, playerLoadError=null;
 let tableState={ sortKey:'ts', sortDir:-1, fWinner:'', fDiff:'', fVer:'', q:'' };
 
 const $=id=>document.getElementById(id);
@@ -214,6 +214,18 @@ async function loadData(){
   }catch(e){
     allSurveys=[]; surveyLoadError=(e&&(e.code||e.message))||'不明なエラー';
   }
+  // 登録プレイヤー数(件数はサーバー集計、一覧は直近分のみ取得)
+  try{
+    const [snap, count] = await Promise.all([
+      fb.getDocs(fb.query(fb.collection(fb.db,"players"), fb.limit(300))),
+      fb.getCountFromServer(fb.collection(fb.db,"players")).then(s=>s.data().count).catch(()=>null)
+    ]);
+    allPlayers=[]; snap.forEach(d=>allPlayers.push(d.data()));
+    totalPlayers=count;
+    playerLoadError=null;
+  }catch(e){
+    allPlayers=[]; totalPlayers=null; playerLoadError=(e&&(e.code||e.message))||'不明なエラー';
+  }
   render();
 }
 function banner(html){ return '<div class="banner">'+html+'</div>'; }
@@ -251,6 +263,29 @@ function surveySectionHTML(){
   return out;
 }
 
+// ===== 登録プレイヤー =====
+function playersSectionHTML(){
+  if(playerLoadError){
+    return '<h2>👤 登録プレイヤー</h2>'+banner(
+      'プレイヤー登録(<code>players</code>コレクション)の読み取りに失敗しました。<br>Firestoreのセキュリティルールで<b>読み取り</b>を許可してください：<br>'+
+      '<code>match /players/{doc} { allow create: if true; allow read: if true; }</code><br>'+
+      '<span style="font-size:10px;">詳細: '+esc(playerLoadError)+'</span>');
+  }
+  const N=(totalPlayers!=null)?totalPlayers:allPlayers.length;
+  let out='<h2>👤 登録プレイヤー</h2>';
+  out+=`<div class="grid">${kpi(N,'登録人数')}</div>`;
+  if(!allPlayers.length) return out+'<div class="card muted">まだ登録がありません。</div>';
+  const tsOf=x=>{ try{ return x.serverTs && x.serverTs.toDate ? x.serverTs.toDate().getTime() : 0; }catch(e){ return 0; } };
+  const sorted=[...allPlayers].sort((a,b)=>tsOf(b)-tsOf(a));
+  out+='<div class="card"><div class="tbl-wrap" style="max-height:220px;">'+
+    sorted.slice(0,50).map(x=>{
+      let t=''; try{ t=x.serverTs&&x.serverTs.toDate ? x.serverTs.toDate().toISOString().replace('T',' ').slice(0,16) : ''; }catch(e){}
+      return `<div class="rrow"><div class="rt"><span>${esc(x.name||'(名前なし)')}</span><span>${esc(t)}</span></div></div>`;
+    }).join('')+
+    '</div></div>';
+  return out;
+}
+
 // ===== 集計＆描画 =====
 function render(){
   const N=allLogs.length;
@@ -259,7 +294,7 @@ function render(){
   $('meta').innerHTML=`総レコード数(サーバー集計): <b style="color:var(--goldb)">${total}</b> 件`+
     (sampled?`　／　集計は直近 ${N} 件のサンプル`:``)+`　／　取得 ${N} 件`;
 
-  if(!N){ $('content').innerHTML=surveySectionHTML()+banner('対戦ログのデータはまだありません。'); return; }
+  if(!N){ $('content').innerHTML=surveySectionHTML()+playersSectionHTML()+banner('対戦ログのデータはまだありません。'); return; }
 
   // 基本集計
   let pw=0,cw=0,dr=0,sumP=0,sumC=0,sumTime=0,timeCount=0;
@@ -303,8 +338,8 @@ function render(){
   const decided=pw+cw;
   const avgTime=timeCount?(sumTime/timeCount/1000):null;
 
-  // アンケート(最優先で確認したい項目なので一番上に表示)
-  let html=surveySectionHTML();
+  // アンケート・登録プレイヤー(最優先で確認したい項目なので一番上に表示)
+  let html=surveySectionHTML()+playersSectionHTML();
 
   // KPI
   html+=`<div class="grid">
@@ -473,7 +508,7 @@ function exportCSV(){
 }
 
 // テスト用フック(モックデータで描画を確認する。害はない)
-window.__adminMock=(logs,count,surveys)=>{ allLogs=logs; totalCount=count; if(surveys)allSurveys=surveys; render(); };
+window.__adminMock=(logs,count,surveys,players,playerCount)=>{ allLogs=logs; totalCount=count; if(surveys)allSurveys=surveys; if(players){ allPlayers=players; totalPlayers=(playerCount!=null)?playerCount:players.length; } render(); };
 
 // ===== 起動 =====
 $('unlockBtn').onclick=tryUnlock;

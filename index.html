@@ -1450,8 +1450,9 @@
   .lv-star{ color:#4a4550; } .lv-star.got{ color:var(--gold-bright); }
   .lv-quote{ font-size:10px; color:#c9bfa8; font-style:italic; margin-top:1px;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .lv-goals-line{ margin-top:6px; padding-top:5px; border-top:1px solid rgba(201,162,74,.12);
-    font-size:10px; color:var(--ink-dim); line-height:1.5;
+  .lv-goals-label{ margin-top:6px; padding-top:5px; border-top:1px solid rgba(201,162,74,.12);
+    font-size:9px; color:var(--gold-dim); letter-spacing:.04em; }
+  .lv-goals-line{ font-size:10px; color:var(--ink-dim); line-height:1.5;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .lv-goal.got{ color:var(--ink); font-weight:600; }
   .lv-goal-sep{ margin:0 3px; opacity:.5; }
@@ -1552,6 +1553,19 @@
   .setup-step .cpu-setting-label{ text-align:center; }
   .setup-step .cpu-setting-row{ margin:5px 0; }
   .setup-step .mode-summary, .setup-step .level-info{ margin:0 auto; }
+  /* CPUの強さ: 手加減の度合いであることを一言添える */
+  #cpuDiffOpts .cpu-opt{ display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 10px; }
+  #cpuDiffOpts .cpu-opt .opt-sub{ font-size:8.5px; font-weight:400; opacity:.8; }
+  /* 対戦設定: ルール・ボス情報は折りたたみに格納(初見は①②だけ決めればよい) */
+  .setup-details{ width:100%; max-width:360px; margin:5px auto 0; border-radius:10px; overflow:hidden;
+    border:1px solid rgba(201,162,74,0.22); }
+  .setup-details summary{ cursor:pointer; padding:9px 12px; font-size:11.5px; color:var(--gold-bright);
+    background:rgba(201,162,74,.05); text-align:center; user-select:none; list-style:none; }
+  .setup-details summary::-webkit-details-marker{ display:none; }
+  .setup-details summary::before{ content:'▸ '; }
+  .setup-details[open] summary::before{ content:'▾ '; }
+  .setup-details[open] summary{ border-bottom:1px solid rgba(201,162,74,0.22); }
+  .setup-details .setup-step{ border:none; border-radius:0; margin:0; background:transparent; }
   /* ルールの内訳をチップで表示(長文パラグラフの代わり) */
   .rule-chips{ display:flex; flex-wrap:wrap; gap:5px; justify-content:center; }
   .rule-chip{ display:flex; align-items:center; gap:4px; padding:4px 8px; border-radius:8px; font-size:10px;
@@ -1799,13 +1813,13 @@
 
     <div class="home-menu-group">
       <div class="home-menu">
-        <div class="img-btn" style="background-image:url(btn-mission.png)" onclick="openMissions()" role="button" tabindex="0" aria-label="ミッション"></div>
-        <div class="img-btn" style="background-image:url(btn-achieve.png)" onclick="openAchievements()" role="button" tabindex="0" aria-label="実績"></div>
-        <div class="img-btn" style="background-image:url(btn-rank.png)" onclick="homeRankSoon()" role="button" tabindex="0" aria-label="ランク"></div>
-      </div>
-      <div class="home-menu">
         <div class="img-btn" style="background-image:url(btn-howto.png)" onclick="openTutorial()" role="button" tabindex="0" aria-label="遊び方"></div>
         <div class="img-btn" style="background-image:url(btn-rules.png)" onclick="openRules()" role="button" tabindex="0" aria-label="ルール"></div>
+        <div class="img-btn" style="background-image:url(btn-achieve.png)" onclick="openAchievements()" role="button" tabindex="0" aria-label="実績"></div>
+      </div>
+      <div class="home-menu">
+        <div class="img-btn" style="background-image:url(btn-mission.png)" onclick="openMissions()" role="button" tabindex="0" aria-label="ミッション"></div>
+        <div class="img-btn" style="background-image:url(btn-rank.png)" onclick="homeRankSoon()" role="button" tabindex="0" aria-label="ランク"></div>
         <div class="img-btn" style="background-image:url(btn-record.png)" onclick="openStats()" role="button" tabindex="0" aria-label="戦績"></div>
       </div>
     </div>
@@ -1819,33 +1833,36 @@
 
     <div class="setup-step">
       <div class="step-head"><span class="step-num">1</span><span class="step-title">レベルを選ぶ</span></div>
-      <div class="cpu-setting-label">使う属性（むずかしさ）</div>
+      <div class="cpu-setting-label">使用するカード</div>
       <div class="cpu-setting-opts" id="ruleOpts">
         <div class="cpu-opt" data-val="r1">初級</div>
         <div class="cpu-opt" data-val="r2">中級（+AIR）</div>
         <div class="cpu-opt" data-val="r3">上級（+KAOS）</div>
-        <div class="cpu-opt" data-val="top">本戦<span class="opt-sub">記録あり</span></div>
+        <div class="cpu-opt" data-val="top">本戦<span class="opt-sub">勝敗を記録</span></div>
       </div>
     </div>
 
     <div class="setup-step">
       <div class="step-head"><span class="step-num">2</span><span class="step-title">CPUの強さを選ぶ</span></div>
       <div class="cpu-setting-opts" id="cpuDiffOpts">
-        <div class="cpu-opt" data-val="weak">弱い</div>
+        <div class="cpu-opt" data-val="weak">弱い<span class="opt-sub">CPUが手加減</span></div>
         <div class="cpu-opt" data-val="normal">普通</div>
-        <div class="cpu-opt" data-val="strong">強い</div>
+        <div class="cpu-opt" data-val="strong">強い<span class="opt-sub">CPUが本気</span></div>
       </div>
     </div>
 
-    <div class="setup-step">
-      <div class="step-head"><span class="step-num">3</span><span class="step-title">このレベルのルール</span></div>
-      <div class="mode-summary" id="modeSummary"></div>
-    </div>
+    <details class="setup-details">
+      <summary>詳細を見る（ルール・ボス情報）</summary>
+      <div class="setup-step">
+        <div class="step-head"><span class="step-title">このレベルのルール</span></div>
+        <div class="mode-summary" id="modeSummary"></div>
+      </div>
 
-    <div class="setup-step">
-      <div class="step-head"><span class="step-num">4</span><span class="step-title">このレベルの主</span></div>
-      <div class="level-info" id="levelInfo"></div>
-    </div>
+      <div class="setup-step">
+        <div class="step-head"><span class="step-title">このレベルの主</span></div>
+        <div class="level-info" id="levelInfo"></div>
+      </div>
+    </details>
 
     <div class="btn-wrap" style="display:flex;gap:8px;margin-top:6px;">
       <div class="btn" style="flex:1;" onclick="beginMatchSetup()">この設定で対戦 ▶</div>
@@ -2556,13 +2573,13 @@ function updateModeSummary(){
   const m=currentModeConfig();
   const attrTxt = m.rule==='r1'?'月・太陽・闇'
                 : m.rule==='r2'?'+AIR'
-                : '+KAOS（特殊）';
+                : '+KAOS（特殊カード）';
   const chips=[
     `<span class="rule-chip"><span class="rc-ic">${m.icon}</span>${attrTxt}</span>`,
     m.full ? `<span class="rule-chip"><span class="rc-ic">⚔️</span>入替/奇襲</span>`
-           : `<span class="rule-chip"><span class="rc-ic">🗡️</span>基本のみ</span>`,
+           : `<span class="rule-chip"><span class="rc-ic">🗡️</span>基本ルールのみ</span>`,
     m.isTop ? `<span class="rule-chip top"><span class="rc-ic">🏆</span>本戦</span>`
-            : `<span class="rule-chip"><span class="rc-ic">📝</span>練習</span>`,
+            : `<span class="rule-chip"><span class="rc-ic">📝</span>練習モード</span>`,
     `<span class="rule-chip"><span class="rc-ic">📋</span>${m.rounds}R制</span>`,
   ];
   if(m.isTop) chips.push(`<span class="rule-chip top"><span class="rc-ic">⚡</span>終盤×2</span>`);
@@ -2583,6 +2600,7 @@ function renderLevelInfo(){
   el.innerHTML=`
     <div class="lv-head"><div class="lv-face" style="background-image:url(${img})"></div>
       <div class="lv-meta"><div class="lv-name">${meta.rival.name}<span class="lv-stars">${pips}</span></div><div class="lv-quote">「${meta.rival.intro}」</div></div></div>
+    <div class="lv-goals-label">クリア条件</div>
     <div class="lv-goals-line">${goalsLine}</div>
     <div class="lv-note">※CPUの強さ＝<b>相手の手加減のみ</b>変更（相手は固定）</div>`;
 }
@@ -2748,7 +2766,9 @@ function endPracticeMode(youFinal, cpuFinal, st){
   const rivalLine = win?meta.rival.win : (draw?'引き分け。次こそ決着を。':meta.rival.lose);
   const gotNew = res.newly.some(Boolean);
   _abandonSent=true; // 完走したので離脱扱いにしない
-  maybeSendGameLog(youFinal, cpuFinal, computeMatchSummary()); // ★練習/レベル戦も計測(解除前に)
+  const _summary=computeMatchSummary();
+  saveGameToHistory(youFinal, cpuFinal, _summary, {level:levelKey, isTop:false}); // 初級/中級/上級もローカル履歴に記録(解除前に)
+  maybeSendGameLog(youFinal, cpuFinal, _summary); // ★練習/レベル戦も計測(解除前に)
   stageConfig=null; deckAttrs=ATTRS5; matchRounds=TOTAL_ROUNDS; // 本戦に影響しないよう解除
   const rov=document.getElementById('resultOv'); if(rov) rov.classList.remove('show');
   document.getElementById('overlay').classList.remove('show');
@@ -2911,7 +2931,7 @@ function renderHomeStats(){
   const total=(s&&s.total)||0;
   totalEl.textContent = total ? `${total}戦` : '対戦前';
   if(!total){ rateEl.textContent='勝率 –%'; barEl.style.width='0%'; return; }
-  rateEl.textContent=`勝率 ${s.winRate.toFixed(0)}%`;
+  rateEl.textContent=`${s.wins}勝（勝率${s.winRate.toFixed(0)}%）`;
   barEl.style.width=Math.max(4,Math.min(100,s.winRate)).toFixed(0)+'%';
 }
 // ランクは未実装。見た目のボタンだけ置き、押されたら近日公開を伝える
@@ -3037,6 +3057,13 @@ function submitPlayerName(){
   playerName=v;
   try{ localStorage.setItem('maskd_playername', v); }catch(e){}
   try{ if(window.__maskdSaveName) window.__maskdSaveName(v); }catch(e){}
+  // 新規プレイヤー登録をスマホへ通知(名前の中身は送らない。件数の把握用)
+  try{
+    fetch('https://ntfy.sh/'+NTFY_TOPIC, {
+      method:'POST', body:'新しいプレイヤーが登録しました',
+      headers:{ 'Title':'MASKD New Player', 'Tags':'wave', 'Click':ADMIN_URL }
+    }).catch(e=>console.warn('MASKD: 登録通知に失敗(fetch)', e));
+  }catch(e){ console.warn('MASKD: 登録通知に失敗', e); }
   document.getElementById('nameModal').classList.remove('show');
   const cb=_afterName; _afterName=null;
   if(typeof cb==='function') cb();
@@ -4801,8 +4828,15 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.59.4';
+const GAME_VERSION = 'v0.60.0';
 const CHANGELOG = [
+  { version:'v0.60.0', date:'2026-07-17', items:[
+    '<b>初級・中級・上級もプレイ記録の対象に</b>：これまでプレイ記録（ホームの戦績バッジ・実績の一部条件）は「本戦」のみが対象だったが、練習モード（初級／中級／上級）で遊んだ分も同じ記録に加わるように変更。',
+    '<b>ホームの戦績バッジの表記を変更</b>：「勝率XX%」のみの表示から、「X勝（勝率XX%）」に変更し勝ち数も一目で分かるように。',
+    '<b>プレイヤー登録人数を管理画面に追加</b>：設定画面で名前を登録した人数を管理画面(admin.html)で確認できるように。登録があるとプッシュ通知が届く（アンケート回答の通知と同じ仕組み）。',
+    '<b>ホーム画面のメニュー並び替え</b>：「遊び方／ルール／実績」「ミッション／ランク／戦績」の順に整理（初見の人が迷わないよう、遊ぶ前に必要な情報を上段に）。',
+    '<b>対戦設定画面の文言・構成を整理</b>：「使う属性（むずかしさ）」→「使用するカード」に変更。CPUの強さボタンに「CPUが手加減／CPUが本気」の一言を追加。「本戦」の説明を「ランキング対象」ではなく実態に合わせて「勝敗を記録」に修正。ルールチップの文言をより分かりやすく（例：「+KAOS（特殊）」→「+KAOS（特殊カード）」）。「このレベルのルール」「このレベルの主」を折りたたみ（詳細を見る）にまとめ、初見でも①②の選択とボタンまでがすぐ見えるように。「クリア条件」の見出しを追加。',
+  ]},
   { version:'v0.59.4', date:'2026-07-17', items:[
     '<b>結果画面からアンケートへ誘導</b>：対戦が終わると「📝 感想を聞かせてください（1分・任意）」というリンクを表示（本戦・練習どちらも）。一度回答すると以降は表示されない。',
   ]},
@@ -5749,7 +5783,7 @@ function loadGameHistory(){
   }catch(e){ return []; } // localStorageが使えない環境では空扱い(機能自体は落とさない)
 }
 
-function saveGameToHistory(youFinal, cpuFinal, summary){
+function saveGameToHistory(youFinal, cpuFinal, summary, meta){
   try{
     const games=loadGameHistory();
     games.push({
@@ -5760,6 +5794,7 @@ function saveGameToHistory(youFinal, cpuFinal, summary){
       passes:summary.passes, youAir:summary.youAir, cpuAir:summary.cpuAir,
       youKaos:summary.youKaos, cpuKaos:summary.cpuKaos,
       cpuStrategy, cpuDifficulty,
+      level:(meta&&meta.level)||'adv', isTop:!!(meta&&meta.isTop), // どのレベル/本戦か練習かのタグ(後で絞り込めるように)
       rounds: JSON.parse(JSON.stringify(roundLog)) // ラウンド別の詳細も保存(後で詳細分析できるように)
     });
     // 直近100試合分だけ保持(ストレージ肥大化を防ぐ)
@@ -6208,14 +6243,14 @@ function endGame(){
   const youFinal = youLP + youTrust + youLeftoverBonus;
   const cpuFinal = cpuLP + cpuTrust + cpuLeftoverBonus;
   const s=computeMatchSummary();
-  // 段階チュートリアルは専用の結果画面へ(通算/実績/履歴には残さない)
+  // レベル戦(初級/中級/上級)・練習モードは専用の結果画面へ(履歴には残すが、実績判定やこの結果UIは通さない)
   if(stageConfig){ endLearnStage(youFinal, cpuFinal); return; }
   if(youFinal>cpuFinal){ t.textContent='VICTORY'; t.className='big win'; }
   else if(cpuFinal>youFinal){ t.textContent='DEFEAT'; t.className='big lose'; }
   else { t.textContent='DRAW'; t.className='big draw'; }
   markOnboardingDone(); // 初回プレイの案内は1試合で終了(以降は通常のヒントに任せる)
   // 先に履歴へ保存し、この試合を含めた通算成績（勝率・連勝・MVP）を算出する
-  saveGameToHistory(youFinal, cpuFinal, s);
+  saveGameToHistory(youFinal, cpuFinal, s, {level:levelKeyFromAttrs(deckAttrs), isTop:true});
   const gameMVP = computeGameMVP(roundLog);
   const streak = computeStreaksAndRate(loadGameHistory());
   // 実績の判定(この試合の結果＋通算を渡す)
@@ -6373,8 +6408,12 @@ if(typeof CARD_IMG!=='undefined' && CARD_IMG.back){
        match /surveys/{doc} { allow create: if true; allow read: if true; }
          ※ 自由記述欄があるため、read を true にすると誰でも回答内容を読める点に注意
            (admin.htmlのパスフレーズは目隠し程度で、真のアクセス制御ではありません)。
+     プレイヤー名登録("players" コレクション)にも専用ルールが必要です(現状は未設定で、
+     キャッチオールのdeny-allに該当し登録が常に失敗しています):
+       match /players/{doc} { allow create: if true; allow read: if true; }
 -->
 <!-- 補足: アンケート送信時、ブラウザから https://ntfy.sh/maskd-survey-20260717 へも直接通知しています。
+     プレイヤー名の新規登録時も同トピックへ通知しています。
      ntfyアプリで同名のトピックを購読すればスマホにプッシュ通知が届きます(サーバー不要)。 -->
 <script type="module">
   // ▼▼▼ Firebase 設定(このプロジェクトのもの) ▼▼▼
