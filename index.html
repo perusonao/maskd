@@ -3056,7 +3056,7 @@ function submitPlayerName(){
   if(!v){ if(inp){ inp.focus(); } return; } // 名前は必須
   playerName=v;
   try{ localStorage.setItem('maskd_playername', v); }catch(e){}
-  try{ if(window.__maskdSaveName) window.__maskdSaveName(v); }catch(e){}
+  try{ if(window.__maskdSaveName) window.__maskdSaveName(v, getPlayerId()); }catch(e){}
   // 新規プレイヤー登録をスマホへ通知(名前の中身は送らない。件数の把握用)
   try{
     fetch('https://ntfy.sh/'+NTFY_TOPIC, {
@@ -4828,8 +4828,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.60.0';
+const GAME_VERSION = 'v0.60.1';
 const CHANGELOG = [
+  { version:'v0.60.1', date:'2026-07-17', items:[
+    '<b>登録プレイヤー一覧にプレイ数を追加</b>：管理画面(admin.html)の登録プレイヤー一覧に、各プレイヤーの対戦回数を表示。今後の新規登録は端末ID(playerId)で対戦ログと正確に突き合わせ、それ以前の登録分は名前一致で概算。',
+  ]},
   { version:'v0.60.0', date:'2026-07-17', items:[
     '<b>初級・中級・上級もプレイ記録の対象に</b>：これまでプレイ記録（ホームの戦績バッジ・実績の一部条件）は「本戦」のみが対象だったが、練習モード（初級／中級／上級）で遊んだ分も同じ記録に加わるように変更。',
     '<b>ホームの戦績バッジの表記を変更</b>：「勝率XX%」のみの表示から、「X勝（勝率XX%）」に変更し勝ち数も一目で分かるように。',
@@ -6439,8 +6442,9 @@ if(typeof CARD_IMG!=='undefined' && CARD_IMG.back){
         catch (e) { console.warn("MASKD: ログ送信に失敗", e); return false; }
       };
       // プレイヤー名の登録(初回入力時)。players コレクションに追記。
-      window.__maskdSaveName = async (name) => {
-        try { await addDoc(collection(db, "players"), { name: String(name).slice(0,12), serverTs: serverTimestamp() }); return true; }
+      // playerId(端末ローカルの匿名ID)も一緒に保存し、admin.html側で対戦ログ(logs)と突き合わせてプレイ数を出せるようにする。
+      window.__maskdSaveName = async (name, playerId) => {
+        try { await addDoc(collection(db, "players"), { name: String(name).slice(0,12), playerId: playerId||null, serverTs: serverTimestamp() }); return true; }
         catch (e) { console.warn("MASKD: 名前登録に失敗", e); return false; }
       };
       // アンケート回答の登録。surveys コレクションに追記。

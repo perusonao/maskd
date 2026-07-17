@@ -275,14 +275,24 @@ function playersSectionHTML(){
   let out='<h2>👤 登録プレイヤー</h2>';
   out+=`<div class="grid">${kpi(N,'登録人数')}</div>`;
   if(!allPlayers.length) return out+'<div class="card muted">まだ登録がありません。</div>';
+  // プレイ数はlogsのplayerId(無ければ名前)で突き合わせた概算値。
+  // playerIdは端末ローカルのIDなので、同じ人が端末を変えると別カウントになる。
+  // playerIdが無い古い登録データは名前一致で数えるため、同名の別人がいる場合は不正確になりうる。
+  const playCountFor=x=>{
+    if(x.playerId) return allLogs.filter(g=>g.playerId===x.playerId).length;
+    if(!x.name) return 0;
+    return allLogs.filter(g=>g.playerName===x.name).length;
+  };
   const tsOf=x=>{ try{ return x.serverTs && x.serverTs.toDate ? x.serverTs.toDate().getTime() : 0; }catch(e){ return 0; } };
   const sorted=[...allPlayers].sort((a,b)=>tsOf(b)-tsOf(a));
-  out+='<div class="card"><div class="tbl-wrap" style="max-height:220px;">'+
+  out+='<div class="card"><div class="tbl-wrap" style="max-height:280px;">'+
     sorted.slice(0,50).map(x=>{
       let t=''; try{ t=x.serverTs&&x.serverTs.toDate ? x.serverTs.toDate().toISOString().replace('T',' ').slice(0,16) : ''; }catch(e){}
-      return `<div class="rrow"><div class="rt"><span>${esc(x.name||'(名前なし)')}</span><span>${esc(t)}</span></div></div>`;
+      const pc=playCountFor(x);
+      return `<div class="rrow"><div class="rt"><span>${esc(x.name||'(名前なし)')} <span style="color:var(--goldb)">・${pc}戦</span></span><span>${esc(t)}</span></div></div>`;
     }).join('')+
-    '</div></div>';
+    '</div></div>'+
+    '<div class="muted" style="font-size:10px;margin-top:4px;">※プレイ数は対戦ログとの突き合わせによる概算です（新規登録分は端末IDで正確に突き合わせ、それ以前の登録は名前一致のため同名の別人がいると誤差が出ます）。</div>';
   return out;
 }
 
