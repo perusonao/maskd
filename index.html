@@ -3050,13 +3050,32 @@ function showNameModal(cb){
   document.getElementById('nameModal').classList.add('show');
   setTimeout(()=>{ if(inp) inp.focus(); },100);
 }
+const PLAYER_NAME_SYNCED_KEY='maskd_playername_synced';
+// 現在の名前をクラウド(players)へ登録する。成功したら「この名前は登録済み」の印を残す
+// (players コレクションはaddDocのみで上書きできないため、同じ名前を何度も登録しないようにするため)。
+function syncPlayerNameToCloud(name){
+  if(!name || typeof window.__maskdSaveName!=='function') return;
+  try{
+    window.__maskdSaveName(name, getPlayerId()).then(ok=>{
+      if(ok){ try{ localStorage.setItem(PLAYER_NAME_SYNCED_KEY, name); }catch(e){} }
+    }).catch(e=>console.warn('MASKD: 名前登録に失敗(fetch)', e));
+  }catch(e){ console.warn('MASKD: 名前登録に失敗', e); }
+}
+// 過去にFirestoreのplayersルール未設定などで登録が失敗していた既存プレイヤーを救済する。
+// 「名前は設定済みだがクラウドへの登録が未確認」な場合にだけ再送する(毎回は送らない)。
+function ensurePlayerNameSynced(){
+  if(!playerName) return; // 未設定なら通常のnameModalの流れに任せる
+  let synced=''; try{ synced=localStorage.getItem(PLAYER_NAME_SYNCED_KEY)||''; }catch(e){}
+  if(synced===playerName) return; // 既に登録済み
+  syncPlayerNameToCloud(playerName);
+}
 function submitPlayerName(){
   const inp=document.getElementById('nameInput');
   const v=((inp&&inp.value)||'').trim().slice(0,12);
   if(!v){ if(inp){ inp.focus(); } return; } // 名前は必須
   playerName=v;
   try{ localStorage.setItem('maskd_playername', v); }catch(e){}
-  try{ if(window.__maskdSaveName) window.__maskdSaveName(v, getPlayerId()); }catch(e){}
+  syncPlayerNameToCloud(v);
   // 新規プレイヤー登録をスマホへ通知(名前の中身は送らない。件数の把握用)
   try{
     fetch('https://ntfy.sh/'+NTFY_TOPIC, {
@@ -4828,8 +4847,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.61.0';
+const GAME_VERSION = 'v0.61.1';
 const CHANGELOG = [
+  { version:'v0.61.1', date:'2026-07-17', items:[
+    '<b>プレイヤー名の登録漏れを救済</b>：Firestoreのセキュリティルール未設定期間に登録が失敗していた既存プレイヤーについて、次回起動時に自動でクラウドへ再登録するように修正（見た目の変化なし・裏側の不具合修正）。',
+  ]},
   { version:'v0.61.0', date:'2026-07-17', items:[
     '<b>管理画面に論理削除(非表示)機能を追加</b>：対戦ログ・アンケート回答・登録プレイヤーのそれぞれを、管理画面(admin.html)から「非表示」にできるように（テストデータや荒らし投稿などを集計・一覧から除外する用途）。データ自体は消さず「非表示イベント」を記録するだけなので、いつでも「元に戻す」で復元できる。',
   ]},
@@ -6468,6 +6490,9 @@ if(typeof CARD_IMG!=='undefined' && CARD_IMG.back){
         return snap.data().count;
       };
       window.__maskdLoggingReady = true;
+      // Firestoreのplayersルール未設定期間などで登録が失敗していた既存プレイヤーを、
+      // 準備が整ったこのタイミングで一度だけ再登録しておく(通常の初回登録フローとは別経路)。
+      try{ if(typeof window.ensurePlayerNameSynced==='function') window.ensurePlayerNameSynced(); }catch(e){}
       // アクセス状況の把握(任意): Firebase Analytics
       try {
         if (firebaseConfig.measurementId) {
