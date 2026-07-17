@@ -5,9 +5,11 @@ rules_version = '2';
 //   （または Firebase CLI: firebase deploy --only firestore:rules）
 //
 // 方針:
-//   - logs コレクション: プレイログの「追加(create)」と「読み取り(read)」のみ許可
-//   - update / delete は禁止（既存ログの改ざん・削除を防ぐ）
-//   - logs 以外のコレクションは全面拒否
+//   - 各コレクションとも「追加(create)」と「読み取り(read)」のみ許可
+//   - update / delete は禁止（既存データの改ざん・削除を防ぐ）
+//   - 「削除」が必要な場合も実体は書き換えず、hidden_records に新しいイベントを
+//     追記する形の論理削除にする(admin.htmlの「非表示」機能はこの方式)
+//   - 上記以外のコレクションは全面拒否
 //   - 有効期限なし（テストモードのような自動失効はしない）
 //   - create は最低限のバリデーションで不正・巨大データを弾く
 
@@ -16,9 +18,31 @@ service cloud.firestore {
 
     // プレイログ（匿名・集計用）
     match /logs/{docId} {
-      allow read: if true;               // 「みんなの統計」で集計表示（匿名データのみ）
+      allow read: if true;               // 「みんなの統計」/admin.htmlで集計表示（匿名データのみ）
       allow create: if isValidLog();     // 追加のみ許可
       allow update, delete: if false;    // 改ざん・削除は不可
+    }
+
+    // アンケート回答（匿名）
+    match /surveys/{docId} {
+      allow read: if true;               // admin.htmlで集計表示。自由記述欄があるため読める点に注意
+      allow create: if isValidSurvey();
+      allow update, delete: if false;
+    }
+
+    // プレイヤー名登録（匿名）
+    match /players/{docId} {
+      allow read: if true;               // admin.htmlで登録人数・プレイ数を表示
+      allow create: if isValidPlayer();
+      allow update, delete: if false;
+    }
+
+    // admin.htmlの論理削除(非表示)イベント。対象データ自体は書き換えず、
+    // 「hide」「unhide」のイベントを追記するだけ(最新のイベントが現在の状態)。
+    match /hidden_records/{docId} {
+      allow read: if true;
+      allow create: if isValidHiddenRecord();
+      allow update, delete: if false;
     }
 
     // 上記以外はすべて拒否
@@ -33,6 +57,29 @@ service cloud.firestore {
           && 'playerFinal' in d && d.playerFinal is number
           && 'cpuFinal' in d && d.cpuFinal is number
           && d.size() <= 40;             // フィールド数の上限（巨大ペイロード防止）
+    }
+
+    // アンケートの最低限のバリデーション
+    function isValidSurvey() {
+      let d = request.resource.data;
+      return 'fun' in d && d.fun is number && d.fun >= 1 && d.fun <= 5
+          && d.size() <= 10;
+    }
+
+    // プレイヤー名登録の最低限のバリデーション
+    function isValidPlayer() {
+      let d = request.resource.data;
+      return 'name' in d && d.name is string && d.name.size() <= 12
+          && d.size() <= 5;
+    }
+
+    // 論理削除イベントの最低限のバリデーション
+    function isValidHiddenRecord() {
+      let d = request.resource.data;
+      return 'col' in d && d.col in ['logs', 'surveys', 'players']
+          && 'docId' in d && d.docId is string
+          && 'action' in d && d.action in ['hide', 'unhide']
+          && d.size() <= 5;
     }
   }
 }

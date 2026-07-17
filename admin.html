@@ -95,6 +95,7 @@
   <header class="top">
     <h1>MASKD ダッシュボード</h1>
     <span class="sp"></span>
+    <span class="btn" id="showHiddenBtn">非表示も表示</span>
     <span class="btn" id="reloadBtn">再読み込み</span>
     <span class="btn" id="csvBtn">CSV</span>
     <span class="btn" id="jsonBtn">JSON</span>
@@ -133,10 +134,43 @@ const ATTRS=['moon','sun','dark','kaos','air'];
 
 let fb=null, allLogs=[], totalCount=null, allSurveys=[], surveyLoadError=null, allPlayers=[], totalPlayers=null, playerLoadError=null;
 let tableState={ sortKey:'ts', sortDir:-1, fWinner:'', fDiff:'', fVer:'', q:'' };
+// 論理削除(非表示)の状態。hidden_recordsコレクションへの追記(hide/unhideイベント)を
+// 時系列に並べて「最後のイベント」を現在の状態とみなす(追記のみ・更新削除なしの設計に合わせるため)。
+let hiddenMap={}, showHidden=false;
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pctOf=(a,b)=>b?(a/b*100).toFixed(1)+'%':'-';
+const tsMillis=e=>{ try{ return e && e.ts && e.ts.toDate ? e.ts.toDate().getTime() : 0; }catch(err){ return 0; } };
+function isHidden(col,id){ return !!(id && hiddenMap[col+'|'+id]); }
+function visibleLogs(){ return allLogs.filter(g=>!isHidden('logs', g._id)); }
+async function toggleHidden(col,id,hide){
+  if(hide && !confirm('この項目を非表示にしますか？(集計・一覧から除外されます。いつでも元に戻せます)')) return;
+  if(!fb || !fb.addDoc){ alert('この操作にはFirebase接続が必要です。'); return; }
+  try{
+    await fb.addDoc(fb.collection(fb.db,'hidden_records'), { col, docId:id, action:(hide?'hide':'unhide'), ts:fb.serverTimestamp() });
+    hiddenMap[col+'|'+id]=hide;
+    render();
+  }catch(e){
+    const code=(e&&(e.code||e.message))||'不明なエラー';
+    alert('操作に失敗しました。Firestoreのセキュリティルールで hidden_records の書き込みを許可してください。\n'+code);
+  }
+}
+function hideBtnHTML(col,id){
+  if(!id) return '';
+  const hidden=isHidden(col,id);
+  return `<span class="btn hidebtn" style="padding:2px 8px;font-size:10px;" data-col="${esc(col)}" data-id="${esc(id)}" data-hide="${hidden?'0':'1'}">${hidden?'元に戻す':'非表示'}</span>`;
+}
+function bindHideButtons(){
+  document.querySelectorAll('.hidebtn').forEach(el=>{
+    el.onclick=(ev)=>{
+      ev.stopPropagation();
+      toggleHidden(el.dataset.col, el.dataset.id, el.dataset.hide==='1');
+    };
+  });
+}
+// テスト/デバッグ用: Firebase接続なしでhiddenMapの変更→再描画だけを検証するためのフック(本番の書き込みは行わない)
+window.__adminHideMock=(col,id,hide)=>{ hiddenMap[col+'|'+id]=hide; render(); };
 
 async function sha256hex(str){
   const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -183,7 +217,8 @@ async function init(){
       const fsMod=await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js");
       const app=appMod.initializeApp(firebaseConfig);
       fb={ db:fsMod.getFirestore(app), collection:fsMod.collection, getDocs:fsMod.getDocs,
-        query:fsMod.query, limit:fsMod.limit, getCountFromServer:fsMod.getCountFromServer };
+        query:fsMod.query, limit:fsMod.limit, getCountFromServer:fsMod.getCountFromServer,
+        addDoc:fsMod.addDoc, serverTimestamp:fsMod.serverTimestamp };
     }catch(e){ $('content').innerHTML=banner('Firebaseの読み込みに失敗しました（ネットワーク/CDN）。<br><span style="font-size:10px;">'+esc(e&&e.message)+'</span>'); return; }
   }
   await loadData();
@@ -196,7 +231,7 @@ async function loadData(){
       fb.getDocs(fb.query(fb.collection(fb.db,"logs"), fb.limit(5000))),
       fb.getCountFromServer(fb.collection(fb.db,"logs")).then(s=>s.data().count).catch(()=>null)
     ]);
-    allLogs=[]; snap.forEach(d=>allLogs.push(d.data()));
+    allLogs=[]; snap.forEach(d=>allLogs.push({...d.data(), _id:d.id}));
     totalCount=count;
   }catch(e){
     const code=(e&&(e.code||e.message))||'';
@@ -209,7 +244,7 @@ async function loadData(){
   // アンケートは失敗してもダッシュボード全体は表示する(独立して扱う)
   try{
     const snap=await fb.getDocs(fb.query(fb.collection(fb.db,"surveys"), fb.limit(2000)));
-    allSurveys=[]; snap.forEach(d=>allSurveys.push(d.data()));
+    allSurveys=[]; snap.forEach(d=>allSurveys.push({...d.data(), _id:d.id}));
     surveyLoadError=null;
   }catch(e){
     allSurveys=[]; surveyLoadError=(e&&(e.code||e.message))||'不明なエラー';
@@ -220,12 +255,20 @@ async function loadData(){
       fb.getDocs(fb.query(fb.collection(fb.db,"players"), fb.limit(300))),
       fb.getCountFromServer(fb.collection(fb.db,"players")).then(s=>s.data().count).catch(()=>null)
     ]);
-    allPlayers=[]; snap.forEach(d=>allPlayers.push(d.data()));
+    allPlayers=[]; snap.forEach(d=>allPlayers.push({...d.data(), _id:d.id}));
     totalPlayers=count;
     playerLoadError=null;
   }catch(e){
     allPlayers=[]; totalPlayers=null; playerLoadError=(e&&(e.code||e.message))||'不明なエラー';
   }
+  // 論理削除(非表示)イベント。読めなくても他機能は継続(何も非表示にしない扱い)。
+  try{
+    const snap=await fb.getDocs(fb.query(fb.collection(fb.db,'hidden_records'), fb.limit(5000)));
+    const events=[]; snap.forEach(d=>events.push(d.data()));
+    events.sort((a,b)=>tsMillis(a)-tsMillis(b));
+    hiddenMap={};
+    events.forEach(e=>{ if(e && e.col && e.docId) hiddenMap[e.col+'|'+e.docId]=(e.action==='hide'); });
+  }catch(e){ hiddenMap={}; }
   render();
 }
 function banner(html){ return '<div class="banner">'+html+'</div>'; }
@@ -238,24 +281,30 @@ function surveySectionHTML(){
       '<code>match /surveys/{doc} { allow create: if true; allow read: if true; }</code><br>'+
       '<span style="font-size:10px;">詳細: '+esc(surveyLoadError)+'</span>');
   }
-  const N=allSurveys.length;
+  const visible=allSurveys.filter(x=>!isHidden('surveys',x._id));
+  const hiddenCount=allSurveys.length-visible.length;
+  const N=visible.length;
   let out='<h2>📝 アンケート回答</h2>';
-  if(!N) return out+'<div class="card muted">まだ回答がありません。</div>';
-  const avgFun=(allSurveys.reduce((s,x)=>s+(Number(x.fun)||0),0)/N).toFixed(1);
+  if(hiddenCount) out+=`<div class="muted" style="font-size:11px;margin:0 0 8px;">（非表示 ${hiddenCount}件。集計からは除外されています）</div>`;
+  const list=showHidden?allSurveys:visible;
+  if(!N && !list.length) return out+'<div class="card muted">まだ回答がありません。</div>';
+  const avgFun=N?(visible.reduce((s,x)=>s+(Number(x.fun)||0),0)/N).toFixed(1):'-';
   const replayLabel={yes:'ぜひ',maybe:'たぶん',no:'あまり'};
   const replayCount={yes:0,maybe:0,no:0};
-  allSurveys.forEach(x=>{ if(replayCount[x.replay]!=null) replayCount[x.replay]++; });
+  visible.forEach(x=>{ if(replayCount[x.replay]!=null) replayCount[x.replay]++; });
   out+=`<div class="grid">
     ${kpi(N,'回答数')}
     ${kpi(avgFun,'平均の面白さ(5点満点)')}
     ${kpi(`${replayCount.yes}/${replayCount.maybe}/${replayCount.no}`,'またやりたい(ぜひ/たぶん/あまり)')}
   </div>`;
-  const sorted=[...allSurveys].sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
+  if(!list.length) return out;
+  const sorted=[...list].sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
   out+='<div class="card"><div class="tbl-wrap" style="max-height:320px;">'+
     sorted.map(x=>{
       const t=(x.ts||'').replace('T',' ').slice(0,16);
-      return `<div class="rrow">
-        <div class="rt"><span>⭐${esc(x.fun)} ／ またやりたい: ${esc(replayLabel[x.replay]||'-')} ／ ${esc(x.version||'')}</span><span>${esc(t)}</span></div>
+      const hidden=isHidden('surveys',x._id);
+      return `<div class="rrow"${hidden?' style="opacity:.55;"':''}>
+        <div class="rt"><span>⭐${esc(x.fun)} ／ またやりたい: ${esc(replayLabel[x.replay]||'-')} ／ ${esc(x.version||'')}${hidden?' <span class="muted">(非表示中)</span>':''}</span><span>${esc(t)} ${hideBtnHTML('surveys',x._id)}</span></div>
         ${x.comment?`<div style="margin-top:4px;">${esc(x.comment)}</div>`:''}
       </div>`;
     }).join('')+
@@ -271,25 +320,31 @@ function playersSectionHTML(){
       '<code>match /players/{doc} { allow create: if true; allow read: if true; }</code><br>'+
       '<span style="font-size:10px;">詳細: '+esc(playerLoadError)+'</span>');
   }
+  const visible=allPlayers.filter(x=>!isHidden('players',x._id));
+  const hiddenCount=allPlayers.length-visible.length;
   const N=(totalPlayers!=null)?totalPlayers:allPlayers.length;
   let out='<h2>👤 登録プレイヤー</h2>';
   out+=`<div class="grid">${kpi(N,'登録人数')}</div>`;
-  if(!allPlayers.length) return out+'<div class="card muted">まだ登録がありません。</div>';
-  // プレイ数はlogsのplayerId(無ければ名前)で突き合わせた概算値。
+  if(hiddenCount) out+=`<div class="muted" style="font-size:11px;margin:-6px 0 8px;">（うち非表示 ${hiddenCount}件。プレイ数の集計からは除外されています）</div>`;
+  const list=showHidden?allPlayers:visible;
+  if(!list.length) return out+'<div class="card muted">まだ登録がありません。</div>';
+  // プレイ数はlogsのplayerId(無ければ名前)で突き合わせた概算値(非表示にしたログは除く)。
   // playerIdは端末ローカルのIDなので、同じ人が端末を変えると別カウントになる。
   // playerIdが無い古い登録データは名前一致で数えるため、同名の別人がいる場合は不正確になりうる。
   const playCountFor=x=>{
-    if(x.playerId) return allLogs.filter(g=>g.playerId===x.playerId).length;
+    const logs=visibleLogs();
+    if(x.playerId) return logs.filter(g=>g.playerId===x.playerId).length;
     if(!x.name) return 0;
-    return allLogs.filter(g=>g.playerName===x.name).length;
+    return logs.filter(g=>g.playerName===x.name).length;
   };
   const tsOf=x=>{ try{ return x.serverTs && x.serverTs.toDate ? x.serverTs.toDate().getTime() : 0; }catch(e){ return 0; } };
-  const sorted=[...allPlayers].sort((a,b)=>tsOf(b)-tsOf(a));
+  const sorted=[...list].sort((a,b)=>tsOf(b)-tsOf(a));
   out+='<div class="card"><div class="tbl-wrap" style="max-height:280px;">'+
     sorted.slice(0,50).map(x=>{
       let t=''; try{ t=x.serverTs&&x.serverTs.toDate ? x.serverTs.toDate().toISOString().replace('T',' ').slice(0,16) : ''; }catch(e){}
       const pc=playCountFor(x);
-      return `<div class="rrow"><div class="rt"><span>${esc(x.name||'(名前なし)')} <span style="color:var(--goldb)">・${pc}戦</span></span><span>${esc(t)}</span></div></div>`;
+      const hidden=isHidden('players',x._id);
+      return `<div class="rrow"${hidden?' style="opacity:.55;"':''}><div class="rt"><span>${esc(x.name||'(名前なし)')} <span style="color:var(--goldb)">・${pc}戦</span>${hidden?' <span class="muted">(非表示中)</span>':''}</span><span>${esc(t)} ${hideBtnHTML('players',x._id)}</span></div></div>`;
     }).join('')+
     '</div></div>'+
     '<div class="muted" style="font-size:10px;margin-top:4px;">※プレイ数は対戦ログとの突き合わせによる概算です（新規登録分は端末IDで正確に突き合わせ、それ以前の登録は名前一致のため同名の別人がいると誤差が出ます）。</div>';
@@ -298,13 +353,16 @@ function playersSectionHTML(){
 
 // ===== 集計＆描画 =====
 function render(){
-  const N=allLogs.length;
-  const total=(totalCount!=null)?totalCount:N;
-  const sampled=(totalCount!=null && totalCount>N);
+  const lVisible=visibleLogs();
+  const N=lVisible.length;
+  const hiddenLogCount=allLogs.length-N;
+  const total=(totalCount!=null)?totalCount:allLogs.length;
+  const sampled=(totalCount!=null && totalCount>allLogs.length);
   $('meta').innerHTML=`総レコード数(サーバー集計): <b style="color:var(--goldb)">${total}</b> 件`+
-    (sampled?`　／　集計は直近 ${N} 件のサンプル`:``)+`　／　取得 ${N} 件`;
+    (sampled?`　／　集計は直近 ${allLogs.length} 件のサンプル`:``)+`　／　取得 ${allLogs.length} 件`+
+    (hiddenLogCount?`　／　非表示 <b style="color:var(--goldb)">${hiddenLogCount}</b> 件(集計から除外)`:``);
 
-  if(!N){ $('content').innerHTML=surveySectionHTML()+playersSectionHTML()+banner('対戦ログのデータはまだありません。'); return; }
+  if(!N){ $('content').innerHTML=surveySectionHTML()+playersSectionHTML()+banner('対戦ログのデータはまだありません。'); bindHideButtons(); return; }
 
   // 基本集計
   let pw=0,cw=0,dr=0,sumP=0,sumC=0,sumTime=0,timeCount=0;
@@ -315,7 +373,7 @@ function render(){
   const attrPlay={}, attrWin={};          // 属性ごとの出現/勝利
   ATTRS.forEach(a=>{attrPlay[a]=0;attrWin[a]=0;});
 
-  allLogs.forEach(g=>{
+  lVisible.forEach(g=>{
     if(g.winner==='player')pw++; else if(g.winner==='cpu')cw++; else dr++;
     sumP+=(g.playerFinal||0); sumC+=(g.cpuFinal||0);
     if(typeof g.playTimeMs==='number'){ sumTime+=g.playTimeMs; timeCount++; }
@@ -414,7 +472,8 @@ function binBars(bins,unit){
 // ===== 生データテーブル =====
 function filtered(){
   const s=tableState;
-  let rows=allLogs.filter(g=>{
+  const base=showHidden?allLogs:visibleLogs();
+  let rows=base.filter(g=>{
     if(s.fWinner && g.winner!==s.fWinner) return false;
     if(s.fDiff && g.cpuDifficulty!==s.fDiff) return false;
     if(s.fVer && g.version!==s.fVer) return false;
@@ -438,7 +497,7 @@ function tableUI(){
   </div>
   <div class="tbl-wrap"><table><thead><tr>
     ${th('ts','日時')}${th('version','ver')}${th('winner','勝者')}${th('playerName','名前')}${th('playerFinal','P')}${th('cpuFinal','C')}${th('margin','差')}
-    ${th('cpuDifficulty','難易度')}${th('cpuStrategy','性格')}${th('playTimeMs','時間')}<th>ID</th>
+    ${th('cpuDifficulty','難易度')}${th('cpuStrategy','性格')}${th('playTimeMs','時間')}<th>ID</th><th>操作</th>
   </tr></thead><tbody id="tbody"></tbody></table></div>`;
 }
 function th(key,label){ const s=tableState; const ar=s.sortKey===key?(s.sortDir<0?' ▼':' ▲'):''; return `<th data-k="${key}">${esc(label)}${ar}</th>`; }
@@ -451,19 +510,21 @@ function renderRows(){
     const idx=allLogs.indexOf(g);
     const t=(g.ts||'').replace('T',' ').slice(0,16);
     const tm=typeof g.playTimeMs==='number'?Math.round(g.playTimeMs/1000)+'s':'-';
-    return `<tr class="row" data-i="${idx}">
+    const hidden=isHidden('logs',g._id);
+    return `<tr class="row" data-i="${idx}"${hidden?' style="opacity:.5;"':''}>
       <td>${esc(t)}</td><td>${esc(g.version||'')}</td><td><span class="tag ${wl}">${wt}</span></td>
       <td>${esc(g.playerName||'-')}</td>
       <td>${esc(g.playerFinal)}</td><td>${esc(g.cpuFinal)}</td><td>${esc((g.playerFinal||0)-(g.cpuFinal||0))}</td>
       <td>${esc(DIFF[g.cpuDifficulty]||g.cpuDifficulty||'')}</td><td>${esc(TYPE[g.cpuStrategy]||g.cpuStrategy||'')}</td>
-      <td>${tm}</td><td>${esc((g.playerId||'').slice(0,8))}</td></tr>`;
-  }).join('') || '<tr><td colspan="11" class="muted" style="text-align:center;padding:16px;">該当なし</td></tr>';
+      <td>${tm}</td><td>${esc((g.playerId||'').slice(0,8))}</td><td>${hideBtnHTML('logs',g._id)}</td></tr>`;
+  }).join('') || '<tr><td colspan="12" class="muted" style="text-align:center;padding:16px;">該当なし</td></tr>';
   document.querySelectorAll('#tbody .row').forEach(tr=>tr.onclick=()=>showDetail(Number(tr.dataset.i)));
+  bindHideButtons();
 }
 function setHead(){
   const tb=$('tbody'); if(!tb) return;
   const head=tb.closest('table').querySelector('thead');
-  head.innerHTML=`<tr>${th('ts','日時')}${th('version','ver')}${th('winner','勝者')}${th('playerName','名前')}${th('playerFinal','P')}${th('cpuFinal','C')}${th('margin','差')}${th('cpuDifficulty','難易度')}${th('cpuStrategy','性格')}${th('playTimeMs','時間')}<th>ID</th></tr>`;
+  head.innerHTML=`<tr>${th('ts','日時')}${th('version','ver')}${th('winner','勝者')}${th('playerName','名前')}${th('playerFinal','P')}${th('cpuFinal','C')}${th('margin','差')}${th('cpuDifficulty','難易度')}${th('cpuStrategy','性格')}${th('playTimeMs','時間')}<th>ID</th><th>操作</th></tr>`;
   head.querySelectorAll('th[data-k]').forEach(el=>{
     el.onclick=()=>{ const k=el.dataset.k; if(tableState.sortKey===k)tableState.sortDir*=-1; else {tableState.sortKey=k;tableState.sortDir=-1;} setHead(); renderRows(); };
   });
@@ -509,20 +570,31 @@ function download(name,text,type){
   const blob=new Blob([text],{type}); const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-function exportJSON(){ download('maskd-logs.json', JSON.stringify(allLogs,null,2), 'application/json'); }
+function exportJSON(){ download('maskd-logs.json', JSON.stringify(visibleLogs(),null,2), 'application/json'); }
 function exportCSV(){
   const cols=['ts','version','playerId','winner','playerFinal','cpuFinal','playerScore','cpuScore','rounds','cpuStrategy','cpuDifficulty','youWins','cpuWins','draws','passes','youAir','cpuAir','youKaos','cpuKaos','playTimeMs'];
   const head=cols.join(',');
-  const body=allLogs.map(g=>cols.map(c=>{ let v=g[c]; if(v==null)v=''; v=String(v).replace(/"/g,'""'); return /[",\n]/.test(v)?`"${v}"`:v; }).join(',')).join('\n');
+  const body=visibleLogs().map(g=>cols.map(c=>{ let v=g[c]; if(v==null)v=''; v=String(v).replace(/"/g,'""'); return /[",\n]/.test(v)?`"${v}"`:v; }).join(',')).join('\n');
   download('maskd-logs.csv', head+'\n'+body, 'text/csv');
 }
 
 // テスト用フック(モックデータで描画を確認する。害はない)
-window.__adminMock=(logs,count,surveys,players,playerCount)=>{ allLogs=logs; totalCount=count; if(surveys)allSurveys=surveys; if(players){ allPlayers=players; totalPlayers=(playerCount!=null)?playerCount:players.length; } render(); };
+window.__adminMock=(logs,count,surveys,players,playerCount,hiddenEvents)=>{
+  allLogs=logs; totalCount=count;
+  if(surveys)allSurveys=surveys;
+  if(players){ allPlayers=players; totalPlayers=(playerCount!=null)?playerCount:players.length; }
+  if(hiddenEvents){
+    const events=[...hiddenEvents].sort((a,b)=>tsMillis(a)-tsMillis(b));
+    hiddenMap={};
+    events.forEach(e=>{ if(e && e.col && e.docId) hiddenMap[e.col+'|'+e.docId]=(e.action==='hide'); });
+  }
+  render();
+};
 
 // ===== 起動 =====
 $('unlockBtn').onclick=tryUnlock;
 $('pass').addEventListener('keydown',e=>{ if(e.key==='Enter')tryUnlock(); });
+$('showHiddenBtn').onclick=()=>{ showHidden=!showHidden; $('showHiddenBtn').textContent=showHidden?'非表示を隠す':'非表示も表示'; render(); };
 $('reloadBtn').onclick=loadData;
 $('csvBtn').onclick=exportCSV;
 $('jsonBtn').onclick=exportJSON;

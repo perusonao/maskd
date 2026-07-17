@@ -4828,8 +4828,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.60.1';
+const GAME_VERSION = 'v0.61.0';
 const CHANGELOG = [
+  { version:'v0.61.0', date:'2026-07-17', items:[
+    '<b>管理画面に論理削除(非表示)機能を追加</b>：対戦ログ・アンケート回答・登録プレイヤーのそれぞれを、管理画面(admin.html)から「非表示」にできるように（テストデータや荒らし投稿などを集計・一覧から除外する用途）。データ自体は消さず「非表示イベント」を記録するだけなので、いつでも「元に戻す」で復元できる。',
+  ]},
   { version:'v0.60.1', date:'2026-07-17', items:[
     '<b>登録プレイヤー一覧にプレイ数を追加</b>：管理画面(admin.html)の登録プレイヤー一覧に、各プレイヤーの対戦回数を表示。今後の新規登録は端末ID(playerId)で対戦ログと正確に突き合わせ、それ以前の登録分は名前一致で概算。',
   ]},
@@ -6411,9 +6414,11 @@ if(typeof CARD_IMG!=='undefined' && CARD_IMG.back){
        match /surveys/{doc} { allow create: if true; allow read: if true; }
          ※ 自由記述欄があるため、read を true にすると誰でも回答内容を読める点に注意
            (admin.htmlのパスフレーズは目隠し程度で、真のアクセス制御ではありません)。
-     プレイヤー名登録("players" コレクション)にも専用ルールが必要です(現状は未設定で、
-     キャッチオールのdeny-allに該当し登録が常に失敗しています):
+     プレイヤー名登録("players" コレクション)にも専用ルールが必要です:
        match /players/{doc} { allow create: if true; allow read: if true; }
+     admin.htmlの論理削除(非表示)機能用に"hidden_records"コレクションにも同様のルールが必要です
+     (他と同じ追記のみの設計。「非表示にする」も実体の更新ではなく新しいイベントの追記として記録します):
+       match /hidden_records/{doc} { allow create: if true; allow read: if true; }
 -->
 <!-- 補足: アンケート送信時、ブラウザから https://ntfy.sh/maskd-survey-20260717 へも直接通知しています。
      プレイヤー名の新規登録時も同トピックへ通知しています。
