@@ -1573,6 +1573,10 @@
   .survey-text:focus{ outline:none; border-color:var(--gold-bright); }
   .survey-thanks{ text-align:center; margin-top:14px; padding:12px; border-radius:10px; font-size:13px;
     color:var(--gold-bright); border:1px solid rgba(201,162,74,0.35); background:rgba(201,162,74,0.08); }
+  /* 結果画面: アンケートへの誘導 */
+  .survey-prompt{ text-align:center; margin-top:10px; padding:11px; border-radius:10px; font-size:12.5px; cursor:pointer;
+    color:var(--gold-bright); border:1px dashed rgba(201,162,74,0.45); background:rgba(201,162,74,0.06); }
+  .survey-prompt:active{ background:rgba(201,162,74,0.14); }
   .trust-table{ width:100%; border-collapse:collapse; font-size:11px; margin:4px 0; }
   .trust-table th{ color:var(--gold-dim); font-weight:600; text-align:left; padding:4px 6px; border-bottom:1px solid var(--line); font-size:10px; }
   .trust-table td{ padding:5px 6px; border-bottom:1px solid rgba(201,162,74,0.12); color:var(--ink-dim); }
@@ -2762,6 +2766,7 @@ function endPracticeMode(youFinal, cpuFinal, st){
       <div class="ub-line">${unlock.line}</div>
       ${unlock.missionIdx!=null?`<div class="ub-learn" onclick="openMissionLesson(${unlock.missionIdx})">▷ ${unlock.element}を1問で学ぶ</div>`:''}
     </div>`:''}
+    ${surveyPromptHTML()}
     <div class="tutm-controls" style="flex-direction:column;margin-top:12px;">
       ${unlock?`<div class="btn" style="width:100%;" onclick="challengeNextLevel('${unlock.next}')">▶ ${unlock.nextName}に挑戦</div>`:''}
       <div class="btn ${unlock?'ghost':''}" style="width:100%;" onclick="replayPractice()">もう一度</div>
@@ -2800,6 +2805,19 @@ function openAppSettings(){
 }
 // ===== アンケート =====
 let surveyFun=null, surveyReplay=null;
+const SURVEY_DONE_KEY='maskd_survey_submitted';
+function surveyDone(){ try{ return localStorage.getItem(SURVEY_DONE_KEY)==='1'; }catch(e){ return false; } }
+// 結果画面からアンケートへ(元の画面を閉じてから遷移)
+function promptSurvey(){
+  document.getElementById('overlay').classList.remove('show');
+  const rov=document.getElementById('resultOv'); if(rov) rov.classList.remove('show');
+  document.getElementById('learnOverlay').classList.remove('show');
+  openSurvey();
+}
+function surveyPromptHTML(){
+  if(surveyDone()) return '';
+  return `<div class="survey-prompt" onclick="promptSurvey()">📝 感想を聞かせてください（1分・任意）</div>`;
+}
 const NTFY_TOPIC='maskd-survey-20260717'; // 回答があった時にスマホへプッシュ通知するための宛先(ntfy.sh)
 // 通知をタップしたら管理画面(admin.html)へワンタップで遷移できるよう、URLに合言葉を含めて自動解錠する
 const ADMIN_URL='https://perusonao.github.io/maskd/admin.html?pass=maskd-admin';
@@ -2841,6 +2859,7 @@ async function submitSurvey(){
       headers:{ 'Title':'MASKD Survey', 'Tags':'memo', 'Click':ADMIN_URL } // Titleヘッダーは日本語不可(ASCII/Latin1のみ)。本文(body)は日本語OK
     }).catch(e=>console.warn('MASKD: ntfy通知に失敗(fetch)', e));
   }catch(e){ console.warn('MASKD: ntfy通知に失敗', e); }
+  try{ localStorage.setItem(SURVEY_DONE_KEY,'1'); }catch(e){}
   document.getElementById('surveyThanks').style.display='block';
 }
 // ホーム: 仮面カードの扇(既存のカードアートを再利用)と戦績バッジを描画
@@ -4782,8 +4801,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.59.3';
+const GAME_VERSION = 'v0.59.4';
 const CHANGELOG = [
+  { version:'v0.59.4', date:'2026-07-17', items:[
+    '<b>結果画面からアンケートへ誘導</b>：対戦が終わると「📝 感想を聞かせてください（1分・任意）」というリンクを表示（本戦・練習どちらも）。一度回答すると以降は表示されない。',
+  ]},
   { version:'v0.59.3', date:'2026-07-17', items:[
     '<b>アンケート通知から管理画面へワンタップで遷移できるように</b>：通知をタップすると管理画面(admin.html)が開き、URLに含めた合言葉で自動的にロックが解除される。',
   ]},
@@ -6256,6 +6278,7 @@ function endGame(){
   // 要点（MVP・通算・実績）は上部に。細かい内訳は折りたたみで初期表示を短く。
   const extra=`<div id="ovExtra">
     ${milestoneSection}
+    ${surveyPromptHTML()}
     ${starSection}
     ${achSection}
     <details class="ov-details">
