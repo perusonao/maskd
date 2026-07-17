@@ -3,8 +3,11 @@
 > **仮面の下に、真実はない。**
 > 仮面をかぶった騎士たちの戦いを描く、心理戦・推理カードゲーム。相手の伏せた仮面を読み、駆け引きで決着をつける ― 1人用（vs CPU）・ブラウザですぐ遊べる。
 
-<!-- スクリーンショットを置く場合は screenshots/ に入れてここで参照 -->
-<!-- ![MASKD](screenshots/home.png) -->
+<p align="center">
+  <img src="screenshots/home.png" width="30%" alt="ホーム画面" />
+  <img src="screenshots/gameplay.png" width="30%" alt="対戦中の画面" />
+  <img src="screenshots/result.png" width="30%" alt="結果画面" />
+</p>
 
 ## どんなゲーム？
 
