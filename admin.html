@@ -143,7 +143,11 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 const pctOf=(a,b)=>b?(a/b*100).toFixed(1)+'%':'-';
 const tsMillis=e=>{ try{ return e && e.ts && e.ts.toDate ? e.ts.toDate().getTime() : 0; }catch(err){ return 0; } };
 function isHidden(col,id){ return !!(id && hiddenMap[col+'|'+id]); }
-function visibleLogs(){ return allLogs.filter(g=>!isHidden('logs', g._id)); }
+// logsコレクションには「完了した対戦の記録」(type:'game'、v0.55より前はtype自体が無い)と、
+// v0.55.0で追加された「分析用の軽量イベント」(session_start/game_start/abandon/tutorial_*)が混在する。
+// 後者はwinner/playerFinal/cpuFinalを持たないため、勝敗集計などに混ぜるとおかしな値になる。
+function isGameRecord(g){ return !g.type || g.type==='game'; }
+function visibleLogs(){ return allLogs.filter(g=>isGameRecord(g) && !isHidden('logs', g._id)); }
 async function toggleHidden(col,id,hide){
   if(hide && !confirm('この項目を非表示にしますか？(集計・一覧から除外されます。いつでも元に戻せます)')) return;
   if(!fb || !fb.addDoc){ alert('この操作にはFirebase接続が必要です。'); return; }
@@ -351,18 +355,50 @@ function playersSectionHTML(){
   return out;
 }
 
+// ===== 軽量イベント(離脱率・チュートリアル完走率) =====
+// v0.55.0で追加されたが、Firestoreルールがwinner等を必須にしていたため実際には
+// これまで一件も保存できていなかった不具合をv0.61.2で修正。ルール反映前のデータには
+// 出てこないため、件数が0の間はセクション自体を出さない。
+function eventStatsHTML(eventLogs){
+  if(!eventLogs.length){
+    return '<div class="muted" style="font-size:11px;margin:-4px 0 12px;">※離脱率などの計測イベントはまだ0件です(Firestoreルール反映前のデータのため、または反映直後でまだ収集中の可能性があります)。</div>';
+  }
+  const evCount={}; eventLogs.forEach(g=>{ evCount[g.type]=(evCount[g.type]||0)+1; });
+  const gameStart=evCount.game_start||0, abandon=evCount.abandon||0;
+  const tutStart=evCount.tutorial_start||0, tutComplete=evCount.tutorial_complete||0;
+  const abandonRate=gameStart?(abandon/gameStart*100):null;
+  const tutRate=tutStart?(tutComplete/tutStart*100):null;
+  let out=`<h2>計測イベント（離脱・チュートリアル完走）</h2><div class="cols">`;
+  out+=`<div class="card"><h3>イベント件数</h3>`+bars([
+    {label:'セッション開始',value:evCount.session_start||0,sub:String(evCount.session_start||0)},
+    {label:'対戦開始',value:gameStart,sub:String(gameStart)},
+    {label:'離脱(対戦中断)',value:abandon,sub:String(abandon)},
+    {label:'チュートリアル開始',value:tutStart,sub:String(tutStart)},
+    {label:'チュートリアル完走',value:tutComplete,sub:String(tutComplete)},
+  ])+`</div>`;
+  out+=`<div class="card"><h3>離脱率・完走率</h3>`+bars([
+    {label:'離脱率',value:abandonRate||0,sub:abandonRate!=null?abandonRate.toFixed(1)+'%':'データ不足'},
+    {label:'チュート完走率',value:tutRate||0,sub:tutRate!=null?tutRate.toFixed(1)+'%':'データ不足'},
+  ])+`<div class="muted" style="font-size:10px;margin-top:4px;">離脱率＝離脱数/対戦開始数、チュート完走率＝チュートリアル完走数/開始数</div></div>`;
+  out+=`</div>`;
+  return out;
+}
+
 // ===== 集計＆描画 =====
 function render(){
+  const gameLogsAll=allLogs.filter(isGameRecord);
+  const eventLogs=allLogs.filter(g=>!isGameRecord(g));
   const lVisible=visibleLogs();
   const N=lVisible.length;
-  const hiddenLogCount=allLogs.length-N;
+  const hiddenLogCount=gameLogsAll.length-N;
   const total=(totalCount!=null)?totalCount:allLogs.length;
   const sampled=(totalCount!=null && totalCount>allLogs.length);
-  $('meta').innerHTML=`総レコード数(サーバー集計): <b style="color:var(--goldb)">${total}</b> 件`+
-    (sampled?`　／　集計は直近 ${allLogs.length} 件のサンプル`:``)+`　／　取得 ${allLogs.length} 件`+
+  $('meta').innerHTML=`総レコード数(サーバー集計・対戦+計測イベント): <b style="color:var(--goldb)">${total}</b> 件`+
+    (sampled?`　／　集計は直近 ${allLogs.length} 件のサンプル`:``)+
+    `　／　取得 ${allLogs.length} 件(対戦${gameLogsAll.length}・イベント${eventLogs.length})`+
     (hiddenLogCount?`　／　非表示 <b style="color:var(--goldb)">${hiddenLogCount}</b> 件(集計から除外)`:``);
 
-  if(!N){ $('content').innerHTML=surveySectionHTML()+playersSectionHTML()+banner('対戦ログのデータはまだありません。'); bindHideButtons(); return; }
+  if(!N){ $('content').innerHTML=surveySectionHTML()+playersSectionHTML()+eventStatsHTML(eventLogs)+banner('対戦ログのデータはまだありません。'); bindHideButtons(); return; }
 
   // 基本集計
   let pw=0,cw=0,dr=0,sumP=0,sumC=0,sumTime=0,timeCount=0;
@@ -419,6 +455,8 @@ function render(){
     ${kpi(avgTime!=null?avgTime.toFixed(0)+'秒':'-','平均対戦時間')}
   </div>`;
 
+  html+=eventStatsHTML(eventLogs);
+
   // バランス分析
   html+=`<h2>バランス分析</h2><div class="cols">`;
   html+=`<div class="card"><h3>勝敗の内訳</h3>`+bars([
@@ -472,7 +510,7 @@ function binBars(bins,unit){
 // ===== 生データテーブル =====
 function filtered(){
   const s=tableState;
-  const base=showHidden?allLogs:visibleLogs();
+  const base=showHidden?allLogs.filter(isGameRecord):visibleLogs();
   let rows=base.filter(g=>{
     if(s.fWinner && g.winner!==s.fWinner) return false;
     if(s.fDiff && g.cpuDifficulty!==s.fDiff) return false;
@@ -486,7 +524,7 @@ function filtered(){
   return rows;
 }
 function tableUI(){
-  const vers=[...new Set(allLogs.map(g=>g.version).filter(Boolean))].sort().reverse();
+  const vers=[...new Set(allLogs.filter(isGameRecord).map(g=>g.version).filter(Boolean))].sort().reverse();
   const opt=(arr,cur,map)=>arr.map(v=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(map?(map[v]||v):v)}</option>`).join('');
   return `<div class="filters">
     <select id="fWinner"><option value="">勝者:すべて</option>${opt(['player','cpu','draw'],tableState.fWinner,{player:'プレイヤー',cpu:'CPU',draw:'引分'})}</select>

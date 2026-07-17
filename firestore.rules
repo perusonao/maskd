@@ -50,13 +50,20 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // プレイログの最低限のバリデーション
+    // プレイログの最低限のバリデーション。
+    // 完了した対戦の記録(type:'game'、winner/playerFinal/cpuFinal必須)と、
+    // 分析用の軽量イベント(session_start/game_start/abandon/tutorial_*、type必須・上記3項目は無し)の
+    // どちらかであればOKとする(軽量イベントは元々このwinner等を持たない設計のため)。
     function isValidLog() {
       let d = request.resource.data;
-      return 'winner' in d && d.winner in ['player', 'cpu', 'draw']
-          && 'playerFinal' in d && d.playerFinal is number
-          && 'cpuFinal' in d && d.cpuFinal is number
-          && d.size() <= 40;             // フィールド数の上限（巨大ペイロード防止）
+      return d.size() <= 40               // フィールド数の上限（巨大ペイロード防止）
+          && (
+            ('winner' in d && d.winner in ['player', 'cpu', 'draw']
+              && 'playerFinal' in d && d.playerFinal is number
+              && 'cpuFinal' in d && d.cpuFinal is number)
+            ||
+            ('type' in d && d.type in ['session_start', 'game_start', 'abandon', 'tutorial_start', 'tutorial_complete'])
+          );
     }
 
     // アンケートの最低限のバリデーション
