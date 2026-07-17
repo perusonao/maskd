@@ -1542,8 +1542,6 @@
   .setup-back{ cursor:pointer; color:var(--gold-bright); font-size:14px; min-width:64px; text-align:left; }
   .setup-title{ flex:1; text-align:center; font-family:'Cormorant Garamond',serif; font-size:22px; color:var(--ink); }
   .setup-spacer{ min-width:64px; }
-  .beginner-quick{ flex:0 0 auto; width:100%; max-width:360px; margin:0 auto; display:flex; flex-direction:column; gap:1px; padding:8px 0; }
-  .beginner-quick .bq-sub{ font-size:10px; font-weight:400; opacity:.85; }
   /* ===== 対戦設定: 番号ステップのカード(1画面に収めるため縦を圧縮) ===== */
   .setup-step{ width:100%; max-width:360px; margin:5px auto 0; padding:8px 11px; border-radius:12px;
     border:1px solid rgba(201,162,74,0.22); background:rgba(255,255,255,0.015); text-align:left; }
@@ -1564,10 +1562,10 @@
   .lv-note{ font-size:9.5px; color:var(--ink-dim); margin-top:4px; line-height:1.4;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .lv-note b{ color:var(--gold-dim); }
-  /* アクション設定: ボタンに一言キャプションを添える */
-  #actionOpts.cpu-setting-opts{ gap:8px; flex-wrap:nowrap; }
-  #actionOpts .cpu-opt{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 6px; }
-  #actionOpts .cpu-opt .opt-sub{ font-size:9px; font-weight:400; opacity:.8; white-space:normal; text-align:center; }
+  /* レベル選択: 本戦ボタンにだけ一言キャプションを添える */
+  #ruleOpts.cpu-setting-opts{ gap:6px; flex-wrap:nowrap; }
+  #ruleOpts .cpu-opt{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 4px; }
+  #ruleOpts .cpu-opt .opt-sub{ font-size:8.5px; font-weight:400; opacity:.8; white-space:normal; text-align:center; }
   .trust-table{ width:100%; border-collapse:collapse; font-size:11px; margin:4px 0; }
   .trust-table th{ color:var(--gold-dim); font-weight:600; text-align:left; padding:4px 6px; border-bottom:1px solid var(--line); font-size:10px; }
   .trust-table td{ padding:5px 6px; border-bottom:1px solid rgba(201,162,74,0.12); color:var(--ink-dim); }
@@ -1807,7 +1805,6 @@
   <!-- ===== 対戦設定 ===== -->
   <div class="instructions" id="instructions" style="display:none;">
     <div class="setup-head"><span class="setup-back" onclick="showHome()">‹ もどる</span><span class="setup-title">対戦設定</span><span class="setup-spacer"></span></div>
-    <div class="btn beginner-quick" onclick="startBeginnerPreset()">🔰 初心者ではじめる<span class="bq-sub">初級・弱いCPU・ヒントON</span></div>
 
     <div class="setup-step">
       <div class="step-head"><span class="step-num">1</span><span class="step-title">レベルを選ぶ</span></div>
@@ -1816,6 +1813,7 @@
         <div class="cpu-opt" data-val="r1">初級</div>
         <div class="cpu-opt" data-val="r2">中級（+AIR）</div>
         <div class="cpu-opt" data-val="r3">上級（+KAOS）</div>
+        <div class="cpu-opt" data-val="top">本戦<span class="opt-sub">記録あり</span></div>
       </div>
     </div>
 
@@ -1836,14 +1834,6 @@
     <div class="setup-step">
       <div class="step-head"><span class="step-num">4</span><span class="step-title">このレベルの主</span></div>
       <div class="level-info" id="levelInfo"></div>
-    </div>
-
-    <div class="setup-step">
-      <div class="step-head"><span class="step-num">5</span><span class="step-title">アクション設定</span></div>
-      <div class="cpu-setting-opts" id="actionOpts">
-        <div class="cpu-opt" data-val="basic">基本（決戦・撤退）<span class="opt-sub">シンプルな基本ルールで対戦</span></div>
-        <div class="cpu-opt" data-val="full">フル（＋入替・奇襲）<span class="opt-sub">すべてのアクションを使用</span></div>
-      </div>
     </div>
 
     <div class="btn-wrap" style="display:flex;gap:8px;margin-top:6px;">
@@ -2551,24 +2541,26 @@ function renderLevelInfo(){
     <div class="lv-goals-line">${goalsLine}</div>
     <div class="lv-note">※CPUの強さ＝<b>相手の手加減のみ</b>変更（相手は固定）</div>`;
 }
+// レベル選択の4択(初級/中級/上級/本戦)は selectedRule と selectedAction の組み合わせで決まる。
+// 本戦=上級の属性(r3)＋フルアクション。それ以外の3つは常にbasic(入替・奇襲なし)に固定する。
+function currentLevelChoice(){
+  return (selectedRule==='r3' && selectedAction==='full') ? 'top' : selectedRule;
+}
 function initModeUI(){
   document.querySelectorAll('#ruleOpts .cpu-opt').forEach(el=>{
     el.onclick=()=>{
       document.querySelectorAll('#ruleOpts .cpu-opt').forEach(x=>x.classList.remove('selected'));
-      el.classList.add('selected'); selectedRule=el.dataset.val;
-      try{ localStorage.setItem('maskd_mode_rule', selectedRule); }catch(e){}
+      el.classList.add('selected');
+      const v=el.dataset.val;
+      if(v==='top'){ selectedRule='r3'; selectedAction='full'; }
+      else { selectedRule=v; selectedAction='basic'; }
+      try{
+        localStorage.setItem('maskd_mode_rule', selectedRule);
+        localStorage.setItem('maskd_mode_action', selectedAction);
+      }catch(e){}
       updateModeSummary();
     };
-    if(el.dataset.val===selectedRule) el.classList.add('selected');
-  });
-  document.querySelectorAll('#actionOpts .cpu-opt').forEach(el=>{
-    el.onclick=()=>{
-      document.querySelectorAll('#actionOpts .cpu-opt').forEach(x=>x.classList.remove('selected'));
-      el.classList.add('selected'); selectedAction=el.dataset.val;
-      try{ localStorage.setItem('maskd_mode_action', selectedAction); }catch(e){}
-      updateModeSummary();
-    };
-    if(el.dataset.val===selectedAction) el.classList.add('selected');
+    if(el.dataset.val===currentLevelChoice()) el.classList.add('selected');
   });
   updateModeSummary();
 }
@@ -2719,7 +2711,7 @@ function endPracticeMode(youFinal, cpuFinal, st){
   document.getElementById('learnBox').innerHTML=`
     <div class="tutm-head"><span class="tutm-title" style="text-align:center;flex:1;">${st.icon} ${meta.name}：${title}</span></div>
     <div class="ls-score">あなた <b>${youFinal}</b> <span>–</span> <b>${cpuFinal}</b> 相手</div>
-    ${youReadBonus?`<div class="star-newnote" style="margin-top:2px;">🎯 仮面あて的中 ${youReadHits}回（読みボーナス +${youReadBonus}pt）</div>`:''}
+    ${youReadHits?`<div class="star-newnote" style="margin-top:2px;">🎯 仮面あて的中 ${youReadHits}回（勝敗には影響しません）</div>`:''}
     ${rivalReactHTML(levelKey, rivalLine)}
     ${starBlockHTML(levelKey, res)}
     ${gotNew?'<div class="star-newnote">🎉 新しい★を獲得！</div>':''}
@@ -2826,19 +2818,10 @@ function homeToast(msg){
   t.textContent=msg; t.classList.add('show');
   clearTimeout(_homeToastT); _homeToastT=setTimeout(()=>t.classList.remove('show'), 1900);
 }
-// 初心者プリセット: 初級・弱いCPU・初心者表示・ヒントON をまとめて適用して対戦へ
-function startBeginnerPreset(){
-  selectedRule='r1'; selectedAction='basic'; selectedCpuDifficulty='weak';
-  cardStyle='beginner'; hintsEnabled=true;
-  try{ localStorage.setItem('maskd_mode_rule','r1'); localStorage.setItem('maskd_mode_action','basic');
-    localStorage.setItem('maskd_cardstyle','beginner'); localStorage.setItem('maskd_hints','on'); }catch(e){}
-  syncSettingChips(); applyCardStyleClass();
-  beginMatchSetup();
-}
 // 選択チップ(UI)を現在の変数値に合わせて再描画する(プリセット適用後など)
 function syncSettingChips(){
   const set=(sel,val)=>document.querySelectorAll(sel+' .cpu-opt').forEach(el=>el.classList.toggle('selected', el.dataset.val===val));
-  set('#ruleOpts', selectedRule); set('#actionOpts', selectedAction);
+  set('#ruleOpts', currentLevelChoice());
   set('#cpuDiffOpts', selectedCpuDifficulty); set('#cpuTypeOpts', selectedCpuType);
   set('#cardStyleOpts', cardStyle); set('#hintOpts', hintsEnabled?'on':'off');
   set('#soundOpts', sfxEnabled?'on':'off'); set('#layoutOpts', boardLayout);
@@ -3923,8 +3906,8 @@ function showDecideCoach(){
   coach(html);
 }
 
-// ===== 仮面あて(予想)ボーナス =====
-const READ_BONUS=2; // 予想的中1回あたりの読みボーナス点
+// ===== 仮面あて(予想) ===== 勝敗には影響しない、的中回数を競う独立したミニゲーム
+const READ_BONUS=2; // 計測用の内部値(テレメトリのみ・スコアには反映されない)
 function cpuFieldCard(){
   if(dealerCard && dealerCard.owner==='cpu') return dealerCard;
   if(childCard && childCard.owner==='cpu') return childCard;
@@ -3938,14 +3921,14 @@ function setPrediction(attr){
   sfx('select');
   const c=cpuFieldCard(); if(c) showAttrHint(c.num);
 }
-// 決着/撤退の公開時に予想を判定してボーナスを付与
+// 決着/撤退の公開時に予想を判定して的中数を記録(勝敗には影響しない)
 function checkPrediction(){
   if(!youPrediction) return;
   const c=cpuFieldCard(); const guess=youPrediction; youPrediction=null;
   if(c && c.attr===guess){
     youReadHits++; youReadBonus+=READ_BONUS;
     sfx('select');
-    homeToast(`🎯 仮面を見破った！ 読みボーナス +${READ_BONUS}pt`);
+    homeToast(`🎯 仮面を見破った！`);
   }
 }
 // 相手が出した数字から、可能性のある属性をヒント表示（あなたの手番なら“仮面あて”のタップ予想付き）
@@ -3962,7 +3945,7 @@ function showAttrHint(num){
     const cand = options.map(a=>`<span class="pred-chip${youPrediction===a?' sel':''}" onclick="setPrediction('${a}')">${glyph(a)}</span>`).join('');
     const tail = youPrediction
       ? `<span class="pred-done">予想: ${CAND_GLYPH[youPrediction]||''}${ALABEL[youPrediction]||''}</span>`
-      : `<span class="pred-hint">タップで予想（的中で+${READ_BONUS}pt・任意）</span>`;
+      : `<span class="pred-hint">タップで予想（任意・勝敗には影響しません）</span>`;
     el.innerHTML=`<span class="pred-lb">🎭 相手の仮面は？</span><span class="hint-icon-row pred-row">${cand}</span>${tail}`;
     return;
   }
@@ -4713,8 +4696,12 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.58.1';
+const GAME_VERSION = 'v0.59.0';
 const CHANGELOG = [
+  { version:'v0.59.0', date:'2026-07-17', items:[
+    '<b>対戦設定画面のレベル選択を4択に統合</b>：「初級／中級／上級」＋別立てだった「アクション設定（基本／フル）」を、「初級／中級／上級／本戦」の1つの選択に統合。「本戦」を選ぶと上級のルール＋入替・奇襲などフル機能＋成績記録が一括で有効になる（以前は「上級」を選んだ上でさらに下の方にある「アクション設定」を「フル」にしないと本戦にならず、分かりにくかった）。あわせて、初回訪問者には出番のない「🔰初心者ではじめる」ボタンを削除（初回訪問時はこの画面自体を経由せず自動で初級に入るため、実質的に重複した導線だった）。',
+    '<b>仮面あて（読み）を勝敗に影響しない独立した成績に変更</b>：これまで的中1回+2ptとして最終得点に加算されていたが、CPU側には対応する仕組みがなく非対称だったため、得点計算から分離。結果画面では得点表ではなく「今回のMVP」などと同じ成績欄に「🎯 仮面あてN回的中（勝敗には影響しません）」として表示するのみに変更。実績「看破者」や★目標（3回見破る）などの的中回数ベースの判定は従来通り機能する。',
+  ]},
   { version:'v0.58.1', date:'2026-07-17', items:[
     '<b>ホーム画面の「Lv」表記を廃止</b>：対戦数から算出する見た目だけの疑似レベル表示をやめ、「◯戦」という実数表示に変更（存在しないレベル制度があるかのような誤解を避けるため）。勝率バーの表示内容自体は変更なし。',
   ]},
@@ -6100,8 +6087,8 @@ function endGame(){
   // 残り手札ボーナスはステージで無効化される場合0
   const youLeftoverBonus = stageAllows('leftover') ? calcLeftoverBonus(youHand) : 0;
   const cpuLeftoverBonus = stageAllows('leftover') ? calcLeftoverBonus(cpuHand) : 0;
-  // 戦略カウンターの残り・残り手札ボーナス・仮面あて(読み)ボーナスを得点に加算
-  const youFinal = youLP + youTrust + youLeftoverBonus + youReadBonus;
+  // 戦略カウンターの残り・残り手札ボーナスを得点に加算(仮面あては勝敗に影響しない別枠の成績)
+  const youFinal = youLP + youTrust + youLeftoverBonus;
   const cpuFinal = cpuLP + cpuTrust + cpuLeftoverBonus;
   const s=computeMatchSummary();
   // 段階チュートリアルは専用の結果画面へ(通算/実績/履歴には残さない)
@@ -6125,7 +6112,6 @@ function endGame(){
     ${rowHTML('決戦の得点','',youLP,cpuLP,'','sb-row')}
     ${rowHTML('戦略カウンター','残り',youTrust,cpuTrust,'+','sb-row')}
     ${rowHTML('残り手札ボーナス','上位2枚+Air2/枚',youLeftoverBonus,cpuLeftoverBonus,'+','sb-row')}
-    ${youReadBonus?rowHTML('読みボーナス','仮面あて的中'+youReadHits+'回',youReadBonus,0,'+','sb-row'):''}
     ${rowHTML('合計','',youFinal,cpuFinal,'','sb-total')}
   </div>`;
   // 各ラウンドの対戦カードと獲得ポイント(決戦の得点の内訳)
@@ -6158,6 +6144,7 @@ function endGame(){
     <div class="ms-row"><span>今回のMVPカード</span><span>${mvpTag}</span></div>
     <div class="ms-row"><span>通算成績</span><span>${streak.wins}勝 / ${streak.total}戦 （勝率 ${streak.winRate.toFixed(0)}%）</span></div>
     <div class="ms-row"><span>連勝</span><span>現在 ${streak.currentStreak} ／ 最高 ${streak.maxStreak}${bestNote}</span></div>
+    ${youReadHits?`<div class="ms-row"><span>🎯 仮面あて</span><span>${youReadHits}回的中（勝敗には影響しません）</span></div>`:''}
   </div>`;
   const achSection = newAch.length ? `<div class="match-summary milestone">
     <div class="ms-row" style="justify-content:center;color:var(--gold-bright);font-weight:700;">🎉 実績を解除！</div>
