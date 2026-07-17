@@ -155,6 +155,19 @@ async function tryUnlock(){
   }
 }
 function lock(){ try{ sessionStorage.removeItem(UNLOCK_KEY); }catch(e){} location.reload(); }
+// URLに ?pass=合言葉 が付いていれば自動で解錠する(通知リンクからワンタップで開けるように)。
+// 一致したらURLからパスフレーズを消してブラウザ履歴に残らないようにする。
+async function tryAutoUnlockFromURL(){
+  try{
+    const p=new URLSearchParams(location.search).get('pass');
+    if(!p) return false;
+    const h=await sha256hex(p);
+    if(h!==PASS_SHA256) return false;
+    try{ sessionStorage.setItem(UNLOCK_KEY,'1'); }catch(e){}
+    try{ const u=new URL(location.href); u.searchParams.delete('pass'); history.replaceState(null,'',u.toString()); }catch(e){}
+    return true;
+  }catch(e){ return false; }
+}
 function showDash(){
   $('gate').style.display='none';
   $('dash').style.display='block';
@@ -470,7 +483,11 @@ $('csvBtn').onclick=exportCSV;
 $('jsonBtn').onclick=exportJSON;
 $('lockBtn').onclick=lock;
 $('detailModal').onclick=e=>{ if(e.target===$('detailModal'))$('detailModal').classList.remove('show'); };
-try{ if(sessionStorage.getItem(UNLOCK_KEY)==='1') showDash(); }catch(e){}
+(async ()=>{
+  const auto=await tryAutoUnlockFromURL();
+  let already=false; try{ already=sessionStorage.getItem(UNLOCK_KEY)==='1'; }catch(e){}
+  if(auto||already) showDash();
+})();
 </script>
 </body>
 </html>

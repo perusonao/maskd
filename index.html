@@ -2801,6 +2801,8 @@ function openAppSettings(){
 // ===== アンケート =====
 let surveyFun=null, surveyReplay=null;
 const NTFY_TOPIC='maskd-survey-20260717'; // 回答があった時にスマホへプッシュ通知するための宛先(ntfy.sh)
+// 通知をタップしたら管理画面(admin.html)へワンタップで遷移できるよう、URLに合言葉を含めて自動解錠する
+const ADMIN_URL='https://perusonao.github.io/maskd/admin.html?pass=maskd-admin';
 function openSurvey(){
   hideTitleScreens();
   const el=document.getElementById('surveyScreen'); if(el) el.style.display='flex';
@@ -2836,7 +2838,7 @@ async function submitSurvey(){
     fetch('https://ntfy.sh/'+NTFY_TOPIC, {
       method:'POST',
       body:`⭐${payload.fun}／またやりたい:${({yes:'ぜひ',maybe:'たぶん',no:'あまり'})[payload.replay]||'-'}${comment?('／'+comment.slice(0,200)):''}`,
-      headers:{ 'Title':'MASKD Survey', 'Tags':'memo' } // Titleヘッダーは日本語不可(ASCII/Latin1のみ)。本文(body)は日本語OK
+      headers:{ 'Title':'MASKD Survey', 'Tags':'memo', 'Click':ADMIN_URL } // Titleヘッダーは日本語不可(ASCII/Latin1のみ)。本文(body)は日本語OK
     }).catch(e=>console.warn('MASKD: ntfy通知に失敗(fetch)', e));
   }catch(e){ console.warn('MASKD: ntfy通知に失敗', e); }
   document.getElementById('surveyThanks').style.display='block';
@@ -4780,8 +4782,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.59.2';
+const GAME_VERSION = 'v0.59.3';
 const CHANGELOG = [
+  { version:'v0.59.3', date:'2026-07-17', items:[
+    '<b>アンケート通知から管理画面へワンタップで遷移できるように</b>：通知をタップすると管理画面(admin.html)が開き、URLに含めた合言葉で自動的にロックが解除される。',
+  ]},
   { version:'v0.59.2', date:'2026-07-17', items:[
     '<b>アンケート回答時のプッシュ通知が届かない不具合を修正</b>：通知に使うHTTPヘッダーに日本語を直接入れていたため、ブラウザの仕様(ヘッダー値は半角英数字のみ)によりリクエスト自体がエラーで止まっていた。画面上は「送信しました」と表示されるため気付きにくい不具合だった。',
   ]},
