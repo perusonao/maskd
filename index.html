@@ -1566,6 +1566,13 @@
   #ruleOpts.cpu-setting-opts{ gap:6px; flex-wrap:nowrap; }
   #ruleOpts .cpu-opt{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 4px; }
   #ruleOpts .cpu-opt .opt-sub{ font-size:8.5px; font-weight:400; opacity:.8; white-space:normal; text-align:center; }
+  /* アンケート */
+  .survey-text{ width:100%; min-height:70px; margin-top:4px; padding:8px 10px; border-radius:8px; resize:vertical;
+    background:rgba(255,255,255,0.02); border:1px solid rgba(201,162,74,0.28); color:var(--ink);
+    font-family:inherit; font-size:12.5px; line-height:1.5; }
+  .survey-text:focus{ outline:none; border-color:var(--gold-bright); }
+  .survey-thanks{ text-align:center; margin-top:14px; padding:12px; border-radius:10px; font-size:13px;
+    color:var(--gold-bright); border:1px solid rgba(201,162,74,0.35); background:rgba(201,162,74,0.08); }
   .trust-table{ width:100%; border-collapse:collapse; font-size:11px; margin:4px 0; }
   .trust-table th{ color:var(--gold-dim); font-weight:600; text-align:left; padding:4px 6px; border-bottom:1px solid var(--line); font-size:10px; }
   .trust-table td{ padding:5px 6px; border-bottom:1px solid rgba(201,162,74,0.12); color:var(--ink-dim); }
@@ -1872,9 +1879,43 @@
         <div class="cpu-opt" data-val="off">OFF</div>
       </div>
     </div>
+    <div class="cpu-setting-row">
+      <div class="btn ghost" style="width:100%;" onclick="openSurvey()">📝 アンケートに回答する</div>
+    </div>
     <div style="text-align:center;margin-top:14px;padding-top:10px;border-top:1px solid rgba(201,162,74,.15);">
       MASKD <span class="version-inline" id="versionTagSettings"></span>
     </div>
+  </div>
+
+  <!-- ===== アンケート ===== -->
+  <div class="instructions" id="surveyScreen" style="display:none;">
+    <div class="setup-head"><span class="setup-back" onclick="showHome()">‹ もどる</span><span class="setup-title">アンケート</span><span class="setup-spacer"></span></div>
+    <div class="setup-step">
+      <div class="cpu-setting-label">面白かった度合い</div>
+      <div class="cpu-setting-opts" id="surveyFunOpts">
+        <div class="cpu-opt" data-val="1">1</div>
+        <div class="cpu-opt" data-val="2">2</div>
+        <div class="cpu-opt" data-val="3">3</div>
+        <div class="cpu-opt" data-val="4">4</div>
+        <div class="cpu-opt" data-val="5">5</div>
+      </div>
+    </div>
+    <div class="setup-step">
+      <div class="cpu-setting-label">またやりたいか</div>
+      <div class="cpu-setting-opts" id="surveyReplayOpts">
+        <div class="cpu-opt" data-val="yes">ぜひ</div>
+        <div class="cpu-opt" data-val="maybe">たぶん</div>
+        <div class="cpu-opt" data-val="no">あまり</div>
+      </div>
+    </div>
+    <div class="setup-step">
+      <div class="cpu-setting-label">分かりにくかった点・感想（任意）</div>
+      <textarea id="surveyText" class="survey-text" maxlength="500" placeholder="自由にどうぞ"></textarea>
+    </div>
+    <div class="btn-wrap" style="display:flex;gap:8px;margin-top:6px;">
+      <div class="btn" style="flex:1;" id="surveySubmitBtn" onclick="submitSurvey()">送信する</div>
+    </div>
+    <div class="survey-thanks" id="surveyThanks" style="display:none;">🙏 送信しました。ご協力ありがとうございます！</div>
   </div>
 
   <div class="tutorial" id="tutorialOverlay">
@@ -2740,7 +2781,7 @@ function backToTitle(){
 }
 // ===== ホーム / 対戦設定 / 設定 の画面遷移 =====
 function hideTitleScreens(){
-  ['homeScreen','instructions','appSettings'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
+  ['homeScreen','instructions','appSettings','surveyScreen'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
 }
 function showHome(){
   hideTitleScreens();
@@ -2756,6 +2797,49 @@ function openMatchSetup(){
 function openAppSettings(){
   hideTitleScreens();
   const el=document.getElementById('appSettings'); if(el) el.style.display='flex';
+}
+// ===== アンケート =====
+let surveyFun=null, surveyReplay=null;
+const NTFY_TOPIC='maskd-survey-20260717'; // 回答があった時にスマホへプッシュ通知するための宛先(ntfy.sh)
+function openSurvey(){
+  hideTitleScreens();
+  const el=document.getElementById('surveyScreen'); if(el) el.style.display='flex';
+  surveyFun=null; surveyReplay=null;
+  document.querySelectorAll('#surveyFunOpts .cpu-opt, #surveyReplayOpts .cpu-opt').forEach(x=>x.classList.remove('selected'));
+  document.getElementById('surveyText').value='';
+  document.getElementById('surveyThanks').style.display='none';
+  document.getElementById('surveySubmitBtn').style.display='';
+}
+function initSurveyUI(){
+  document.querySelectorAll('#surveyFunOpts .cpu-opt').forEach(el=>{
+    el.onclick=()=>{
+      document.querySelectorAll('#surveyFunOpts .cpu-opt').forEach(x=>x.classList.remove('selected'));
+      el.classList.add('selected'); surveyFun=el.dataset.val;
+    };
+  });
+  document.querySelectorAll('#surveyReplayOpts .cpu-opt').forEach(el=>{
+    el.onclick=()=>{
+      document.querySelectorAll('#surveyReplayOpts .cpu-opt').forEach(x=>x.classList.remove('selected'));
+      el.classList.add('selected'); surveyReplay=el.dataset.val;
+    };
+  });
+}
+async function submitSurvey(){
+  if(!surveyFun){ homeToast('面白かった度合いを選んでください'); return; }
+  const comment=(document.getElementById('surveyText').value||'').trim().slice(0,500);
+  const payload={ fun:Number(surveyFun), replay:surveyReplay||null, comment, version:GAME_VERSION, playerId:getPlayerId(), ts:new Date().toISOString() };
+  document.getElementById('surveySubmitBtn').style.display='none';
+  try{ if(typeof window.__maskdSaveSurvey==='function') await window.__maskdSaveSurvey(payload); }
+  catch(e){ console.warn('MASKD: アンケート送信に失敗', e); }
+  // スマホへプッシュ通知(失敗しても回答自体はFirestoreへ保存済みなので無視してよい)
+  try{
+    fetch('https://ntfy.sh/'+NTFY_TOPIC, {
+      method:'POST',
+      body:`⭐${payload.fun}／またやりたい:${({yes:'ぜひ',maybe:'たぶん',no:'あまり'})[payload.replay]||'-'}${comment?('／'+comment.slice(0,200)):''}`,
+      headers:{ 'Title':'MASKD アンケート回答', 'Tags':'memo' }
+    }).catch(()=>{});
+  }catch(e){}
+  document.getElementById('surveyThanks').style.display='block';
 }
 // ホーム: 仮面カードの扇(既存のカードアートを再利用)と戦績バッジを描画
 const MASK_FAN=[
@@ -4696,8 +4780,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.59.0';
+const GAME_VERSION = 'v0.59.1';
 const CHANGELOG = [
+  { version:'v0.59.1', date:'2026-07-17', items:[
+    '<b>アンケート機能を追加</b>：設定画面から「📝 アンケートに回答する」で、面白さ（5段階）・またやりたいか・自由記述の3項目に回答できるように。匿名でクラウドに保存され、開発側で確認できる。',
+  ]},
   { version:'v0.59.0', date:'2026-07-17', items:[
     '<b>対戦設定画面のレベル選択を4択に統合</b>：「初級／中級／上級」＋別立てだった「アクション設定（基本／フル）」を、「初級／中級／上級／本戦」の1つの選択に統合。「本戦」を選ぶと上級のルール＋入替・奇襲などフル機能＋成績記録が一括で有効になる（以前は「上級」を選んだ上でさらに下の方にある「アクション設定」を「フル」にしないと本戦にならず、分かりにくかった）。あわせて、初回訪問者には出番のない「🔰初心者ではじめる」ボタンを削除（初回訪問時はこの画面自体を経由せず自動で初級に入るため、実質的に重複した導線だった）。',
     '<b>仮面あて（読み）を勝敗に影響しない独立した成績に変更</b>：これまで的中1回+2ptとして最終得点に加算されていたが、CPU側には対応する仕組みがなく非対称だったため、得点計算から分離。結果画面では得点表ではなく「今回のMVP」などと同じ成績欄に「🎯 仮面あてN回的中（勝敗には影響しません）」として表示するのみに変更。実績「看破者」や★目標（3回見破る）などの的中回数ベースの判定は従来通り機能する。',
@@ -6215,6 +6302,7 @@ function animateScoreBreakdown(){
 
 initCpuSettingUI(); // 全ての変数・関数定義が済んだ後に呼び出す
 initModeUI();       // ゲームモード選択(ルール×アクション)の初期化
+initSurveyUI();     // アンケート画面のボタン初期化
 renderHomeStats();  // ホームの戦績サマリーを描画
 applyCardStyleClass(); // 保存された表示モード(上級者/初心者)を反映
 applyLayout(); // 保存された盤面レイアウト(A/B)を反映
@@ -6250,7 +6338,13 @@ if(typeof CARD_IMG!=='undefined' && CARD_IMG.back){
        ・書き込みのみ(従来):      match /logs/{doc} { allow create: if true; allow read: if false; }
        ・「みんなの統計」を使う場合: match /logs/{doc} { allow create: if true; allow read: if true; }
          ※ read を true にすると匿名ログを誰でも読めます。集計表示のみで個人情報は含みません。
+     アンケート("surveys" コレクション)も同様のルールが必要です:
+       match /surveys/{doc} { allow create: if true; allow read: if true; }
+         ※ 自由記述欄があるため、read を true にすると誰でも回答内容を読める点に注意
+           (admin.htmlのパスフレーズは目隠し程度で、真のアクセス制御ではありません)。
 -->
+<!-- 補足: アンケート送信時、ブラウザから https://ntfy.sh/maskd-survey-20260717 へも直接通知しています。
+     ntfyアプリで同名のトピックを購読すればスマホにプッシュ通知が届きます(サーバー不要)。 -->
 <script type="module">
   // ▼▼▼ Firebase 設定(このプロジェクトのもの) ▼▼▼
   const firebaseConfig = {
@@ -6278,6 +6372,11 @@ if(typeof CARD_IMG!=='undefined' && CARD_IMG.back){
       window.__maskdSaveName = async (name) => {
         try { await addDoc(collection(db, "players"), { name: String(name).slice(0,12), serverTs: serverTimestamp() }); return true; }
         catch (e) { console.warn("MASKD: 名前登録に失敗", e); return false; }
+      };
+      // アンケート回答の登録。surveys コレクションに追記。
+      window.__maskdSaveSurvey = async (survey) => {
+        try { await addDoc(collection(db, "surveys"), { ...survey, serverTs: serverTimestamp() }); return true; }
+        catch (e) { console.warn("MASKD: アンケート送信に失敗", e); return false; }
       };
       // クラウドからの読み取り(みんなの統計用)。Firestoreルールで read を許可した場合のみ成功する。
       window.__maskdFetchLogs = async () => {

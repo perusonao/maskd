@@ -131,7 +131,7 @@ const DIFF={weak:'やさしい',normal:'普通',strong:'強い'};
 const TYPE={aggressive:'攻撃的',cautious:'慎重',tricky:'トリッキー',random:'おまかせ'};
 const ATTRS=['moon','sun','dark','kaos','air'];
 
-let fb=null, allLogs=[], totalCount=null;
+let fb=null, allLogs=[], totalCount=null, allSurveys=[], surveyLoadError=null;
 let tableState={ sortKey:'ts', sortDir:-1, fWinner:'', fDiff:'', fVer:'', q:'' };
 
 const $=id=>document.getElementById(id);
@@ -185,16 +185,58 @@ async function loadData(){
     ]);
     allLogs=[]; snap.forEach(d=>allLogs.push(d.data()));
     totalCount=count;
-    render();
   }catch(e){
     const code=(e&&(e.code||e.message))||'';
     $('content').innerHTML=banner(
       'クラウドからの読み取りに失敗しました。<br>Firestoreのセキュリティルールで <code>logs</code> の<b>読み取り</b>を許可してください：<br>'+
       '<code>match /logs/{doc} { allow create: if true; allow read: if true; }</code><br>'+
       '<span style="font-size:10px;">詳細: '+esc(code)+'</span>');
+    return;
   }
+  // アンケートは失敗してもダッシュボード全体は表示する(独立して扱う)
+  try{
+    const snap=await fb.getDocs(fb.query(fb.collection(fb.db,"surveys"), fb.limit(2000)));
+    allSurveys=[]; snap.forEach(d=>allSurveys.push(d.data()));
+    surveyLoadError=null;
+  }catch(e){
+    allSurveys=[]; surveyLoadError=(e&&(e.code||e.message))||'不明なエラー';
+  }
+  render();
 }
 function banner(html){ return '<div class="banner">'+html+'</div>'; }
+
+// ===== アンケート =====
+function surveySectionHTML(){
+  if(surveyLoadError){
+    return '<h2>📝 アンケート回答</h2>'+banner(
+      'アンケート(<code>surveys</code>コレクション)の読み取りに失敗しました。<br>Firestoreのセキュリティルールで<b>読み取り</b>を許可してください：<br>'+
+      '<code>match /surveys/{doc} { allow create: if true; allow read: if true; }</code><br>'+
+      '<span style="font-size:10px;">詳細: '+esc(surveyLoadError)+'</span>');
+  }
+  const N=allSurveys.length;
+  let out='<h2>📝 アンケート回答</h2>';
+  if(!N) return out+'<div class="card muted">まだ回答がありません。</div>';
+  const avgFun=(allSurveys.reduce((s,x)=>s+(Number(x.fun)||0),0)/N).toFixed(1);
+  const replayLabel={yes:'ぜひ',maybe:'たぶん',no:'あまり'};
+  const replayCount={yes:0,maybe:0,no:0};
+  allSurveys.forEach(x=>{ if(replayCount[x.replay]!=null) replayCount[x.replay]++; });
+  out+=`<div class="grid">
+    ${kpi(N,'回答数')}
+    ${kpi(avgFun,'平均の面白さ(5点満点)')}
+    ${kpi(`${replayCount.yes}/${replayCount.maybe}/${replayCount.no}`,'またやりたい(ぜひ/たぶん/あまり)')}
+  </div>`;
+  const sorted=[...allSurveys].sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
+  out+='<div class="card"><div class="tbl-wrap" style="max-height:320px;">'+
+    sorted.map(x=>{
+      const t=(x.ts||'').replace('T',' ').slice(0,16);
+      return `<div class="rrow">
+        <div class="rt"><span>⭐${esc(x.fun)} ／ またやりたい: ${esc(replayLabel[x.replay]||'-')} ／ ${esc(x.version||'')}</span><span>${esc(t)}</span></div>
+        ${x.comment?`<div style="margin-top:4px;">${esc(x.comment)}</div>`:''}
+      </div>`;
+    }).join('')+
+    '</div></div>';
+  return out;
+}
 
 // ===== 集計＆描画 =====
 function render(){
@@ -204,7 +246,7 @@ function render(){
   $('meta').innerHTML=`総レコード数(サーバー集計): <b style="color:var(--goldb)">${total}</b> 件`+
     (sampled?`　／　集計は直近 ${N} 件のサンプル`:``)+`　／　取得 ${N} 件`;
 
-  if(!N){ $('content').innerHTML=banner('データがまだありません。'); return; }
+  if(!N){ $('content').innerHTML=surveySectionHTML()+banner('対戦ログのデータはまだありません。'); return; }
 
   // 基本集計
   let pw=0,cw=0,dr=0,sumP=0,sumC=0,sumTime=0,timeCount=0;
@@ -248,8 +290,11 @@ function render(){
   const decided=pw+cw;
   const avgTime=timeCount?(sumTime/timeCount/1000):null;
 
+  // アンケート(最優先で確認したい項目なので一番上に表示)
+  let html=surveySectionHTML();
+
   // KPI
-  let html=`<div class="grid">
+  html+=`<div class="grid">
     ${kpi(total,'総レコード数')}
     ${kpi(players.size,'参加プレイヤー数')}
     ${kpi(pctOf(pw,decided),'プレイヤー勝率')}
@@ -415,7 +460,7 @@ function exportCSV(){
 }
 
 // テスト用フック(モックデータで描画を確認する。害はない)
-window.__adminMock=(logs,count)=>{ allLogs=logs; totalCount=count; render(); };
+window.__adminMock=(logs,count,surveys)=>{ allLogs=logs; totalCount=count; if(surveys)allSurveys=surveys; render(); };
 
 // ===== 起動 =====
 $('unlockBtn').onclick=tryUnlock;
