@@ -1358,7 +1358,7 @@
     border:1px solid rgba(201,162,74,.5); box-shadow:0 0 8px rgba(201,162,74,.3); }
   .hb-info{ display:flex; flex-direction:column; gap:3px; min-width:96px; }
   .hb-line{ display:flex; align-items:baseline; gap:8px; font-size:11px; color:var(--ink); }
-  .hb-lv{ font-family:'Cormorant Garamond',serif; font-size:15px; color:var(--gold-bright); font-weight:700; line-height:1; }
+  .hb-total{ font-family:'Cormorant Garamond',serif; font-size:15px; color:var(--gold-bright); font-weight:700; line-height:1; }
   .hb-bar{ height:5px; border-radius:3px; background:#1c1a24; border:1px solid rgba(201,162,74,.2); overflow:hidden; }
   .hb-bar > i{ display:block; height:100%; background:linear-gradient(90deg,var(--gold-dim),var(--gold-bright)); }
   .home-bell{ position:relative; display:flex; align-items:center; gap:6px; padding:9px 15px; border-radius:999px; cursor:pointer;
@@ -1771,7 +1771,7 @@
       <div class="home-badge" onclick="openAchievements()" title="称号・実績">
         <div class="hb-crest" id="hbCrest"></div>
         <div class="hb-info">
-          <div class="hb-line"><span class="hb-lv" id="hbLv">Lv.1</span><span class="hb-title" id="hbTitle"></span></div>
+          <div class="hb-line"><span class="hb-total" id="hbTotal">―</span><span class="hb-title" id="hbTitle"></span></div>
           <div class="hb-line"><span id="hbRate">勝率 –%</span></div>
           <div class="hb-bar"><i id="hbBar" style="width:0%"></i></div>
         </div>
@@ -2806,14 +2806,13 @@ function renderHomeStats(){
   updateBellBadge();
   const crest=document.getElementById('hbCrest');
   if(crest && typeof CARD_IMG!=='undefined' && CARD_IMG.moon) crest.style.backgroundImage=`url(${CARD_IMG.moon})`;
-  const lvEl=document.getElementById('hbLv'), rateEl=document.getElementById('hbRate'), barEl=document.getElementById('hbBar');
+  const totalEl=document.getElementById('hbTotal'), rateEl=document.getElementById('hbRate'), barEl=document.getElementById('hbBar');
   const titleEl=document.getElementById('hbTitle');
   if(titleEl){ const tn=activeTitleName(); titleEl.textContent = tn?('・'+tn):''; }
-  if(!lvEl) return;
+  if(!totalEl) return;
   let s=null; try{ s=computeStreaksAndRate(loadGameHistory()); }catch(e){}
   const total=(s&&s.total)||0;
-  const lv = 1 + Math.floor(total/2); // 簡易: 2戦ごとに1Lv(将来のレベル制で置換予定)
-  lvEl.textContent='Lv.'+lv;
+  totalEl.textContent = total ? `${total}戦` : '対戦前';
   if(!total){ rateEl.textContent='勝率 –%'; barEl.style.width='0%'; return; }
   rateEl.textContent=`勝率 ${s.winRate.toFixed(0)}%`;
   barEl.style.width=Math.max(4,Math.min(100,s.winRate)).toFixed(0)+'%';
@@ -4714,8 +4713,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.58.0';
+const GAME_VERSION = 'v0.58.1';
 const CHANGELOG = [
+  { version:'v0.58.1', date:'2026-07-17', items:[
+    '<b>ホーム画面の「Lv」表記を廃止</b>：対戦数から算出する見た目だけの疑似レベル表示をやめ、「◯戦」という実数表示に変更（存在しないレベル制度があるかのような誤解を避けるため）。勝率バーの表示内容自体は変更なし。',
+  ]},
   { version:'v0.58.0', date:'2026-07-16', items:[
     '<b>ホーム画面の整理（レビュー反映）</b>：「対戦する」ボタンを仮面カードより上に配置し視線誘導を強化。ロゴを縮小し仮面カードもコンパクトに。各カードに正確な一言説明を追加（例：MOON＝闇に勝つ／AIR＝多くは引分／KAOS＝特殊ルール）。メニュー6項目を1つのグループにまとめ、設定ボタンとの間に区切り線を追加。バージョン表記をホーム上部から設定画面下部へ移動。',
     '<b>お知らせベルに未読バッジを追加</b>：前回開いた時点からの更新履歴の件数のみを表示（水増しなし、開けば既読になる）。',
