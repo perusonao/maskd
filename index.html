@@ -2080,7 +2080,7 @@
       <div class="tutm-intro" style="text-align:center;margin-top:12px;">仮面をかぶった騎士たちの<b>心理戦・推理カードゲーム</b>。<br>まずは遊びながら覚えていきましょう。</div>
       <div class="tutm-controls" style="flex-direction:column;margin-top:16px;">
         <div class="btn" style="width:100%;" onclick="welcomeChoose('play')">▶ さっそく対戦する</div>
-        <div class="btn ghost" style="width:100%;" onclick="welcomeChoose('missions')">🎯 先にミッションで学ぶ</div>
+        <div class="btn ghost" style="width:100%;" onclick="welcomeChoose('learn')">🎓 先にチュートリアルで学ぶ</div>
       </div>
     </div>
   </div>
@@ -2358,6 +2358,8 @@ const ATTRS5=['moon','sun','dark','kaos','air'];
 let stageConfig=null;          // null=通常対戦。段階チュートリアル中に設定
 let deckAttrs=ATTRS5;          // 現在のデッキの属性集合(縮小デッキ対応)
 let matchRounds=TOTAL_ROUNDS;  // この対戦のラウンド数(ステージで可変)
+let _preStageHints=null;       // チュートリアルのステージ中だけヒントON/OFFを上書きするため、突入前の設定を退避
+function inTutorialStage(){ return !!(stageConfig && !stageConfig.practice); } // 練習モード(レベル別)は対象外、段階チュートリアルのみ
 function stageAllows(k){ return stageConfig ? !!stageConfig[k] : true; } // 通常対戦は全ルール許可
 function computePossibleAttrs(myFullDeal){
   const result={};
@@ -2426,19 +2428,32 @@ function dealHandsStage(attrs){
   return (Math.random()<0.5) ? {you:shuffle(p1), cpu:shuffle(p2)} : {you:shuffle(p2), cpu:shuffle(p1)};
 }
 // 段階チュートリアルの各ステージ定義(縮小デッキ＋解放ルール)
+// hints: このステージで初心者ヒント(候補アイコン等)を強制ON/OFFする(未指定時はtrue)。
+//        ステージ1〜3は属性そのものに集中してもらうためOFF、ステージ4で読み合いとして正式に教える。
+// predict: このステージで「🎭仮面あて」のタップ予想UIを出すか(falseなら候補表示のみ)。
+//          ステージ4は推理の基本(看破/読まれている)そのものを教える回なので、寄り道になる予想機能は隠す。
 const LEARN_STAGES=[
   { id:1, name:'色の対決', icon:'🎨', attrs:['moon','sun','dark'], rounds:4,
-    swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak',
+    swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak', hints:false,
     intro:'まずは<b>色（属性）</b>と<b>数字</b>の基本。異属性は<b>じゃんけん</b>（月✊＞闇✌＞太陽✋）、同属性は<b>数字</b>が大きい方が勝ち。あなたが親のときは<b>決戦</b>か<b>撤退</b>を選べます。' },
   { id:2, name:'風を読む', icon:'🌬️', attrs:['moon','sun','dark','air'], rounds:4,
-    swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak',
+    swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak', hints:false,
     intro:'<b class="air">Air</b>が仲間入り。<b>Airが絡むと必ず引き分け</b>（使うと戦略カウンター+1）。勝てない相手を受け流す一手です。' },
-  { id:3, name:'混沌を制す', icon:'🌀', attrs:['moon','sun','dark','kaos','air'], rounds:6,
-    swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak',
+  { id:3, name:'混沌を制す', icon:'🌀', attrs:['moon','sun','dark','kaos','air'], rounds:4,
+    swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak', hints:false,
     intro:'<b class="kaos">Kaos</b>解禁で全属性そろい踏み。Kaosは<b>属性問わず数字勝負</b>、さらに<b>0・1は最強の5に勝つ</b>特殊効果を持ちます。' },
-  { id:4, name:'駆け引きの極み', icon:'⚔️', attrs:['moon','sun','dark','kaos','air'], rounds:8,
-    swap:true, force:true, late2x:true, leftover:true, cpuDiff:'normal',
-    intro:'いよいよ全ルール。親の<b>入替</b>、子の<b>奇襲</b>、<b>終盤2ラウンドは得点2倍</b>、そして<b>残り手札ボーナス</b>まで。ここを越えれば一人前です。' },
+  { id:4, name:'読み合い', icon:'🔍', attrs:['moon','sun','dark','kaos','air'], rounds:6,
+    swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak', hints:true,
+    intro:'5属性がそろったところで、種明かし。デッキは<b>5属性×数字0〜5、全30枚</b>の固定デッキで、二人で<b>15枚ずつ</b>に分配されています。相手の<b>数字はすぐ見える</b>が<b>属性は伏せられたまま</b>。場に出た札から消去法で候補が絞られ、<b>1つに絞れたら🔓看破</b>（確定）。あなたの札も同じ理屈で相手に絞られ、絞られると<b>⚠読まれている</b>と警告が出ます。' },
+  { id:5, name:'戦略・奇襲', icon:'✦', attrs:['moon','sun','dark','kaos','air'], rounds:6,
+    swap:false, force:true, late2x:false, leftover:false, cpuDiff:'normal', hints:true,
+    intro:'子の新しい一手、<b>奇襲</b>が解禁。<b>親が撤退を選んだ時だけ</b>、戦略カウンターを2消費して撤退を無効化し、<b>強制的に決戦</b>へ持ち込めます。逃げ切らせない一手です。' },
+  { id:6, name:'戦略・入替', icon:'🔄', attrs:['moon','sun','dark','kaos','air'], rounds:6,
+    swap:true, force:true, late2x:false, leftover:false, cpuDiff:'normal', hints:true,
+    intro:'親の特権、<b>入替</b>が解禁。子の数字を見た後、場に出した札を手札の別の1枚と交換できます（1ラウンド1回）。不利な手を、有利な札へ差し替えましょう。' },
+  { id:7, name:'最終決戦', icon:'⚔️', attrs:['moon','sun','dark','kaos','air'], rounds:8,
+    swap:true, force:true, late2x:true, leftover:true, cpuDiff:'normal', hints:true,
+    intro:'いよいよ全ルール。<b>終盤2ラウンドは得点2倍</b>、そして<b>残り手札ボーナス</b>まで。ここを越えれば一人前です。' },
 ];
 const LEARN_KEY='maskd_learn_stage'; // クリア済みの最大ステージ番号(0=未クリア)
 function learnClearedMax(){ try{ return parseInt(localStorage.getItem(LEARN_KEY)||'0',10)||0; }catch(e){ return 0; } }
@@ -2446,7 +2461,11 @@ function learnAllCleared(){ return learnClearedMax()>=LEARN_STAGES.length; }
 function setLearnCleared(n){ try{ if(n>learnClearedMax()) localStorage.setItem(LEARN_KEY, String(n)); }catch(e){} }
 const ATTR_JP_SHORT={moon:'月',sun:'太陽',dark:'闇',kaos:'Kaos',air:'Air'};
 function stageSummary(st){ return `${st.attrs.map(a=>ATTR_JP_SHORT[a]).join('・')} ／ ${st.rounds}R`; }
-function closeLearn(){ document.getElementById('learnOverlay').classList.remove('show'); stageConfig=null; deckAttrs=ATTRS5; matchRounds=TOTAL_ROUNDS; }
+function closeLearn(){
+  document.getElementById('learnOverlay').classList.remove('show');
+  stageConfig=null; deckAttrs=ATTRS5; matchRounds=TOTAL_ROUNDS;
+  if(_preStageHints!==null){ hintsEnabled=_preStageHints; _preStageHints=null; }
+}
 // ステージ選択(ラダー)
 function openLearnLadder(){
   const cleared=learnClearedMax();
@@ -2459,8 +2478,8 @@ function openLearnLadder(){
       <div class="ls-st">${status}</div></div>`;
   }).join('');
   document.getElementById('learnBox').innerHTML=`
-    <div class="tutm-head"><span class="tutm-title" style="flex:1;">🎓 はじめての対戦</span><span class="tutm-close" onclick="closeLearn()">✕</span></div>
-    <div class="tutm-intro" style="margin-top:8px;">ルールを1つずつ解放しながら、<b>実際の対戦</b>で少しずつ覚えます。4段階クリアで一人前！</div>
+    <div class="tutm-head"><span class="tutm-title" style="flex:1;">🎓 チュートリアル</span><span class="tutm-close" onclick="closeLearn()">✕</span></div>
+    <div class="tutm-intro" style="margin-top:8px;">ルールを1つずつ解放しながら、<b>実際の対戦</b>で少しずつ覚えます。全${LEARN_STAGES.length}段階クリアで一人前！</div>
     <div class="ls-grid">${rows}</div>
     ${learnAllCleared()?'<div class="tutm-controls" style="margin-top:12px;"><div class="btn" onclick="closeLearn(); beginMatchSetup();">本編を始める</div></div>':''}`;
   document.getElementById('learnOverlay').classList.add('show');
@@ -2468,10 +2487,13 @@ function openLearnLadder(){
 // ステージ開始前の「あたらしいルール」案内
 function showStageIntro(id){
   const st=LEARN_STAGES.find(s=>s.id===id); if(!st) return;
+  const diffLabel={weak:'相手は弱め',normal:'相手は普通',strong:'相手は強め'}[st.cpuDiff]||'相手は弱め';
+  const actions=[st.force?'奇襲':null, st.swap?'入替':null].filter(Boolean);
+  const actionLabel = actions.length ? actions.join('・')+'あり' : '決戦・撤退のみ';
   document.getElementById('learnBox').innerHTML=`
     <div class="tutm-head"><span class="tutm-title" style="flex:1;">${st.icon} STAGE ${st.id}：${st.name}</span><span class="tutm-close" onclick="closeLearn()">✕</span></div>
     <div class="tutm-intro" style="margin-top:10px;">${st.intro}</div>
-    <div class="tutm-intro" style="margin-top:8px;border-color:rgba(201,162,74,.4);"><b>この対戦</b>：${stageSummary(st)}／相手は弱め／${(st.swap||st.force)?'入替・奇襲あり':'入替・奇襲なし'}／${st.late2x?'終盤2倍あり':'終盤2倍なし'}</div>
+    <div class="tutm-intro" style="margin-top:8px;border-color:rgba(201,162,74,.4);"><b>この対戦</b>：${stageSummary(st)}／${diffLabel}／${actionLabel}／${st.late2x?'終盤2倍あり':'終盤2倍なし'}</div>
     <div class="tutm-controls" style="margin-top:14px;">
       <div class="btn" onclick="startLearnStage(${st.id})">はじめる</div>
       <div class="btn ghost" onclick="openLearnLadder()">戻る</div>
@@ -2481,6 +2503,7 @@ function showStageIntro(id){
 function startLearnStage(id){
   const st=LEARN_STAGES.find(s=>s.id===id); if(!st) return;
   document.getElementById('learnOverlay').classList.remove('show');
+  if('hints' in st){ _preStageHints=hintsEnabled; hintsEnabled=st.hints; }
   startGame(Math.random()<0.5, st);
 }
 // ステージ終了(専用結果。通算/実績/履歴には残さない)
@@ -2497,6 +2520,7 @@ function endLearnStage(youFinal, cpuFinal){
     if(fresh.length) achNote=`<div class="tutm-intro" style="text-align:center;margin-top:8px;border-color:rgba(201,162,74,.5);background:rgba(201,162,74,.08);">🎉 実績解除：${fresh.map(a=>a.icon+' '+a.title).join(' / ')}</div>`;
   }
   stageConfig=null; deckAttrs=ATTRS5; matchRounds=TOTAL_ROUNDS; // 通常対戦に影響しないよう解除
+  if(_preStageHints!==null){ hintsEnabled=_preStageHints; _preStageHints=null; }
   const rov=document.getElementById('resultOv'); if(rov) rov.classList.remove('show');
   document.getElementById('overlay').classList.remove('show');
   sfx(win?'win':(draw?'draw':'lose'));
@@ -4080,7 +4104,12 @@ function cpuFieldCard(){
   return null;
 }
 // 予想できる状況か: 相手の伏せ札が場にあり、あなたの手番(pick/decide)
-function canPredictNow(){ return !!cpuFieldCard() && (phase==='pick'||phase==='decide'); }
+// 段階チュートリアル中(練習モードは除く)は、ルール習得に集中してもらうため
+// 仮面あて(🎭予想)の寄り道UIを出さない。看破/読まれているの基本は「読み合い」ステージで別途教える
+function canPredictNow(){
+  if(inTutorialStage()) return false;
+  return !!cpuFieldCard() && (phase==='pick'||phase==='decide');
+}
 function setPrediction(attr){
   if(!canPredictNow()) return;
   youPrediction = (youPrediction===attr) ? null : attr; // 再タップで解除
@@ -4100,6 +4129,8 @@ function checkPrediction(){
 // 相手が出した数字から、可能性のある属性をヒント表示（あなたの手番なら“仮面あて”のタップ予想付き）
 function showAttrHint(num){
   const el=document.getElementById('oppCardHint');
+  // チュートリアル序盤(ステージ1〜3)は推理をまだ教えていないため非表示。通常対戦のヒント設定には影響しない
+  if(inTutorialStage() && !hintsEnabled){ el.textContent=''; return; }
   const {pool} = remainingPossibleForNum(num);
   const options = pool;
   if(options.length===0){ el.innerHTML=`可能性：<b style="color:var(--gold-bright)">全て公開済み</b>`; return; }
@@ -4135,6 +4166,7 @@ function showAttrHint(num){
 // 自分が場に出した数字について、相手(CPU)視点でどの属性まで絞り込めるかを表示
 function showYouCardHint(num){
   const el=document.getElementById('youCardHint');
+  if(inTutorialStage() && !hintsEnabled){ el.textContent=''; return; }
   const options=cpuPossibleAttrsFor(num);
   if(options.length===0){
     el.innerHTML=`相手視点：<b style="color:var(--gold-bright)">全て公開済み</b>`;
@@ -4862,8 +4894,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.1.0';
+const GAME_VERSION = 'v1.2.0';
 const CHANGELOG = [
+  { version:'v1.2.0', date:'2026-07-18', items:[
+    '<b>チュートリアルを全7段階に拡充</b>：属性を1つずつ覚える序盤（3属性→Air→Kaos）、フルデッキと推理の基本を学ぶ「読み合い」、奇襲・入替を覚える戦略編、最終決戦まで、実際の対戦をプレイしながら段階的にルールを覚えられるようにしました。',
+  ]},
   { version:'v1.1.0', date:'2026-07-18', items:[
     '<b>推理・看破のしくみを分かりやすく</b>：ルール説明に新章「推理と看破」を追加し、具体例つきで解説しました。対戦中の候補アイコンからⓘタップでその場から開けます。',
     '<b>「遊び方」を改善</b>：カードの配分（山札の構成）についての説明を追加し、最後の案内文を「ルールに詳細あり」がより伝わる書き方に見直しました。',
