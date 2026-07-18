@@ -1072,7 +1072,7 @@
 
   .result-overlay{
     position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    background:rgba(13,12,20,0.72); opacity:0; pointer-events:none; transition:opacity .3s; z-index:5;
+    background:rgba(13,12,20,0.94); opacity:0; pointer-events:none; transition:opacity .3s; z-index:5;
   }
   .result-overlay.show{ opacity:1; }
   .result-card{ width:82%; text-align:center; padding:15px 14px; border-radius:14px; border:1px solid var(--line); background:rgba(23,21,31,0.96); box-shadow:0 12px 30px rgba(0,0,0,0.5); }
@@ -4847,8 +4847,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v0.61.2';
+const GAME_VERSION = 'v0.61.3';
 const CHANGELOG = [
+  { version:'v0.61.3', date:'2026-07-18', items:[
+    '<b>ラウンド結果画面のレイアウト崩れを修正</b>：結果カードの背景が半透明すぎたため、ヒント表示ONの状態だと縁のあたりに背後のスコア表示などが透けて見えてしまう不具合を修正（背景をほぼ不透明に変更）。',
+  ]},
   { version:'v0.61.2', date:'2026-07-17', items:[
     '<b>離脱率などの分析イベントが保存されない不具合を修正</b>：セッション開始・対戦開始・離脱・チュートリアル完走の記録が、Firestoreのルールと噛み合っておらずこれまで保存できていなかった問題を修正。管理画面(admin.html)に離脱率・チュートリアル完走率の表示を追加（見た目の変化なし・裏側の不具合修正＋管理画面の機能追加）。',
   ]},
