@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MASKD — ルール解説</title>
+<style>
+/* ============================================================
+   MASKD — ルール解説ムービー
+   ゲーム本体(index.html)の世界観トークンを拡張した映像ステージ。
+   意図的にダーク単一テーマ(没入型の劇場)にコミットしている。
+   ============================================================ */
+*{ box-sizing:border-box; margin:0; padding:0; }
+:root{
+  --void:#211d2c; --void-2:#2b2638; --panel:#37324a;
+  --gold:#d8b25e; --gold-bright:#f3d492; --gold-dim:#a08a52;
+  --ink:#f6f2ea; --ink-dim:#c9c3b7; --ink-faint:#8b8598;
+  --line:rgba(216,178,94,0.30);
+  --moon:#8fb0d6; --dark:#a679cf; --sun:#e6a63f; --kaos:#e0517e; --air:#bfe0e6;
+  --serif:"Cormorant Garamond","Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP",Georgia,serif;
+  --mincho:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP",serif;
+  --gothic:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,"Noto Sans JP","Zen Kaku Gothic New",sans-serif;
+}
+html,body{ height:100%; }
+body{
+  background:#0c0a12;
+  color:var(--ink); font-family:var(--gothic);
+  display:flex; align-items:center; justify-content:center;
+  min-height:100dvh; padding:clamp(8px,2vw,26px);
+  overflow:hidden;
+}
+
+/* ---- Player shell ---- */
+.player{ width:100%; max-width:1000px; display:flex; flex-direction:column; gap:12px; }
+.stage-frame{
+  position:relative; width:100%; aspect-ratio:16/9;
+  border-radius:16px; overflow:hidden;
+  border:1px solid var(--line);
+  background:
+     radial-gradient(120% 90% at 50% -10%, #3a3350 0%, var(--void-2) 45%, var(--void) 100%);
+  box-shadow:0 30px 80px rgba(0,0,0,.6), inset 0 0 120px rgba(0,0,0,.5);
+  container-type:size;
+}
+/* faint vignette + gold dust */
+.stage-frame::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(130% 100% at 50% 50%, transparent 55%, rgba(0,0,0,.55) 100%);
+}
+
+/* ---- Scene base ---- */
+.scene{
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:6cqmin 7cqmin; text-align:center;
+  opacity:0; visibility:hidden; transition:opacity .6s ease, transform .6s ease;
+  transform:scale(1.015);
+}
+.scene.active{ opacity:1; visibility:visible; transform:none; z-index:2; }
+
+/* eyebrow / act numbering */
+.act-no{
+  font-family:var(--mincho); color:var(--gold); letter-spacing:.5em;
+  font-size:2.6cqmin; padding-left:.5em;
+  border:1px solid var(--line); border-radius:999px;
+  padding:.7cqmin 2.4cqmin .7cqmin 2.9cqmin; background:rgba(216,178,94,.06);
+}
+.act-title{
+  font-family:var(--mincho); font-weight:600; color:var(--gold-bright);
+  font-size:5.4cqmin; letter-spacing:.06em; line-height:1.25; text-wrap:balance;
+  margin-top:2.6cqmin;
+}
+.act-title .sep{ color:var(--gold-dim); font-weight:400; margin:0 .35em; }
+.lead{
+  font-size:2.8cqmin; color:var(--ink-dim); line-height:1.7; max-width:74cqmin;
+  margin-top:2.4cqmin; text-wrap:balance;
+}
+.lead b, .hi{ color:var(--gold-bright); font-weight:600; }
+.hi-ink{ color:var(--ink); font-weight:600; }
+
+/* staggered entrance */
+@media (prefers-reduced-motion: no-preference){
+  .scene.active .anim{ animation:rise .7s cubic-bezier(.2,.7,.2,1) both;
+    animation-delay:calc(var(--i,0) * 85ms + 120ms); }
+}
+@keyframes rise{ from{ opacity:0; transform:translateY(2.4cqmin); } to{ opacity:1; transform:none; } }
+
+/* ============ Mask card ============ */
+.card{
+  position:relative; width:14cqmin; aspect-ratio:3/4; border-radius:1.6cqmin;
+  background:linear-gradient(160deg, #34304a, #241f31);
+  border:1px solid var(--line);
+  box-shadow:0 1.2cqmin 3cqmin rgba(0,0,0,.45), inset 0 0 2cqmin rgba(0,0,0,.4);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  overflow:hidden; color:var(--gold); flex:0 0 auto;
+}
+.card .mask{ width:70%; height:auto; opacity:.9; }
+.card .mask path{ fill:currentColor; }
+.card .mask .eye{ fill:#241f31; }
+.card[data-attr=moon]{ color:var(--moon); }
+.card[data-attr=dark]{ color:var(--dark); }
+.card[data-attr=sun]{ color:var(--sun); }
+.card[data-attr=kaos]{ color:var(--kaos);
+  background:linear-gradient(160deg,#3d2338,#2a1524); }
+.card[data-attr=air]{ color:var(--air);
+  background:linear-gradient(160deg,#2c3540,#1e2731); }
+.card .num{
+  position:absolute; top:.6cqmin; left:.9cqmin;
+  font-family:var(--serif); font-weight:700; font-size:3.4cqmin; color:var(--ink);
+  text-shadow:0 1px 3px rgba(0,0,0,.6);
+}
+.card .glyph{
+  position:absolute; top:.4cqmin; right:.7cqmin; font-size:2.7cqmin; line-height:1;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));
+}
+.card .nm{
+  position:absolute; bottom:.7cqmin; width:100%; text-align:center;
+  font-size:1.7cqmin; letter-spacing:.22em; color:currentColor; font-weight:600;
+}
+.card.sm{ width:10cqmin; }
+.card.back{
+  color:var(--gold-dim);
+  background:
+    repeating-linear-gradient(45deg, rgba(216,178,94,.05) 0 6px, transparent 6px 12px),
+    linear-gradient(160deg,#2c2740,#201b2e);
+}
+.card.back .seal{ font-family:var(--serif); font-style:italic; font-size:3cqmin; color:var(--gold-dim); letter-spacing:.05em; }
+
+/* rows / groups */
+.row{ display:flex; gap:2.4cqmin; align-items:center; justify-content:center; flex-wrap:wrap; }
+.lineup{ display:flex; gap:2.2cqmin; margin-top:4cqmin; }
+.lineup .u{ display:flex; flex-direction:column; align-items:center; gap:1.2cqmin; }
+.lineup .cap{ font-size:1.9cqmin; letter-spacing:.2em; color:var(--ink-faint); }
+
+/* deal panel */
+.deal{ display:flex; align-items:center; gap:4cqmin; margin-top:4.4cqmin; }
+.deal .side{ display:flex; flex-direction:column; align-items:center; gap:1.6cqmin; }
+.deal .side h4{ font-size:2.4cqmin; color:var(--gold-bright); font-weight:600; letter-spacing:.1em; }
+.deal .fan{ display:flex; }
+.deal .fan .card{ width:8.4cqmin; margin-left:-3.4cqmin; box-shadow:0 .8cqmin 2cqmin rgba(0,0,0,.5); }
+.deal .fan .card:first-child{ margin-left:0; }
+.deal .crow{ display:flex; gap:2.4cqmin; font-size:2.1cqmin; color:var(--ink-dim); }
+.deal .crow b{ color:var(--ink); font-family:var(--serif); font-size:2.7cqmin; }
+.deal .vs{ font-family:var(--serif); font-style:italic; font-size:3.2cqmin; color:var(--gold-dim); letter-spacing:.05em; }
+.note{
+  margin-top:3.4cqmin; display:flex; align-items:center; gap:2cqmin;
+  background:rgba(224,81,126,.08); border:1px solid rgba(224,81,126,.32);
+  border-radius:2cqmin; padding:2cqmin 3cqmin; max-width:74cqmin;
+}
+.note .k{ font-family:var(--serif); font-weight:700; color:var(--kaos); font-size:2.6cqmin; line-height:1.2;
+  border-right:1px solid rgba(224,81,126,.3); padding-right:2cqmin; white-space:nowrap; }
+.note .t{ font-size:2.2cqmin; color:var(--ink-dim); line-height:1.6; text-align:left; }
+
+/* flow steps */
+.flow{ display:flex; flex-direction:column; gap:1.8cqmin; margin-top:3.6cqmin; width:100%; max-width:70cqmin; }
+.step{ display:flex; align-items:center; gap:2.4cqmin; text-align:left;
+  background:rgba(255,255,255,.03); border:1px solid var(--line); border-radius:2cqmin; padding:2cqmin 2.6cqmin; }
+.step .no{ font-family:var(--serif); font-weight:700; font-size:3.4cqmin; color:var(--gold-bright);
+  width:5cqmin; text-align:center; flex:0 0 auto; }
+.step .tx{ font-size:2.3cqmin; color:var(--ink-dim); line-height:1.55; }
+.step .tx b{ color:var(--ink); }
+.privs{ display:flex; gap:2.4cqmin; margin-top:3.4cqmin; }
+.priv{ display:flex; flex-direction:column; align-items:center; gap:.8cqmin;
+  border:1px solid var(--line); border-radius:2cqmin; padding:2cqmin 3cqmin; min-width:18cqmin; }
+.priv .ic{ font-size:4cqmin; }
+.priv .pt{ font-size:2.6cqmin; font-weight:700; color:var(--gold-bright); letter-spacing:.1em; }
+.priv .pe{ font-family:var(--serif); font-size:1.7cqmin; letter-spacing:.25em; color:var(--ink-faint); }
+.priv.b{ background:rgba(216,178,94,.07); }
+.priv.r{ background:rgba(224,81,126,.06); }
+.priv.x{ background:rgba(143,176,214,.06); }
+
+/* rps triangle */
+.tri{ position:relative; width:52cqmin; height:40cqmin; margin-top:2cqmin; }
+.tri svg{ position:absolute; inset:0; width:100%; height:100%; }
+.tri .node{ position:absolute; display:flex; flex-direction:column; align-items:center; gap:1cqmin; }
+.tri .node .lb{ font-size:2.1cqmin; color:var(--ink-dim); letter-spacing:.1em; }
+.tri .top{ top:0; left:50%; transform:translateX(-50%); }
+.tri .bl{ bottom:0; left:2cqmin; }
+.tri .br{ bottom:0; right:2cqmin; }
+.legend{ display:flex; align-items:center; gap:1.6cqmin; margin-top:2.4cqmin; font-size:2.6cqmin; font-weight:600; }
+.legend .g{ color:var(--gold-dim); }
+.legend .moon{ color:var(--moon); } .legend .dark{ color:var(--dark); } .legend .sun{ color:var(--sun); }
+
+/* matchup rows */
+.mrows{ display:flex; flex-direction:column; gap:1.8cqmin; margin-top:3.4cqmin; }
+.mrow{ display:flex; align-items:center; gap:2.2cqmin; }
+.mrow .card{ width:8.6cqmin; }
+.vsx{ font-family:var(--serif); font-style:italic; color:var(--gold-dim); font-size:2.4cqmin; }
+.out{ font-size:2.2cqmin; font-weight:700; padding:.7cqmin 2cqmin; border-radius:999px; min-width:22cqmin; text-align:center; }
+.out.draw{ color:var(--ink-dim); background:rgba(255,255,255,.06); border:1px solid var(--line); }
+.out.win{ color:#0f0b16; background:linear-gradient(160deg,var(--gold-bright),var(--gold-dim)); }
+.out.kwin{ color:var(--ink); background:rgba(224,81,126,.16); border:1px solid rgba(224,81,126,.4); }
+
+/* kaos cases */
+.kcases{ display:flex; gap:2.2cqmin; margin-top:3.4cqmin; flex-wrap:wrap; justify-content:center; }
+.kcase{ border:1px solid rgba(224,81,126,.3); border-radius:2cqmin; padding:2cqmin 2.6cqmin;
+  max-width:30cqmin; text-align:left; background:rgba(224,81,126,.05); }
+.kcase .tag{ font-family:var(--serif); font-weight:700; color:var(--kaos); font-size:2.4cqmin; margin-bottom:.8cqmin; }
+.kcase .d{ font-size:2.1cqmin; color:var(--ink-dim); line-height:1.55; }
+.kcase .d b{ color:var(--ink); }
+
+/* endgame multiplier + counters */
+.mult{ display:flex; align-items:center; gap:2.6cqmin; margin-top:3.4cqmin; }
+.mtile{ border:1px solid var(--line); border-radius:2cqmin; padding:2cqmin 3.4cqmin; }
+.mtile .rl{ font-size:2cqmin; color:var(--ink-faint); letter-spacing:.08em; }
+.mtile .mv{ font-family:var(--serif); font-weight:700; font-size:4.6cqmin; }
+.mtile.pre .mv{ color:var(--ink-dim); }
+.mtile.fin{ background:rgba(216,178,94,.1); border-color:var(--gold); }
+.mtile.fin .mv{ color:var(--gold-bright); }
+.arrow{ color:var(--gold-dim); font-size:3cqmin; }
+.ctr-lead{ margin-top:3.4cqmin; font-size:2.2cqmin; color:var(--gold-bright); letter-spacing:.06em; }
+.chips{ display:flex; gap:1.6cqmin; margin-top:2cqmin; flex-wrap:wrap; justify-content:center; }
+.chip{ display:flex; align-items:center; gap:1cqmin; border:1px solid var(--line); border-radius:999px;
+  padding:1.1cqmin 2.2cqmin; font-size:2.1cqmin; }
+.chip .ic{ font-size:2.4cqmin; }
+.chip .cl{ color:var(--ink-dim); }
+.chip .cv{ font-family:var(--serif); font-weight:700; }
+.chip.minus .cv{ color:var(--kaos); }
+.chip.plus .cv{ color:var(--moon); }
+
+/* final formula */
+.formula{ display:flex; align-items:stretch; gap:1.6cqmin; margin-top:3.6cqmin; flex-wrap:wrap; justify-content:center; }
+.fterm{ border:1px solid var(--line); border-radius:1.8cqmin; padding:1.8cqmin 2.6cqmin; min-width:20cqmin; }
+.fterm .fl{ font-family:var(--serif); font-weight:700; letter-spacing:.14em; font-size:2.4cqmin; color:var(--gold); }
+.fterm .fj{ font-size:1.9cqmin; color:var(--ink-faint); margin-top:.5cqmin; }
+.fterm.total{ background:linear-gradient(160deg,rgba(216,178,94,.16),rgba(216,178,94,.04)); border-color:var(--gold); }
+.fterm.total .fl{ color:var(--gold-bright); }
+.op{ display:flex; align-items:center; font-family:var(--serif); font-size:3.4cqmin; color:var(--gold-dim); }
+.bonus{ margin-top:3cqmin; max-width:72cqmin; background:rgba(255,255,255,.03);
+  border:1px solid var(--line); border-radius:2cqmin; padding:2.2cqmin 3cqmin; text-align:left; }
+.bonus h4{ font-size:2.1cqmin; color:var(--gold-bright); letter-spacing:.06em; margin-bottom:.8cqmin; }
+.bonus p{ font-size:2.05cqmin; color:var(--ink-dim); line-height:1.6; }
+.bonus p b{ color:var(--ink); }
+.verdict{ margin-top:3cqmin; font-family:var(--mincho); font-size:3cqmin; color:var(--gold-bright); letter-spacing:.1em; }
+
+/* fine print list */
+.fine{ display:flex; flex-direction:column; gap:1.6cqmin; margin-top:3.4cqmin; max-width:78cqmin; }
+.fine li{ list-style:none; display:flex; gap:1.8cqmin; text-align:left;
+  font-size:2.15cqmin; color:var(--ink-dim); line-height:1.55; }
+.fine li .m{ color:var(--gold); flex:0 0 auto; font-size:2.2cqmin; }
+.fine li b{ color:var(--ink); }
+
+/* title + closing scenes */
+.brand{ font-family:var(--serif); font-style:italic; font-weight:600;
+  font-size:13cqmin; letter-spacing:.14em; color:var(--gold-bright);
+  text-shadow:0 0 8cqmin rgba(216,178,94,.35); line-height:1; }
+.tagline{ font-family:var(--mincho); font-size:3.4cqmin; color:var(--ink); letter-spacing:.14em; margin-top:3cqmin; }
+.subhead{ font-size:2.4cqmin; color:var(--ink-faint); letter-spacing:.2em; margin-top:2cqmin; }
+.eyebrow{ font-family:var(--serif); letter-spacing:.5em; font-size:2.6cqmin; color:var(--gold-dim); padding-left:.5em; }
+.fan-bg{ display:flex; margin-top:5cqmin; }
+.fan-bg .card{ width:11cqmin; margin-left:-4cqmin; }
+.fan-bg .card:first-child{ margin-left:0; }
+.fan-bg .card:nth-child(odd){ transform:translateY(-1.4cqmin) rotate(-4deg); }
+.fan-bg .card:nth-child(even){ transform:translateY(.6cqmin) rotate(4deg); }
+.closing .brand{ font-size:9cqmin; margin-top:3cqmin; }
+
+/* ---- Controls ---- */
+.controls{ display:flex; align-items:center; gap:14px; padding:0 4px; }
+.btn{
+  background:transparent; border:1px solid var(--line); color:var(--gold);
+  width:42px; height:42px; border-radius:50%; cursor:pointer; font-size:16px;
+  display:flex; align-items:center; justify-content:center; transition:.2s;
+}
+.btn:hover{ background:rgba(216,178,94,.12); border-color:var(--gold); }
+.btn.play{ width:50px; height:50px; font-size:19px; color:var(--gold-bright); }
+.btn:focus-visible{ outline:2px solid var(--gold-bright); outline-offset:2px; }
+.timeline{ flex:1; display:flex; gap:5px; }
+.seg{ flex:1; height:5px; border-radius:3px; background:rgba(255,255,255,.1);
+  cursor:pointer; overflow:hidden; position:relative; }
+.seg .fill{ position:absolute; inset:0; width:0; background:linear-gradient(90deg,var(--gold-dim),var(--gold-bright)); border-radius:3px; }
+.seg.done .fill{ width:100%; }
+.meta{ display:flex; align-items:center; justify-content:space-between; padding:0 6px; }
+.meta .label{ font-family:var(--mincho); font-size:13px; color:var(--gold); letter-spacing:.12em; }
+.meta .count{ font-family:var(--serif); font-size:13px; color:var(--ink-faint); letter-spacing:.1em; }
+.hint{ font-size:11px; color:var(--ink-faint); text-align:center; letter-spacing:.04em; }
+.hint b{ color:var(--gold-dim); font-weight:600; }
+
+@media (max-width:560px){
+  body{ padding:0; }
+  .player{ gap:9px; }
+  .stage-frame{ border-radius:0; border-left:none; border-right:none; }
+  .btn{ width:38px; height:38px; } .btn.play{ width:44px; height:44px; }
+}
+</style>
+</head>
+<body>
+<div class="player">
+  <div class="stage-frame" id="stage">
+
+    <!-- ══ 0 · タイトル ══ -->
+    <section class="scene" data-label="MASKD" data-dur="7000">
+      <div class="eyebrow anim" style="--i:0">RULES ─ 遊び方</div>
+      <div class="brand anim" style="--i:1">MASKD</div>
+      <div class="tagline anim" style="--i:2">仮面の下に、真実はない。</div>
+      <div class="subhead anim" style="--i:3">心理戦・推理カードゲーム ─ ルール解説</div>
+      <div class="fan-bg anim" style="--i:4">
+        <div class="card" data-attr="sun"><svg class="mask" viewBox="0 0 100 62"><use href="#msk"/></svg><span class="nm">SUN</span></div>
+        <div class="card" data-attr="dark"><svg class="mask" viewBox="0 0 100 62"><use href="#msk"/></svg><span class="nm">DARK</span></div>
+        <div class="card" data-attr="moon"><svg class="mask" viewBox="0 0 100 62"><use href="#msk"/></svg><span class="nm">MOON</span></div>
+        <div class="card" data-attr="kaos"><span class="glyph">✷</span><svg class="mask" viewBox="0 0 100 62"><use href="#msk"/></svg><span class="nm">KAOS</span></div>
+        <div class="card" data-attr="air"><span class="glyph">🜁</span><svg class="mask" viewBox="0 0 100 62"><use href="#msk"/></svg><span class="nm">AIR</span></div>
+      </div>
+    </section>
+
+    <!-- ══ 1 · 第一幕 決闘の支度 ══ -->
+    <section class="scene" data-label="決闘の支度" data-dur="12500">
+      <div class="act-no anim" style="--i:0">第一幕</div>
+      <h2 class="act-title anim" style="--i:1">決闘の支度<span class="sep">—</span>30枚の仮面</h2>
+      <p class="lead anim" style="--i:2">5つの属性 × 数字 <b>0〜5</b>、あわせて <b>全30枚</b>の固定デッキ。<br>これを二人の騎士が分け合う。</p>
+      <div class="deal anim" style="--i:3">
+        <div class="side">
+          <h4>あなた</h4>
+          <div class="fan">
+            <div class="card" data-attr="moon"><span class="num">3</span><span class="glyph">✊</span></div>
+            <div class="card" data-attr="sun"><span class="num">1</span><span class="glyph">✋</span></div>
+            <div class="card back"><span class="seal">M</span></div>
+            <div class="card back"><span class="seal">M</span></div>
+            <div class="card back"><span class="seal">M</span></div>
+          </div>
+          <div class="crow"><span>手札 <b>5</b></span><span>山札 <b>10</b></span></div>
+        </div>
+        <div class="vs">15 / 15</div>
+        <div class="side">
+          <h4>相手（CPU）</h4>
+          <div class="fan">
+            <div class="card back"><span class="seal">M</span></div>
+            <div class="card back"><span class="seal">M</span></div>
+            <div class="card back"><span class="seal">M</span></div>
+            <div class="card back"><span class="seal">M</span></div>
+            <div class="card back"><span class="seal">M</span></div>
+          </div>
+          <div class="crow"><span>手札 <b>5</b></span><span>山札 <b>10</b></span></div>
+        </div>
+      </div>
+      <div class="note anim" style="--i:4">
+        <div class="k">Kaos<br>0 · 1</div>
+        <div class="t">最強格の <b>Kaos の 0 と 1</b> は、配札運を抑えるため <span class="hi">両者に 1 枚ずつ</span>配られる。</div>
+      </div>
+    </section>
+
+    <!-- ══ 2 · 第二幕 一手の作法 ══ -->
+    <section class="scene" data-label="一手の作法" data-dur="12000">
+      <div class="act-no anim" style="--i:0">第二幕</div>
+      <h2 class="act-title anim" style="--i:1">一手の作法<span class="sep">—</span>親と子</h2>
+      <p class="lead anim" style="--i:2">毎ラウンド、<b>親（ディーラー）</b>と<b>子</b>の役割が入れ替わる。<br>非対称な立場が、読み合いを生む。</p>
+      <div class="flow">
+        <div class="step anim" style="--i:3"><div class="no">1</div><div class="tx"><b>親</b>が先に、仮面（カード）を<b>伏せて</b>差し出す。</div></div>
+        <div class="step anim" style="--i:4"><div class="no">2</div><div class="tx"><b>子</b>はそれを見てから、自分の仮面を<b>伏せて</b>出す。</div></div>
+        <div class="step anim" style="--i:5"><div class="no">3</div><div class="tx"><b>親だけ</b>が特権行動 ―― <b>決戦・撤退・入替</b> ―― を選べる。</div></div>
+      </div>
+      <div class="privs">
+        <div class="priv b anim" style="--i:6"><span class="ic">⚔️</span><span class="pt">決戦</span><span class="pe">BATTLE</span></div>
+        <div class="priv r anim" style="--i:7"><span class="ic">🏃</span><span class="pt">撤退</span><span class="pe">RETREAT</span></div>
+        <div class="priv x anim" style="--i:8"><span class="ic">🔄</span><span class="pt">入替</span><span class="pe">EXCHANGE</span></div>
+      </div>
+    </section>
+
+    <!-- ══ 3 · 第三幕 三竦み ══ -->
+    <section class="scene" data-label="三竦みの構え" data-dur="12000">
+      <div class="act-no anim" style="--i:0">第三幕</div>
+      <h2 class="act-title anim" style="--i:1">三竦みの構え<span class="sep">—</span>じゃんけん</h2>
+      <p class="lead anim" style="--i:2"><b>同じ属性</b>どうしなら、数字が大きい方の勝ち。<br><b>異なる属性</b>の Moon／Dark／Sun は <span class="hi">3すくみ＝じゃんけん</span>。</p>
+      <div class="tri anim" style="--i:3">
+        <svg viewBox="0 0 300 230">
+          <defs><marker id="ah" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#c9a24a"/></marker></defs>
+          <path d="M128 74 Q86 118 74 168" fill="none" stroke="#8fb0d6" stroke-width="2.4" marker-end="url(#ah)" opacity=".85"/>
+          <path d="M86 196 Q150 214 214 196" fill="none" stroke="#a679cf" stroke-width="2.4" marker-end="url(#ah)" opacity=".85"/>
+          <path d="M226 168 Q214 118 172 74" fill="none" stroke="#e6a63f" stroke-width="2.4" marker-end="url(#ah)" opacity=".85"/>
+        </svg>
+        <div class="node top"><div class="card sm" data-attr="moon"><span class="glyph">✊</span><svg class="mask" viewBox="0 0 100 62"><use href="#msk"/></svg></div><div class="lb">月 ✊</div></div>
+        <div class="node bl"><div class="card sm" data-attr="dark"><span class="glyph">✌️</span><svg class="mask" viewBox="0 0 100 62"><use href="#msk"/></svg></div><div class="lb">闇 ✌️</div></div>
+        <div class="node br"><div class="card sm" data-attr="sun"><span class="glyph">✋</span><svg class="mask" viewBox="0 0 100 62"><use href="#msk"/></svg></div><div class="lb">太陽 ✋</div></div>
+      </div>
+      <div class="legend anim" style="--i:4"><span class="moon">月✊</span><span class="g">＞</span><span class="dark">闇✌️</span><span class="g">＞</span><span class="sun">太陽✋</span><span class="g">＞</span><span class="moon">月</span></div>
+      <p class="lead anim" style="--i:5;margin-top:1.6cqmin">※ カード右上の記号が、そのまま「グー・チョキ・パー」。数字は無関係。</p>
+    </section>
+
+    <!-- ══ 4 · 第四幕 混沌 Kaos ══ -->
+    <section class="scene" data-label="混沌の仮面" data-dur="12500">
+      <div class="act-no anim" style="--i:0">第四幕</div>
+      <h2 class="act-title anim" style="--i:1">混沌の仮面<span class="sep">—</span>Kaos</h2>
+      <div class="row anim" style="--i:2;margin-top:2.6cqmin">
+        <div class="card" data-attr="kaos"><span class="glyph">✷</span><svg class="mask" viewBox="0 0 100 62"><use href="#msk"/></svg><span class="nm">KAOS</span></div>
+        <p class="lead" style="margin-top:0;text-align:left;max-width:52cqmin">
+          <b>数字を問わず</b>、Kaos は <span class="hi">Air に勝つ</span>。<br>
+          それ以外は <b>数字が大きい方</b>の勝ち。<span class="hi-ink">同じ数字なら Kaos 側の負け</span>。
+        </p>
+      </div>
+      <div class="kcases">
+        <div class="kcase anim" style="--i:3"><div class="tag">Kaos 0 · 1</div><div class="d">どの属性の <b>「5」にも勝つ</b>。最強格の一撃。</div></div>
+        <div class="kcase anim" style="--i:4"><div class="tag">Kaos 5</div><div class="d">他属性の <b>5 には勝つ</b>が、<b>「1」には負ける</b>。</div></div>
+        <div class="kcase anim" style="--i:5"><div class="tag">その他</div><div class="d"><b>数字が大きい方</b>の勝ち。同値は <b>Kaos の負け</b>。</div></div>
+      </div>
+    </section>
+
+    <!-- ══ 5 · 第五幕 空気 Air ══ -->
+    <section class="scene" data-label="空気の仮面" data-dur="11500">
+      <div class="act-no anim" style="--i:0">第五幕</div>
+      <h2 class="act-title anim" style="--i:1">空気の仮面<span class="sep">—</span>Air</h2>
+      <div class="row anim" style="--i:2;margin-top:2.6cqmin">
+        <div class="card" data-attr="air"><span class="glyph">🜁</span><svg class="mask" viewBox="0 0 100 62"><use href="#msk"/></svg><span class="nm">AIR</span></div>
+        <p class="lead" style="margin-top:0;text-align:left;max-width:52cqmin">
+          Air が絡む勝負は、<span class="hi">必ず引き分け</span>。数字は関係しない。<br>
+          ただし<b>唯一の例外</b>として、<span class="hi">Air は Kaos に負ける</span>。
+        </p>
+      </div>
+      <div class="mrows">
+        <div class="mrow anim" style="--i:3"><div class="card" data-attr="air"><span class="num">2</span><span class="glyph">🜁</span></div><span class="vsx">VS</span><div class="card" data-attr="sun"><span class="num">3</span><span class="glyph">✋</span></div><span class="out draw">引き分け</span></div>
+        <div class="mrow anim" style="--i:4"><div class="card" data-attr="air"><span class="num">5</span><span class="glyph">🜁</span></div><span class="vsx">VS</span><div class="card" data-attr="moon"><span class="num">1</span><span class="glyph">✊</span></div><span class="out draw">引き分け</span></div>
+        <div class="mrow anim" style="--i:5"><div class="card" data-attr="air"><span class="num">5</span><span class="glyph">🜁</span></div><span class="vsx">VS</span><div class="card" data-attr="kaos"><span class="num">3</span><span class="glyph">✷</span></div><span class="out kwin">Kaos の勝ち</span></div>
+      </div>
+    </section>
+
+    <!-- ══ 6 · 第六幕 終盤戦と戦略カウンター ══ -->
+    <section class="scene" data-label="終盤戦と戦略カウンター" data-dur="12500">
+      <div class="act-no anim" style="--i:0">第六幕</div>
+      <h2 class="act-title anim" style="--i:1">終盤戦と、戦略カウンター</h2>
+      <p class="lead anim" style="--i:2">最終2ラウンド ―― <b>第7・第8ラウンド</b>の決戦は、得点が <span class="hi">2倍</span>。<br>ここで勝負が決まる。</p>
+      <div class="mult anim" style="--i:3">
+        <div class="mtile pre"><div class="rl">1〜6ラウンド</div><div class="mv">×1</div></div>
+        <div class="arrow">➜</div>
+        <div class="mtile fin"><div class="rl">7・8ラウンド</div><div class="mv">×2</div></div>
+      </div>
+      <div class="ctr-lead anim" style="--i:4">戦略カウンター（初期値 5・上限 5）</div>
+      <div class="chips">
+        <div class="chip minus anim" style="--i:5"><span class="ic">🏃</span><span class="cl">撤退</span><span class="cv">−1</span></div>
+        <div class="chip minus anim" style="--i:6"><span class="ic">🔄</span><span class="cl">入替</span><span class="cv">−2</span></div>
+        <div class="chip minus anim" style="--i:7"><span class="ic">✦</span><span class="cl">奇襲</span><span class="cv">−2</span></div>
+        <div class="chip plus anim" style="--i:8"><span class="ic">⚔️</span><span class="cl">決戦勝利</span><span class="cv">＋1</span></div>
+        <div class="chip plus anim" style="--i:9"><span class="ic">🜁</span><span class="cl">Air使用</span><span class="cv">＋1</span></div>
+      </div>
+    </section>
+
+    <!-- ══ 7 · 第七幕 勝敗 ══ -->
+    <section class="scene" data-label="勝敗" data-dur="13000">
+      <div class="act-no anim" style="--i:0">第七幕</div>
+      <h2 class="act-title anim" style="--i:1">勝敗<span class="sep">—</span>最後に立つ者</h2>
+      <div class="formula">
+        <div class="fterm anim" style="--i:2"><div class="fl">WON</div><div class="fj">獲得点</div></div>
+        <span class="op anim" style="--i:2">＋</span>
+        <div class="fterm anim" style="--i:3"><div class="fl">COUNTER</div><div class="fj">残りカウンター</div></div>
+        <span class="op anim" style="--i:3">＋</span>
+        <div class="fterm anim" style="--i:4"><div class="fl">HAND</div><div class="fj">残り手札ボーナス</div></div>
+        <span class="op anim" style="--i:4">＝</span>
+        <div class="fterm total anim" style="--i:5"><div class="fl">FINAL</div><div class="fj">最終得点</div></div>
+      </div>
+      <div class="bonus anim" style="--i:6">
+        <h4>残り手札ボーナスとは</h4>
+        <p>決着時、<b>手札に残った非Air札のうち数字の大きい上位2枚</b>を合計して加点。<b>Air は数字に関係なく1枚2点</b>。（※ 山札に残った札は対象外）</p>
+      </div>
+      <div class="verdict anim" style="--i:7">得点が高い方の、勝利。</div>
+    </section>
+
+    <!-- ══ 8 · 細則 ══ -->
+    <section class="scene" data-label="こまかな取り決め" data-dur="13500">
+      <div class="act-no anim" style="--i:0">細則</div>
+      <h2 class="act-title anim" style="--i:1">こまかな取り決め</h2>
+      <ul class="fine">
+        <li class="anim" style="--i:2"><span class="m">◆</span><div><b>撤退</b>したカードは、<b>双方とも開示してから破棄</b>される。</div></li>
+        <li class="anim" style="--i:3"><span class="m">◆</span><div><b>入替</b>は親の特権。子の数字を見た後、場札を手札の別の1枚と交換できる（<b>1ラウンド1回</b>）。</div></li>
+        <li class="anim" style="--i:4"><span class="m">◆</span><div><b>奇襲</b>は子の一手。<b>親が撤退を選んだ時だけ</b>現れ、カウンターを2消費して<b>強制的に決戦</b>へ持ち込む。</div></li>
+        <li class="anim" style="--i:5"><span class="m">◆</span><div><b>看破と、読まれている</b>：固定デッキゆえ相手の<b>数字は既知</b>。公開が進み候補属性が<b>1つに絞れたら「🔓看破」</b>。逆に絞られると<b>「⚠読まれている」</b>と出る。</div></li>
+      </ul>
+    </section>
+
+    <!-- ══ 9 · 結び ══ -->
+    <section class="scene closing" data-label="MASKD" data-dur="7000">
+      <div class="tagline anim" style="--i:0;font-size:3.8cqmin">仮面の下に、真実はない。</div>
+      <div class="brand anim" style="--i:1">MASKD</div>
+      <div class="subhead anim" style="--i:2">さあ、決闘を。 ─ ブラウザですぐ遊べる</div>
+    </section>
+
+  </div><!-- /stage -->
+
+  <div class="meta">
+    <span class="label" id="metaLabel">MASKD</span>
+    <span class="count" id="metaCount">01 / 10</span>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="prevBtn" aria-label="前へ" title="前へ">⏮</button>
+    <button class="btn play" id="playBtn" aria-label="再生 / 一時停止" title="再生 / 一時停止">⏸</button>
+    <button class="btn" id="nextBtn" aria-label="次へ" title="次へ">⏭</button>
+    <div class="timeline" id="timeline"></div>
+    <button class="btn" id="replayBtn" aria-label="最初から" title="最初から">↺</button>
+  </div>
+  <p class="hint">自動再生されます。<b>録画すればそのまま動画（MP4）</b>に ─ タイムラインの各区切りをクリックで頭出し。</p>
+</div>
+
+<!-- 共有マスクのSVGシンボル(仮面シルエット) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="msk" viewBox="0 0 100 62">
+    <path d="M8,18 Q8,4 28,5 Q44,6 50,15 Q56,6 72,5 Q92,4 92,18 Q92,42 70,52 Q55,57 50,46 Q45,57 30,52 Q8,42 8,18 Z
+             M22,22 Q22,15 33,15 Q44,15 44,23 Q44,32 33,32 Q22,32 22,22 Z
+             M56,23 Q56,15 67,15 Q78,15 78,22 Q78,32 67,32 Q56,32 56,23 Z"
+          fill-rule="evenodd"/>
+  </symbol>
+</svg>
+
+<script>
+(function(){
+  const stage = document.getElementById('stage');
+  const scenes = Array.from(stage.querySelectorAll('.scene'));
+  const timeline = document.getElementById('timeline');
+  const playBtn = document.getElementById('playBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const replayBtn = document.getElementById('replayBtn');
+  const metaLabel = document.getElementById('metaLabel');
+  const metaCount = document.getElementById('metaCount');
+  const total = scenes.length;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // build timeline segments
+  const segs = scenes.map((sc, i) => {
+    const seg = document.createElement('div');
+    seg.className = 'seg';
+    seg.innerHTML = '<div class="fill"></div>';
+    seg.addEventListener('click', () => goTo(i, true));
+    timeline.appendChild(seg);
+    return seg;
+  });
+
+  let idx = 0, playing = true, ended = false;
+  let rafId = null, startTs = 0, elapsed = 0;
+
+  function pad(n){ return String(n+1).padStart(2,'0'); }
+
+  function paintProgress(activeIdx, p){
+    segs.forEach((s, i) => {
+      const fill = s.querySelector('.fill');
+      if(i < activeIdx){ s.classList.add('done'); fill.style.width='100%'; }
+      else if(i === activeIdx){ s.classList.remove('done'); fill.style.width = (p*100).toFixed(2)+'%'; }
+      else { s.classList.remove('done'); fill.style.width='0'; }
+    });
+  }
+
+  function showScene(i){
+    scenes.forEach((sc,k)=> sc.classList.toggle('active', k===i));
+    metaLabel.textContent = scenes[i].dataset.label || 'MASKD';
+    metaCount.textContent = pad(i) + ' / ' + String(total).padStart(2,'0');
+  }
+
+  function tick(ts){
+    if(!playing) return;
+    if(!startTs) startTs = ts;
+    const dur = +scenes[idx].dataset.dur || 10000;
+    const cur = elapsed + (ts - startTs);
+    const p = Math.min(cur / dur, 1);
+    paintProgress(idx, p);
+    if(p >= 1){
+      if(idx < total - 1){ goTo(idx + 1); }
+      else { finish(); return; }
+    } else {
+      rafId = requestAnimationFrame(tick);
+    }
+  }
+
+  function startTimer(){
+    cancelAnimationFrame(rafId);
+    startTs = 0;
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function goTo(i, fromClick){
+    idx = Math.max(0, Math.min(total-1, i));
+    elapsed = 0; ended = false;
+    showScene(idx);
+    paintProgress(idx, 0);
+    playBtn.textContent = playing ? '⏸' : '▶';
+    if(playing) startTimer();
+    if(fromClick && !playing){ /* stay paused on the chosen scene */ }
+  }
+
+  function finish(){
+    ended = true; playing = false;
+    cancelAnimationFrame(rafId);
+    paintProgress(total-1, 1);
+    segs[total-1].classList.add('done');
+    playBtn.textContent = '↺';
+  }
+
+  function play(){
+    if(ended){ goTo(0); playing = true; playBtn.textContent='⏸'; startTimer(); return; }
+    playing = true; playBtn.textContent = '⏸'; startTimer();
+  }
+  function pause(){
+    playing = false; playBtn.textContent = '▶';
+    if(startTs) elapsed += performance.now() - startTs;
+    cancelAnimationFrame(rafId);
+  }
+
+  playBtn.addEventListener('click', ()=> playing ? pause() : play());
+  nextBtn.addEventListener('click', ()=>{ if(idx < total-1) goTo(idx+1); else goTo(0); });
+  prevBtn.addEventListener('click', ()=> goTo(idx-1));
+  replayBtn.addEventListener('click', ()=>{ playing = true; playBtn.textContent='⏸'; goTo(0); });
+
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === ' '){ e.preventDefault(); playing ? pause() : play(); }
+    else if(e.key === 'ArrowRight'){ if(idx<total-1) goTo(idx+1); }
+    else if(e.key === 'ArrowLeft'){ goTo(idx-1); }
+  });
+
+  // init
+  showScene(0);
+  paintProgress(0,0);
+  if(reduce){
+    // still auto-advances, but without entrance motion (handled by CSS media query)
+  }
+  startTimer();
+})();
+</script>
+</body>
+</html>
