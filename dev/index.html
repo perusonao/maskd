@@ -3055,12 +3055,13 @@ const PLAYER_NAME_SYNCED_KEY='maskd_playername_synced';
 // 現在の名前をクラウド(players)へ登録する。成功したら「この名前は登録済み」の印を残す
 // (players コレクションはaddDocのみで上書きできないため、同じ名前を何度も登録しないようにするため)。
 function syncPlayerNameToCloud(name){
-  if(!name || typeof window.__maskdSaveName!=='function') return;
+  if(!name || typeof window.__maskdSaveName!=='function') return Promise.resolve(false);
   try{
-    window.__maskdSaveName(name, getPlayerId()).then(ok=>{
+    return window.__maskdSaveName(name, getPlayerId()).then(ok=>{
       if(ok){ try{ localStorage.setItem(PLAYER_NAME_SYNCED_KEY, name); }catch(e){} }
-    }).catch(e=>console.warn('MASKD: 名前登録に失敗(fetch)', e));
-  }catch(e){ console.warn('MASKD: 名前登録に失敗', e); }
+      return ok;
+    }).catch(e=>{ console.warn('MASKD: 名前登録に失敗(fetch)', e); return false; });
+  }catch(e){ console.warn('MASKD: 名前登録に失敗', e); return Promise.resolve(false); }
 }
 // 過去にFirestoreのplayersルール未設定などで登録が失敗していた既存プレイヤーを救済する。
 // 「名前は設定済みだがクラウドへの登録が未確認」な場合にだけ再送する(毎回は送らない)。
@@ -3076,14 +3077,18 @@ function submitPlayerName(){
   if(!v){ if(inp){ inp.focus(); } return; } // 名前は必須
   playerName=v;
   try{ localStorage.setItem('maskd_playername', v); }catch(e){}
-  syncPlayerNameToCloud(v);
-  // 新規プレイヤー登録をスマホへ通知(名前の中身は送らない。件数の把握用)
-  try{
-    fetch('https://ntfy.sh/'+NTFY_TOPIC, {
-      method:'POST', body:'新しいプレイヤーが登録しました',
-      headers:{ 'Title':'MASKD New Player', 'Tags':'wave', 'Click':ADMIN_URL }
-    }).catch(e=>console.warn('MASKD: 登録通知に失敗(fetch)', e));
-  }catch(e){ console.warn('MASKD: 登録通知に失敗', e); }
+  // 新規プレイヤー登録をスマホへ通知(名前の中身は送らない。件数の把握用)。
+  // Firestoreへの書き込みが実際に成功した場合のみ送る(以前は結果を待たず常に送っていたため、
+  // 書き込みが失敗していても通知だけは届く、という食い違いが起きていた)。
+  syncPlayerNameToCloud(v).then(ok=>{
+    if(!ok) return;
+    try{
+      fetch('https://ntfy.sh/'+NTFY_TOPIC, {
+        method:'POST', body:'新しいプレイヤーが登録しました',
+        headers:{ 'Title':'MASKD New Player', 'Tags':'wave', 'Click':ADMIN_URL }
+      }).catch(e=>console.warn('MASKD: 登録通知に失敗(fetch)', e));
+    }catch(e){ console.warn('MASKD: 登録通知に失敗', e); }
+  });
   document.getElementById('nameModal').classList.remove('show');
   const cb=_afterName; _afterName=null;
   if(typeof cb==='function') cb();
@@ -4848,8 +4853,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.0.2';
+const GAME_VERSION = 'v1.0.3';
 const CHANGELOG = [
+  { version:'v1.0.3', date:'2026-07-18', items:[
+    '<b>不具合修正</b>：プレイヤー名の新規登録通知が、実際の登録に失敗していても届いてしまうことがある不具合を修正しました。',
+  ]},
   { version:'v1.0.2', date:'2026-07-18', items:[
     '<b>開発確認環境のデータ分離</b>：develop確認用の環境（/dev/）で遊んだ内容が、本番の統計データに混ざらないようにしました。表示・体験に変化はありません。',
   ]},
