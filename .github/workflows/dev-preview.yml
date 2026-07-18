@@ -1,0 +1,54 @@
+name: developプレビューの同期
+
+# develop に push されるたびに、そのランタイム資産(index.html/admin.html等)を
+# main の dev/ フォルダにコピーしてコミットする。
+# GitHub Pages は main を配信元にしているため、これにより
+#   https://perusonao.github.io/maskd/       … main(本番)
+#   https://perusonao.github.io/maskd/dev/   … develop(確認用)
+# の両方が同じ1つのPagesサイトから見られるようになる。
+# main 自体のトップレベルファイルは一切変更しない(dev/配下のみを更新)。
+
+on:
+  push:
+    branches: [develop]
+
+permissions:
+  contents: write
+
+jobs:
+  sync-dev-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: mainをチェックアウト
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: developのランタイム資産をdev/へコピー
+        run: |
+          set -e
+          git fetch origin develop
+          mkdir -p dev
+          FILES="index.html admin.html manifest.webmanifest apple-touch-icon.png icon-192.png icon-512.png icon-maskable-512.png btn-achieve.png btn-duel.png btn-howto.png btn-mission.png btn-rank.png btn-record.png btn-rules.png btn-setting.png"
+          for f in $FILES; do
+            if git cat-file -e origin/develop:"$f" 2>/dev/null; then
+              git show origin/develop:"$f" > "dev/$f"
+            else
+              echo "::warning::develop に $f が見つからないためスキップしました"
+            fi
+          done
+
+      - name: 差分があればmainへコミット
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dev/
+          if git diff --cached --quiet; then
+            echo "変更なし。コミットをスキップします。"
+          else
+            DEV_SHA=$(git rev-parse --short origin/develop)
+            git commit -m "chore: developプレビューを更新 (develop@${DEV_SHA})"
+            git push origin HEAD:main
+          fi
