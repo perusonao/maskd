@@ -1842,13 +1842,12 @@
     <div class="setup-head"><span class="setup-back" onclick="showHome()">‹ もどる</span><span class="setup-title">対戦設定</span><span class="setup-spacer"></span></div>
 
     <div class="setup-step">
-      <div class="step-head"><span class="step-num">1</span><span class="step-title">レベルを選ぶ</span></div>
-      <div class="cpu-setting-label">使用するカード</div>
-      <div class="cpu-setting-opts" id="ruleOpts">
-        <div class="cpu-opt" data-val="r1">初級</div>
-        <div class="cpu-opt" data-val="r2">中級（+AIR）</div>
-        <div class="cpu-opt" data-val="r3">上級（+KAOS）</div>
-        <div class="cpu-opt" data-val="top">本戦<span class="opt-sub">勝敗を記録</span></div>
+      <div class="step-head"><span class="step-num">1</span><span class="step-title">対戦相手を選ぶ</span></div>
+      <div class="cpu-setting-opts" id="cpuTypeOpts">
+        <div class="cpu-opt" data-val="tricky">アルル<span class="opt-sub">技巧仮面</span></div>
+        <div class="cpu-opt" data-val="cautious">ゼファ<span class="opt-sub">鉄壁仮面</span></div>
+        <div class="cpu-opt" data-val="aggressive">ノクス<span class="opt-sub">剛力仮面</span></div>
+        <div class="cpu-opt" data-val="random">ランダム</div>
       </div>
     </div>
 
@@ -1862,14 +1861,9 @@
     </div>
 
     <details class="setup-details">
-      <summary>詳細を見る（ルール・ボス情報）</summary>
+      <summary>詳細を見る（対戦相手の情報）</summary>
       <div class="setup-step">
-        <div class="step-head"><span class="step-title">このレベルのルール</span></div>
-        <div class="mode-summary" id="modeSummary"></div>
-      </div>
-
-      <div class="setup-step">
-        <div class="step-head"><span class="step-title">このレベルの主</span></div>
+        <div class="step-head"><span class="step-title">選んだ対戦相手</span></div>
         <div class="level-info" id="levelInfo"></div>
       </div>
     </details>
@@ -2544,6 +2538,7 @@ function initCpuSettingUI(){
     el.onclick=()=>{
       document.querySelectorAll('#cpuTypeOpts .cpu-opt').forEach(x=>x.classList.remove('selected'));
       el.classList.add('selected'); selectedCpuType=el.dataset.val;
+      renderLevelInfo();
     };
     if(el.dataset.val===selectedCpuType) el.classList.add('selected');
   });
@@ -2620,22 +2615,21 @@ function updateModeSummary(){
   el.innerHTML=`<div class="rule-chips">${chips.join('')}</div>`;
   renderLevelInfo();
 }
-// 対戦設定: 選択中レベルの「主(ライバル)」と★の獲得状況を表示
+// 対戦設定: 選択中の対戦相手タイプの情報を表示(クリア条件や★は廃止、単純な紹介のみ)
 function renderLevelInfo(){
   const el=document.getElementById('levelInfo'); if(!el) return;
-  const m=currentModeConfig();
-  const levelKey = m.rule==='r1'?'beginner':(m.rule==='r2'?'inter':'adv');
-  const meta=LEVEL_META[levelKey];
+  if(selectedCpuType==='random'){
+    el.innerHTML=`
+      <div class="lv-head"><div class="lv-face" style="background:radial-gradient(circle at 35% 30%,#2a2436,#14111c);display:flex;align-items:center;justify-content:center;font-size:20px;">🎲</div>
+        <div class="lv-meta"><div class="lv-name">ランダム</div><div class="lv-quote">対戦相手はその場で3人の中から決まります。</div></div></div>
+      <div class="lv-note">※CPUの強さ＝<b>相手の手加減のみ</b>変更</div>`;
+    return;
+  }
+  const meta=CPU_TYPE_META[selectedCpuType]; if(!meta) return;
   const img=(typeof CARD_IMG!=='undefined'&&CARD_IMG[meta.portrait])?CARD_IMG[meta.portrait]:'';
-  const earned=starsEarned(levelKey);
-  const pips=earned.map((g,i)=>`<span class="lv-star${g?' got':''}" title="${meta.stars[i].label}">${g?'★':'☆'}</span>`).join('');
-  // 目標は1行に圧縮(短縮ラベル)。詳細な文言は対戦中/結果画面の★表示で確認できる
-  const goalsLine=meta.stars.map((s,i)=>`<span class="lv-goal${earned[i]?' got':''}" title="${s.label}">${earned[i]?'★':'☆'}${s.short||s.label}</span>`).join('<span class="lv-goal-sep">・</span>');
   el.innerHTML=`
     <div class="lv-head"><div class="lv-face" style="background-image:url(${img})"></div>
-      <div class="lv-meta"><div class="lv-name">${meta.rival.name}<span class="lv-stars">${pips}</span></div><div class="lv-quote">「${meta.rival.intro}」</div></div></div>
-    <div class="lv-goals-label">クリア条件</div>
-    <div class="lv-goals-line">${goalsLine}</div>
+      <div class="lv-meta"><div class="lv-name">${meta.rival.name}</div><div class="lv-quote">「${meta.rival.intro}」</div></div></div>
     <div class="lv-note">※CPUの強さ＝<b>相手の手加減のみ</b>変更（相手は固定）</div>`;
 }
 // レベル選択の4択(初級/中級/上級/本戦)は selectedRule と selectedAction の組み合わせで決まる。
@@ -2689,6 +2683,19 @@ const LEVEL_META={
       { label:'大差(8点差)勝ち、または最終ラウンドを勝って締める', short:'大差/最終R勝ち', check:c=>c.win && ((c.youFinal-c.cpuFinal)>=8 || c.wonLastRound) },
     ]},
 };
+// ===== 実戦の対戦相手(CPUタイプ別)。LEVEL_METAのライバル演出をレベルから切り離して流用。
+//       名前・画像は暫定で既存のものを使用(差し替え予定)。 =====
+const CPU_TYPE_META={
+  tricky:    { portrait:'dark', color:'var(--dark)',
+    rival:{ name:'三色の見習い アルル', role:'色の見習い騎士', intro:'ふふ、色の読み合い…見習いの君に分かるかな？',
+            win:'やるね！ 色を制する者は侮れない。', lose:'まだ早いよ。もう一度、色を見極めて。' } },
+  cautious:  { portrait:'air', color:'var(--air)',
+    rival:{ name:'風唄いのゼファ', role:'風の騎士', intro:'風は流れを変える。受け流せるかな？',
+            win:'見事。風を味方にしたね。', lose:'風に翻弄されたね。Airの使い所を掴んで。' } },
+  aggressive:{ portrait:'kaos', color:'var(--kaos)',
+    rival:{ name:'仮面卿ノクス', role:'仮面騎士の頂点', intro:'よくぞここまで。混沌の戦い、見せてもらおう。',
+            win:'…見事だ。君こそ頂に立つ仮面騎士だ。', lose:'混沌は甘くない。0と1、そして5の理を思い出せ。' } },
+};
 // ===== 称号(★・ライバル撃破・通算からアンロック。装備してホームに表示) =====
 const TITLES=[
   { id:'newcomer',   name:'見習い仮面騎士',     desc:'はじめて勝利する',            check:c=>c.wins>=1 },
@@ -2722,8 +2729,9 @@ function buildTitleCtx(){
   const totalStars=stars.beginner+stars.inter+stars.adv;
   let s={wins:0,total:0,winRate:0}; try{ s=computeStreaksAndRate(loadGameHistory()); }catch(e){}
   const p=loadProgress(); const rb=p.rivalBeaten||{};
+  // 実戦の対戦相手タイプ(tricky/cautious/aggressive)で撃破を追跡(旧レベル別キーの分は引き続き有効)
   return { stars, totalStars, wins:s.wins, total:s.total, winRate:s.winRate,
-    readHitsTotal:p.readHitsTotal, allRivalsBeaten:!!(rb.beginner&&rb.inter&&rb.adv) };
+    readHitsTotal:p.readHitsTotal, allRivalsBeaten:!!(rb.tricky&&rb.cautious&&rb.aggressive) };
 }
 // 未取得の称号を判定・解除。新規解除ぶんを返す(最初の解除は自動装備)
 function unlockTitles(){
@@ -2773,6 +2781,13 @@ function applyStars(levelKey, ctx){
 }
 function rivalReactHTML(levelKey, line){
   const meta=LEVEL_META[levelKey];
+  const img=(typeof CARD_IMG!=='undefined'&&CARD_IMG[meta.portrait])?CARD_IMG[meta.portrait]:'';
+  return `<div class="rival-react"><div class="rv-face" style="background-image:url(${img})"></div>`+
+    `<div class="rv-say"><b>${meta.rival.name}</b><span>「${line}」</span></div></div>`;
+}
+// 実戦用: レベルではなく対戦相手タイプ(CPU_TYPE_META)を基にライバルの反応を表示
+function cpuTypeReactHTML(typeKey, line){
+  const meta=CPU_TYPE_META[typeKey]; if(!meta) return '';
   const img=(typeof CARD_IMG!=='undefined'&&CARD_IMG[meta.portrait])?CARD_IMG[meta.portrait]:'';
   return `<div class="rival-react"><div class="rv-face" style="background-image:url(${img})"></div>`+
     `<div class="rv-say"><b>${meta.rival.name}</b><span>「${line}」</span></div></div>`;
@@ -2851,7 +2866,7 @@ function showHome(){
 function openMatchSetup(){
   hideTitleScreens();
   const el=document.getElementById('instructions'); if(el) el.style.display='flex';
-  updateModeSummary();
+  renderLevelInfo();
 }
 function openAppSettings(){
   hideTitleScreens();
@@ -3037,38 +3052,32 @@ function updateFooterToggles(){
 }
 // (initCpuSettingUI()はスクリプト末尾で呼び出す。変数宣言より先に実行されるのを防ぐため)
 
-// 対戦開始ボタン: 設定画面を閉じて親決め演出へ
+// 対戦開始ボタン: 設定画面を閉じて親決め演出へ(実戦は常にフルルール・チュートリアル完了が前提)
 let _afterName=null;
+let _resolvedMatchCpuType=null; // 「ランダム」選択時、演出と実際のCPU挙動を一致させるため1試合分だけ解決した結果を保持
 function beginMatchSetup(){
   // 初回プレイ時: 名前が未登録ならまず名前入力を求める
   if(!playerName){ showNameModal(beginMatchSetup); return; }
-  const m=currentModeConfig();
-  const levelKey = m.rule==='r1'?'beginner':(m.rule==='r2'?'inter':'adv');
+  const resolvedType = (selectedCpuType==='random')
+    ? CPU_STRATEGIES[Math.floor(Math.random()*CPU_STRATEGIES.length)] : selectedCpuType;
+  _resolvedMatchCpuType = resolvedType;
   hideTitleScreens();
   document.getElementById('overlay').classList.remove('show');
-  // ライバル登場(ボス演出)→ 続けると対戦開始
-  showRivalIntro(levelKey, ()=>{
-    if(m.isTop){
-      // 上級2＝本戦(全ルール): 親決め→配札演出→ランク戦(成績記録)
-      document.getElementById('dealerDrawOverlay').classList.add('show');
-      setupDealerDraw();
-    } else {
-      // 練習モード(縮小ルール): 親はランダム、即開始(成績には記録しない)
-      _lastPracticeCfg={ practice:true, name:m.label, icon:m.icon, attrs:[...m.attrs], rounds:m.rounds,
-        swap:m.full, force:m.full, late2x:false, leftover:false, cpuDiff:selectedCpuDifficulty };
-      startGame(Math.random()<0.5, _lastPracticeCfg);
-    }
+  // ライバル登場(ボス演出)→ 続けると対戦開始。実戦は常にフルルール(全属性・入替/奇襲/終盤2倍あり)
+  showRivalIntro(resolvedType, ()=>{
+    document.getElementById('dealerDrawOverlay').classList.add('show');
+    setupDealerDraw();
   });
 }
 // ライバル登場のボス演出(立ち絵＋名乗り)。続行でcb()
-function showRivalIntro(levelKey, cb){
-  const meta=LEVEL_META[levelKey]; const r=meta.rival;
+function showRivalIntro(typeKey, cb){
+  const meta=CPU_TYPE_META[typeKey]; const r=meta.rival;
   const img=(typeof CARD_IMG!=='undefined'&&CARD_IMG[meta.portrait])?CARD_IMG[meta.portrait]:'';
   const ov=document.getElementById('rivalIntro');
   const port=document.getElementById('riPortrait');
   port.style.backgroundImage=`url(${img})`;
   port.style.boxShadow=`0 0 26px ${meta.color||'rgba(201,162,74,.5)'}, 0 8px 24px rgba(0,0,0,.6)`;
-  document.getElementById('riRole').textContent=`${meta.name} ― ${r.role}`;
+  document.getElementById('riRole').textContent=r.role;
   document.getElementById('riName').textContent=r.name;
   document.getElementById('riQuote').textContent=`「${r.intro}」`;
   const go=document.getElementById('riGo');
@@ -3291,13 +3300,20 @@ function startGame(initialDealerIsYou, stage){
   const cpuPick=pick6(cpuFullDeal);
   cpuHand=cpuPick.hand; cpuDrawPile=cpuPick.drawPile;
 
-  // CPUの戦略パターン: 段階ラダーは固定(弱め)、練習モード・通常対戦は設定に従う
+  // CPUの戦略パターン: 段階チュートリアルは固定(弱め)、練習モードはレベル別ライバル固定、
+  // 実戦はプレイヤーが選んだ対戦相手タイプ(selectedCpuType)をそのまま使う
   if(stageConfig && !stageConfig.practice){
     cpuStrategy='cautious'; cpuDifficulty=stageConfig.cpuDiff;
-  } else {
-    // レベル対戦(練習・本戦)は、その階級のライバル専用AI(性格固定)＋ユーザーの強さ設定
-    const lvKey = levelKeyFromAttrs(stageConfig ? stageConfig.attrs : ATTRS5);
+  } else if(stageConfig && stageConfig.practice){
+    const lvKey = levelKeyFromAttrs(stageConfig.attrs);
     let strat = (LEVEL_META[lvKey] && LEVEL_META[lvKey].cpuType) || selectedCpuType;
+    if(strat==='random') strat = CPU_STRATEGIES[Math.floor(Math.random()*CPU_STRATEGIES.length)];
+    cpuStrategy = strat;
+    cpuDifficulty = selectedCpuDifficulty;
+  } else {
+    // beginMatchSetup()で「ランダム」を解決済みならそれを使う(ライバル演出と実際のCPUを一致させるため)
+    let strat = _resolvedMatchCpuType || selectedCpuType;
+    _resolvedMatchCpuType = null;
     if(strat==='random') strat = CPU_STRATEGIES[Math.floor(Math.random()*CPU_STRATEGIES.length)];
     cpuStrategy = strat;
     cpuDifficulty = selectedCpuDifficulty;
@@ -4221,10 +4237,10 @@ function isFirstTimer(){
     return true;
   }catch(e){ return false; }
 }
-// ホームの「対戦する」: 初見は設定画面を飛ばして初級へ直行、以降は対戦設定へ
+// ホームの「対戦する」: チュートリアル(全7段階)未修了ならまずチュートリアルへ誘導する
 function onHomePlay(){
-  if(isFirstTimer()){ selectedRule='r1'; selectedAction='basic'; beginMatchSetup(); }
-  else openMatchSetup();
+  if(!learnAllCleared()){ openLearnLadder(); return; }
+  openMatchSetup();
 }
 // 相手(CPU)の戦略ごとの仮面名
 const CPU_MASK_NAME={aggressive:'剛力仮面', cautious:'鉄壁仮面', tricky:'技巧仮面'};
@@ -4894,8 +4910,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.2.0';
+const GAME_VERSION = 'v1.3.0';
 const CHANGELOG = [
+  { version:'v1.3.0', date:'2026-07-18', items:[
+    '<b>実戦を再構成</b>：チュートリアル完了が対戦の前提になりました。対戦設定はCPUの強さと対戦相手（アルル／ゼファ／ノクス／ランダム）だけを選ぶシンプルな形にし、レベル選択・★クリア条件は廃止。結果画面もシンプルな勝敗表示になりました。',
+  ]},
   { version:'v1.2.0', date:'2026-07-18', items:[
     '<b>チュートリアルを全7段階に拡充</b>：属性を1つずつ覚える序盤（3属性→Air→Kaos）、フルデッキと推理の基本を学ぶ「読み合い」、奇襲・入替を覚える戦略編、最終決戦まで、実際の対戦をプレイしながら段階的にルールを覚えられるようにしました。',
   ]},
@@ -6070,14 +6089,11 @@ function endGame(){
     <div class="ms-row" style="justify-content:center;color:var(--gold-bright);font-weight:700;">🎉 実績を解除！</div>
     ${newAch.map(a=>`<div class="ms-row"><span>${a.icon} ${a.title}</span><span>${a.desc}</span></div>`).join('')}
   </div>` : '';
-  // 上級(本戦)の★クリア目標とライバルの反応
-  const _lvKey='adv';
-  const _lvCtx=buildStarCtx(youFinal, cpuFinal);
-  const _lvRes=applyStars(_lvKey, _lvCtx);
-  const _lvLine=(youFinal>cpuFinal)?LEVEL_META[_lvKey].rival.win:(youFinal===cpuFinal?'引き分け。次こそ決着を。':LEVEL_META[_lvKey].rival.lose);
-  updateProgress(_lvKey, youFinal>cpuFinal); // 見破り累計・ライバル(ノクス)撃破を記録
+  // 実戦の対戦相手(cpuStrategyで実際に戦ったタイプ)の反応。★クリア条件は廃止し、単純な勝敗のみ表示する
+  const _typeLine=(youFinal>cpuFinal)?CPU_TYPE_META[cpuStrategy].rival.win:(youFinal===cpuFinal?'引き分け。次こそ決着を。':CPU_TYPE_META[cpuStrategy].rival.lose);
+  updateProgress(cpuStrategy, youFinal>cpuFinal); // 見破り累計・対戦相手タイプ別の撃破を記録
   const _freshTitles=unlockTitles();
-  const starSection=`<div class="match-summary milestone">${rivalReactHTML(_lvKey,_lvLine)}${starBlockHTML(_lvKey,_lvRes)}${_lvRes.newly.some(Boolean)?'<div class="star-newnote">🎉 新しい★を獲得！</div>':''}${_freshTitles.length?`<div class="star-newnote">🎖 称号アンロック：${_freshTitles.map(t=>t.name).join('・')}</div>`:''}</div>`;
+  const starSection=`<div class="match-summary milestone">${cpuTypeReactHTML(cpuStrategy,_typeLine)}${_freshTitles.length?`<div class="star-newnote">🎖 称号アンロック：${_freshTitles.map(t=>t.name).join('・')}</div>`:''}</div>`;
   // 要点（MVP・通算・実績）は上部に。細かい内訳は折りたたみで初期表示を短く。
   const extra=`<div id="ovExtra">
     ${milestoneSection}
