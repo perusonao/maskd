@@ -1505,6 +1505,11 @@
     color:#ff9a9a; border:1px solid rgba(216,120,120,.7); background:rgba(180,70,70,.16); animation:exposePulse 1.2s ease-in-out infinite; }
   @keyframes confirmPop{ from{ transform:scale(.85); opacity:0; } to{ transform:scale(1); opacity:1; } }
   @keyframes exposePulse{ 0%,100%{ box-shadow:0 0 4px rgba(216,120,120,.25); } 50%{ box-shadow:0 0 12px rgba(216,120,120,.6); } }
+  /* 推理(看破/予想)のしくみをその場で確認できる説明タップ */
+  .ddc-info{ display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; margin-left:5px;
+    border-radius:50%; border:1px solid rgba(201,162,74,.55); color:var(--gold-dim); font-size:9px; cursor:pointer;
+    vertical-align:middle; flex-shrink:0; }
+  .ddc-info:active{ background:rgba(201,162,74,.25); }
   /* ===== クライマックス(最終ラウンド)バナー ===== */
   .rs-climax{ margin:6px auto 2px; padding:6px 14px; border-radius:8px; font-size:14px; color:var(--gold-bright);
     border:1px solid var(--gold-bright); background:linear-gradient(90deg,rgba(193,75,82,.18),rgba(201,162,74,.18));
@@ -4107,7 +4112,7 @@ function showAttrHint(num){
     const tail = youPrediction
       ? `<span class="pred-done">予想: ${CAND_GLYPH[youPrediction]||''}${ALABEL[youPrediction]||''}</span>`
       : `<span class="pred-hint">タップで予想（任意・勝敗には影響しません）</span>`;
-    el.innerHTML=`<span class="pred-lb">🎭 相手の仮面は？</span><span class="hint-icon-row pred-row">${cand}</span>${tail}`;
+    el.innerHTML=`<span class="pred-lb">🎭 相手の仮面は？</span><span class="hint-icon-row pred-row">${cand}</span>${tail}${deductionInfoIcon()}`;
     return;
   }
   // 候補が1つに絞れた＝相手の仮面を「看破（確定）」。目立つバッジで強調する
@@ -4115,14 +4120,14 @@ function showAttrHint(num){
     const a=options[0];
     const g = cardStyle==='beginner' ? (CAND_GLYPH[a]||'') : '';
     const dot = cardStyle==='beginner' ? '' : `<span class="hint-icon ${a} confirmed" style="display:inline-block;vertical-align:middle;"></span>`;
-    el.innerHTML=`<span class="oh-confirmed">🔓 看破！ ${dot}<span class="ohc-attr">${g}${ALABEL[a]}</span> で確定</span>`;
+    el.innerHTML=`<span class="oh-confirmed">🔓 看破！ ${dot}<span class="ohc-attr">${g}${ALABEL[a]}</span> で確定</span>${deductionInfoIcon()}`;
     return;
   }
   const cand = options.map(a=>glyph(a)).join('');
   if(cardStyle==='beginner'){
-    el.innerHTML=`可能性: <span class="hint-icon-row" style="align-items:center;gap:4px;">${cand}</span>`;
+    el.innerHTML=`可能性: <span class="hint-icon-row" style="align-items:center;gap:4px;">${cand}</span>${deductionInfoIcon()}`;
   } else {
-    el.innerHTML=`可能性: <span class="hint-icon-row">${cand}</span>`;
+    el.innerHTML=`可能性: <span class="hint-icon-row">${cand}</span>${deductionInfoIcon()}`;
   }
 }
 
@@ -4137,10 +4142,10 @@ function showYouCardHint(num){
     // 自分の仮面が相手に1つに絞られている＝「読まれている」。警告バッジで強調
     const a=options[0];
     const g = cardStyle==='beginner' ? (CAND_GLYPH[a]||'') : `<span class="hint-icon ${a}" style="display:inline-block;vertical-align:middle;"></span>`;
-    el.innerHTML=`<span class="yh-exposed">⚠ 相手に読まれている：${g}<span class="yhe-attr">${ALABEL[a]}</span></span>`;
+    el.innerHTML=`<span class="yh-exposed">⚠ 相手に読まれている：${g}<span class="yhe-attr">${ALABEL[a]}</span></span>${deductionInfoIcon()}`;
   } else {
     const iconsHTML = candAttrsHTML(options, true);
-    el.innerHTML=`相手からの見え方: <span class="hint-icon-row">${iconsHTML}</span>`;
+    el.innerHTML=`相手からの見え方: <span class="hint-icon-row">${iconsHTML}</span>${deductionInfoIcon()}`;
   }
 }
 
@@ -4857,8 +4862,12 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.0.4';
+const GAME_VERSION = 'v1.1.0';
 const CHANGELOG = [
+  { version:'v1.1.0', date:'2026-07-18', items:[
+    '<b>推理・看破のしくみを分かりやすく</b>：ルール説明に新章「推理と看破」を追加し、具体例つきで解説しました。対戦中の候補アイコンからⓘタップでその場から開けます。',
+    '<b>「遊び方」を改善</b>：カードの配分（山札の構成）についての説明を追加し、最後の案内文を「ルールに詳細あり」がより伝わる書き方に見直しました。',
+  ]},
   { version:'v1.0.4', date:'2026-07-18', items:[
     '<b>不具合修正</b>：初心者向けカード表示で、手札の「おすすめ」の印がカードの角に隠れて読めなくなっていた不具合を修正しました。',
   ]},
@@ -5039,6 +5048,31 @@ function renderRulesGuide(){
     <div class="rg-verdict">得点が高い方の、勝利。</div>
   </div>
 
+  <div class="rg-ch" id="rg-deduction">
+    <div class="rg-head"><span class="rg-no">第八幕</span><span class="rg-title">推理と看破 — 隠された仮面を暴け</span></div>
+    <p class="rg-lead">デッキの中身は完全に固定。相手が出した札の<b>数字はすぐ見える</b>が、<b>属性（仮面の色）は伏せられたまま</b>。場に出た札・自分の手札から消去法で、隠れた属性を絞り込んでいく。</p>
+    <div class="rg-mult">
+      <div class="rg-mtile pre">
+        <div class="rl">候補が複数残っている</div>
+        <div style="display:flex;gap:5px;justify-content:center;margin-top:8px;">
+          <span class="hint-icon moon"></span><span class="hint-icon sun"></span><span class="hint-icon air"></span>
+        </div>
+        <div class="rl" style="margin-top:8px;">🎭 タップで予想（外れてもOK）</div>
+      </div>
+      <div class="rg-arrow">➜</div>
+      <div class="rg-mtile fin">
+        <div class="rl">候補が1つに絞れた</div>
+        <div style="margin-top:8px;"><span class="hint-icon moon confirmed" style="display:inline-block;"></span></div>
+        <div class="rl" style="margin-top:8px;color:#e59a8f;">🔓 看破！自動で確定表示</div>
+      </div>
+    </div>
+    <ul class="rg-list">
+      <li><b>予想（🎭）</b>：候補が<b>2つ以上</b>残っている間だけ現れる。任意でタップして予想できるミニゲームで、<b>当たっても外れても勝敗には影響しない</b>。外れて当然、当たればラッキー、くらいの位置づけ。</li>
+      <li><b>看破（🔓）</b>：候補が<b>ちょうど1つ</b>に絞れた瞬間、操作なしで自動的に「確定」と表示される。ここまで絞れたら<b>100%間違いない</b>（予想とは違い、外れることはない）。</li>
+      <li><b>読まれている（⚠）</b>：同じ理屈で、<b>あなたの札も相手から絞り込まれる</b>。あなたの手番の下に、相手からどう見えているかが表示され、候補が1つに絞られると「読まれている」と警告が出る。</li>
+    </ul>
+  </div>
+
   <div class="rg-ch">
     <div class="rg-head"><span class="rg-no">細則</span><span class="rg-title">こまかな取り決め</span></div>
     <ul class="rg-list">
@@ -5047,12 +5081,24 @@ function renderRulesGuide(){
       <li><b>奇襲</b>は子の一手。<b>親（相手）が撤退を選んだ時だけ</b>選択肢が現れ、戦略カウンターを2消費して<b>撤退を無効化＝強制的に決戦</b>へ持ち込む。相手が撤退しなければ奇襲は起こらない。</li>
       <li>戦略カウンターが足りないと、その行動は<b>選べなくなる</b>（奇襲も、相手の撤退時にカウンターが2未満だと出せない）。</li>
       <li>Airを決戦に使うと、勝敗に関わらず戦略カウンターが<b>+1</b>される。</li>
-      <li><b>看破とバレ</b>：デッキは固定なので相手の<b>数字</b>は最初から分かる。<b>公開・使用が進む</b>と各数字の候補属性が減り、<b>1つに絞れたら相手の仮面は「🔓看破」で確定</b>。逆に、あなたの札も同じ理屈で相手に絞られ、絞られると<b>「⚠読まれている」</b>と表示される。</li>
     </ul>
   </div>`;
 }
 function openRules(){ renderRulesGuide(); document.getElementById('rulesModal').classList.add('show'); }
 function closeRules(){ document.getElementById('rulesModal').classList.remove('show'); }
+// ルール説明を開いて、指定した見出し(id)まで自動スクロールする(推理の仕組み等、その場で確認したい時用)
+function openRulesAt(anchorId){
+  renderRulesGuide();
+  document.getElementById('rulesModal').classList.add('show');
+  setTimeout(()=>{
+    const el=document.getElementById(anchorId);
+    if(el) el.scrollIntoView({block:'start', behavior:'smooth'});
+  }, 60);
+}
+// 候補アイコンの横に添える「ⓘ」。タップでルール画面の「推理と看破」まで飛べる
+function deductionInfoIcon(){
+  return `<span class="ddc-info" onclick="event.stopPropagation();openRulesAt('rg-deduction')" title="推理のしくみを見る">ⓘ</span>`;
+}
 
 // ===== チュートリアル(初回ガイド) =====
 const TUT_KEY='maskd_tut_seen_v1';
@@ -5078,6 +5124,9 @@ const TUTORIAL_STEPS=[
   {t:'カードの出し方',
    v:()=>`${tutCard('moon',1)}${tutCard('kaos',4)}${tutCard('air',5)}`,
    b:'手札から1枚タップして場に出す。カードは<b>属性（5種の仮面）</b>と<b>数字0〜5</b>を持つ。'},
+  {t:'配札のしくみ',
+   v:()=>`${tutBack(15,'あなた')}<span class="tut-vs">VS</span>${tutBack(15,'相手')}`,
+   b:'<b>5属性×数字0〜5</b>の<b>全30枚</b>を、二人で<b>15枚ずつ</b>に分配。そのうち<b>5枚が初期手札</b>、残り<b>10枚が自分の山札</b>（山札の中身は自分だけ見える）。'},
   {t:'相性で勝敗が決まる',
    v:()=>`<span class="hint-icon sun"></span><span class="hint-icon moon"></span><span class="hint-icon dark"></span><span class="hint-icon kaos"></span><span class="hint-icon air"></span>`,
    b:'同属性は数字勝負、異属性は<b>3すくみ＝じゃんけん</b>（<b>月✊</b>＞<b>闇✌</b>＞<b>太陽✋</b>＞月）。<b class="kaos">Kaos</b>は数字勝負＋特殊効果、<b class="air">Air</b>が絡むと引き分け（流れを変える一手）。'},
@@ -5089,7 +5138,7 @@ const TUTORIAL_STEPS=[
    b:'各自<b>戦略カウンター5</b>。撤退-1／入替-2／奇襲-2、決戦勝利で+1。<b class="kaos">終盤2ラウンドは得点2倍</b>で最後まで逆転可能。'},
   {t:'さあ、始めよう',
    v:()=>`<div class="mask-badge you" style="width:46px;height:46px;"></div>`,
-   b:'まずは1戦してみよう。迷ったら画面下のヒントを読めばOK。詳しいルールは「<b>ルール説明</b>」からいつでも確認できます。'},
+   b:'まずは1戦してみよう。画面下のヒントでも一部は分かるが、<b>数字の構成や推理のしくみなど詳細は「ルール」に書いてある</b>ので、迷ったらそちらを確認しよう。'},
 ];
 function renderTutStep(){
   const s=TUTORIAL_STEPS[tutStep];
