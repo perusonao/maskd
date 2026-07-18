@@ -41,7 +41,8 @@
 
 - **`main`**：不具合修正のみ。バージョンは `1.0.x` で加算。修正が固まり次第 `main` に直接push（レビュー体制が整うまでの暫定運用）。
 - **`develop`**：仕様変更・新機能を伴う修正。バージョンは `1.x.0` で加算。`develop` にpushして動作確認してから `main` へ反映する。
-- **確認環境**：`develop` にpushした内容を実機で確認できるプレビュー環境を用意する（検討中、詳細はHANDOFF.md参照）。
+- **確認環境**：`develop` にpushした内容を実機で確認できるプレビュー環境（`https://perusonao.github.io/maskd/dev/`）を用意済み（`.github/workflows/dev-preview.yml`、詳細はHANDOFF.md参照）。開発確認用のプレイ・アンケート・登録データは`_dev`サフィックス付きのFirestoreコレクションに分離し、本番集計に混ざらないようにしてある（v1.0.2、要Firestoreルール追加）。
+- **運用ルール**：`main`に入った修正は必ず`develop`にも反映する（`develop`が本番の不具合修正を取りこぼして食い違わないようにするため）。
 
 ---
 

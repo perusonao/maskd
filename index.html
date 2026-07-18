@@ -1801,6 +1801,7 @@
       </div>
       <div class="home-bell" onclick="openChangelog()"><span>🔔</span>お知らせ<span class="bell-badge" id="bellBadge" style="display:none;"></span></div>
     </div>
+    <div id="devEnvBadge" style="display:none;text-align:center;font-size:10px;letter-spacing:.1em;color:#e8c877;border:1px solid #e8c877;background:rgba(232,200,119,.12);border-radius:999px;padding:2px 10px;margin:6px auto 0;width:fit-content;">DEV PREVIEW（開発確認用・本番とは別データ）</div>
 
     <div class="home-crest">
       <div class="home-title">MASKD</div>
@@ -4847,8 +4848,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.0.1';
+const GAME_VERSION = 'v1.0.2';
 const CHANGELOG = [
+  { version:'v1.0.2', date:'2026-07-18', items:[
+    '<b>開発確認環境のデータ分離</b>：develop確認用の環境（/dev/）で遊んだ内容が、本番の統計データに混ざらないようにしました。表示・体験に変化はありません。',
+  ]},
   { version:'v1.0.1', date:'2026-07-18', items:[
     '<b>お知らせの表示を整理</b>：v1.0.0より前の開発履歴（v0.1.0〜v0.61.3、100件超）をゲーム内のお知らせから整理し、開発者向けの管理画面のみで確認できるようにしました。',
   ]},
@@ -6035,6 +6039,7 @@ initCpuSettingUI(); // 全ての変数・関数定義が済んだ後に呼び出
 initModeUI();       // ゲームモード選択(ルール×アクション)の初期化
 initSurveyUI();     // アンケート画面のボタン初期化
 renderHomeStats();  // ホームの戦績サマリーを描画
+if(location.pathname.includes('/dev/')){ const d=document.getElementById('devEnvBadge'); if(d) d.style.display='block'; } // develop確認用であることを明示
 applyCardStyleClass(); // 保存された表示モード(上級者/初心者)を反映
 applyLayout(); // 保存された盤面レイアウト(A/B)を反映
 updateFooterToggles(); // フッターの表示切替トグルの初期表示
@@ -6078,6 +6083,9 @@ if(typeof CARD_IMG!=='undefined' && CARD_IMG.back){
      admin.htmlの論理削除(非表示)機能用に"hidden_records"コレクションにも同様のルールが必要です
      (他と同じ追記のみの設計。「非表示にする」も実体の更新ではなく新しいイベントの追記として記録します):
        match /hidden_records/{doc} { allow create: if true; allow read: if true; }
+     developプレビュー環境(/dev/配下)では、上記4コレクションそれぞれの"_dev"版
+     (logs_dev / surveys_dev / players_dev / hidden_records_dev)を使用し、本番データと分離します。
+     それぞれ同じバリデーション内容でルールを追加してください。詳細は firestore.rules を参照。
 -->
 <!-- 補足: アンケート送信時、ブラウザから https://ntfy.sh/maskd-survey-20260717 へも直接通知しています。
      プレイヤー名の新規登録時も同トピックへ通知しています。
@@ -6101,29 +6109,35 @@ if(typeof CARD_IMG!=='undefined' && CARD_IMG.back){
         await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js");
       const app = initializeApp(firebaseConfig);
       const db = getFirestore(app);
+      // developプレビュー(/dev/配下)で遊んだ分は本番の集計に混ぜないよう、
+      // コレクション名に _dev を付けて完全に分離する(Firestoreプロジェクト自体は共通)。
+      // 例: logs → logs_dev。admin.html側も同じ判定で /dev/admin.html なら *_dev を読みに行く。
+      const isDevPreview = location.pathname.includes('/dev/');
+      const col = name => name + (isDevPreview ? '_dev' : '');
+      window.__maskdEnv = isDevPreview ? 'dev' : 'prod';
       window.__maskdSaveLog = async (log) => {
-        try { await addDoc(collection(db, "logs"), { ...log, serverTs: serverTimestamp() }); return true; }
+        try { await addDoc(collection(db, col("logs")), { ...log, serverTs: serverTimestamp() }); return true; }
         catch (e) { console.warn("MASKD: ログ送信に失敗", e); return false; }
       };
       // プレイヤー名の登録(初回入力時)。players コレクションに追記。
       // playerId(端末ローカルの匿名ID)も一緒に保存し、admin.html側で対戦ログ(logs)と突き合わせてプレイ数を出せるようにする。
       window.__maskdSaveName = async (name, playerId) => {
-        try { await addDoc(collection(db, "players"), { name: String(name).slice(0,12), playerId: playerId||null, serverTs: serverTimestamp() }); return true; }
+        try { await addDoc(collection(db, col("players")), { name: String(name).slice(0,12), playerId: playerId||null, serverTs: serverTimestamp() }); return true; }
         catch (e) { console.warn("MASKD: 名前登録に失敗", e); return false; }
       };
       // アンケート回答の登録。surveys コレクションに追記。
       window.__maskdSaveSurvey = async (survey) => {
-        try { await addDoc(collection(db, "surveys"), { ...survey, serverTs: serverTimestamp() }); return true; }
+        try { await addDoc(collection(db, col("surveys")), { ...survey, serverTs: serverTimestamp() }); return true; }
         catch (e) { console.warn("MASKD: アンケート送信に失敗", e); return false; }
       };
       // クラウドからの読み取り(みんなの統計用)。Firestoreルールで read を許可した場合のみ成功する。
       window.__maskdFetchLogs = async () => {
-        const snap = await getDocs(query(collection(db, "logs"), limit(2000)));
+        const snap = await getDocs(query(collection(db, col("logs")), limit(2000)));
         const out = []; snap.forEach(d => out.push(d.data())); return out;
       };
       // 格納レコード数だけをサーバー側集計で取得(ドキュメント本体はダウンロードしない=低コスト)。
       window.__maskdFetchCount = async () => {
-        const snap = await getCountFromServer(collection(db, "logs"));
+        const snap = await getCountFromServer(collection(db, col("logs")));
         return snap.data().count;
       };
       window.__maskdLoggingReady = true;

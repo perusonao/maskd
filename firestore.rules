@@ -12,6 +12,8 @@ rules_version = '2';
 //   - 上記以外のコレクションは全面拒否
 //   - 有効期限なし（テストモードのような自動失効はしない）
 //   - create は最低限のバリデーションで不正・巨大データを弾く
+//   - *_dev は develop プレビュー(/dev/)専用のコレクション。本番(logs/surveys/players/
+//     hidden_records)とは完全に別物として扱い、集計やadmin.htmlの表示が混ざらないようにする。
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -22,10 +24,20 @@ service cloud.firestore {
       allow create: if isValidLog();     // 追加のみ許可
       allow update, delete: if false;    // 改ざん・削除は不可
     }
+    match /logs_dev/{docId} {            // developプレビュー用(本番のlogsとは分離)
+      allow read: if true;
+      allow create: if isValidLog();
+      allow update, delete: if false;
+    }
 
     // アンケート回答（匿名）
     match /surveys/{docId} {
       allow read: if true;               // admin.htmlで集計表示。自由記述欄があるため読める点に注意
+      allow create: if isValidSurvey();
+      allow update, delete: if false;
+    }
+    match /surveys_dev/{docId} {         // developプレビュー用
+      allow read: if true;
       allow create: if isValidSurvey();
       allow update, delete: if false;
     }
@@ -36,10 +48,20 @@ service cloud.firestore {
       allow create: if isValidPlayer();
       allow update, delete: if false;
     }
+    match /players_dev/{docId} {         // developプレビュー用
+      allow read: if true;
+      allow create: if isValidPlayer();
+      allow update, delete: if false;
+    }
 
     // admin.htmlの論理削除(非表示)イベント。対象データ自体は書き換えず、
     // 「hide」「unhide」のイベントを追記するだけ(最新のイベントが現在の状態)。
     match /hidden_records/{docId} {
+      allow read: if true;
+      allow create: if isValidHiddenRecord();
+      allow update, delete: if false;
+    }
+    match /hidden_records_dev/{docId} {  // developプレビュー用
       allow read: if true;
       allow create: if isValidHiddenRecord();
       allow update, delete: if false;
