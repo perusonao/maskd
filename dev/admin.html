@@ -1,0 +1,1050 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MASKD 管理ダッシュボード</title>
+<style>
+  :root{
+    --bg:#0d0b12; --panel:#161320; --line:#2c2740; --ink:#e8e2d0; --dim:#9a927f;
+    --gold:#c9a24a; --goldb:#e8c877; --win:#7dc99a; --lose:#d97a86; --draw:#8a8496;
+    --moon:#8fa9c9; --sun:#e0a23d; --dark:#8a5cae; --kaos:#c14b52; --air:#6fbfa0;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Hiragino Kaku Gothic ProN',sans-serif; font-size:14px; }
+  h1{ font-size:20px; margin:0; letter-spacing:0.04em; }
+  h2{ font-size:14px; color:var(--gold); margin:0 0 10px; font-weight:600; letter-spacing:0.03em; }
+  h3{ font-size:12px; color:var(--dim); margin:0 0 8px; font-weight:600; }
+  a{ color:var(--goldb); }
+  code{ background:#0a0810; padding:1px 5px; border-radius:4px; font-size:12px; }
+
+  /* ゲート */
+  #gate{ min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:24px; }
+  #gate .box{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:28px 24px; max-width:360px; width:100%; text-align:center; }
+  #gate input{ width:100%; padding:11px 12px; margin-top:14px; background:#0a0810; border:1px solid var(--line); border-radius:9px; color:var(--ink); font-size:15px; }
+  #gate .err{ color:var(--lose); font-size:12px; min-height:16px; margin-top:8px; }
+  .btn{ display:inline-block; background:linear-gradient(180deg,#2a2540,#1c1830); border:1px solid var(--line); color:var(--ink);
+    padding:9px 18px; border-radius:9px; cursor:pointer; font-size:13px; user-select:none; }
+  .btn:hover{ border-color:var(--gold); }
+  .btn.primary{ background:linear-gradient(180deg,#7a5f22,#5c4718); border-color:var(--gold); color:#fff; }
+
+  /* ダッシュボード */
+  #dash{ display:none; max-width:1000px; margin:0 auto; padding:18px 16px 60px; }
+  header.top{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+  header.top .sp{ flex:1; }
+  .muted{ color:var(--dim); font-size:12px; }
+  .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:14px 0; }
+  .kpi{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .kpi .v{ font-size:26px; font-weight:700; color:var(--goldb); }
+  .kpi .l{ font-size:11px; color:var(--dim); margin-top:3px; }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:12px; }
+  .cols{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media(max-width:640px){ .cols{ grid-template-columns:1fr; } }
+
+  .bar-row{ display:flex; align-items:center; gap:8px; margin:5px 0; font-size:12px; }
+  .bar-label{ width:120px; flex-shrink:0; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bar-track{ flex:1; height:14px; background:#0a0810; border-radius:7px; overflow:hidden; }
+  .bar-fill{ height:100%; background:linear-gradient(90deg,var(--gold),var(--goldb)); border-radius:7px; }
+  .bar-val{ width:96px; flex-shrink:0; text-align:right; color:var(--dim); font-variant-numeric:tabular-nums; }
+  .a-moon{ background:var(--moon)!important; } .a-sun{ background:var(--sun)!important; }
+  .a-dark{ background:var(--dark)!important; } .a-kaos{ background:var(--kaos)!important; } .a-air{ background:var(--air)!important; }
+
+  table{ width:100%; border-collapse:collapse; font-size:12px; }
+  th,td{ padding:6px 8px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; }
+  th{ color:var(--dim); font-weight:600; cursor:pointer; user-select:none; position:sticky; top:0; background:var(--panel); }
+  th:hover{ color:var(--gold); }
+  tr.row{ cursor:pointer; }
+  tr.row:hover td{ background:#1c1830; }
+  .tag{ padding:1px 7px; border-radius:6px; font-size:11px; border:1px solid; }
+  .tag.win{ color:var(--win); border-color:var(--win); }
+  .tag.lose{ color:var(--lose); border-color:var(--lose); }
+  .tag.draw{ color:var(--draw); border-color:var(--draw); }
+  .tbl-wrap{ max-height:440px; overflow:auto; border:1px solid var(--line); border-radius:10px; }
+  .filters{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+  .filters select,.filters input{ background:#0a0810; border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:6px 9px; font-size:12px; }
+
+  /* 詳細モーダル */
+  .modal{ position:fixed; inset:0; background:rgba(6,5,9,0.85); display:none; align-items:center; justify-content:center; padding:18px; z-index:50; }
+  .modal.show{ display:flex; }
+  .modal .inner{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; max-width:520px; width:100%; max-height:86vh; overflow:auto; }
+  .rrow{ border:1px solid var(--line); border-radius:8px; padding:6px 9px; margin-bottom:5px; font-size:12px; }
+  .rrow .rt{ display:flex; justify-content:space-between; color:var(--dim); font-size:10px; }
+  .ctag{ padding:1px 6px; border-radius:5px; border:1px solid; font-size:11px; }
+  .c-moon{ color:var(--moon); border-color:var(--moon); } .c-sun{ color:var(--sun); border-color:var(--sun); }
+  .c-dark{ color:var(--dark); border-color:var(--dark); } .c-kaos{ color:var(--kaos); border-color:var(--kaos); } .c-air{ color:var(--air); border-color:var(--air); }
+  .banner{ background:#3a1518; border:1px solid var(--lose); color:#f0c0c4; padding:12px 14px; border-radius:10px; font-size:12px; line-height:1.7; }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="box">
+    <h1>MASKD 管理ダッシュボード</h1>
+    <p class="muted" style="margin-top:10px;">パスフレーズを入力してください</p>
+    <input id="pass" type="password" placeholder="パスフレーズ" autocomplete="off">
+    <div class="err" id="gateErr"></div>
+    <div class="btn primary" id="unlockBtn" style="margin-top:10px;width:100%;">開く</div>
+    <p class="muted" style="margin-top:14px;font-size:10px;line-height:1.6;">
+      ※このゲートは目隠しであり、真のセキュリティではありません。データは匿名です。
+    </p>
+  </div>
+</div>
+
+<div id="dash">
+  <header class="top">
+    <h1>MASKD ダッシュボード</h1>
+    <span class="sp"></span>
+    <span class="btn" id="showHiddenBtn">非表示も表示</span>
+    <span class="btn" id="reloadBtn">再読み込み</span>
+    <span class="btn" id="csvBtn">CSV</span>
+    <span class="btn" id="jsonBtn">JSON</span>
+    <span class="btn" id="lockBtn">ロック</span>
+  </header>
+  <div class="muted" id="meta"></div>
+  <div id="content"><p class="muted" style="margin-top:20px;">読み込み中…</p></div>
+</div>
+
+<div class="modal" id="detailModal"><div class="inner" id="detailInner"></div></div>
+
+<script type="module">
+// Firebaseは動的importで読み込む（CDN到達不可でもゲート/描画は動くようにするため）
+
+// ▼ このプロジェクトのFirebase設定（ゲーム本体と同じ）
+const firebaseConfig = {
+  apiKey: "AIzaSyCH6JF6VL4OnYL2mR8N3V1LUZ920QADuvc",
+  authDomain: "maskd-8eafb.firebaseapp.com",
+  projectId: "maskd-8eafb",
+  storageBucket: "maskd-8eafb.firebasestorage.app",
+  messagingSenderId: "138967847579",
+  appId: "1:138967847579:web:866ddf9bac4af567f76c3e",
+  measurementId: "G-3Q429M5PXD"
+};
+
+// ▼ パスフレーズ（SHA-256）。変更するには新しい合言葉のsha256を下記に貼る。
+//    現在の合言葉: "maskd-admin"
+//    生成: node -e "console.log(require('crypto').createHash('sha256').update('新しい合言葉').digest('hex'))"
+const PASS_SHA256 = "c8ba6a0556451eb3b8b2a233332d3f31ae7df18cb1a4fa7b7d2f0cc9e878844f";
+const UNLOCK_KEY = "maskd_admin_unlocked";
+
+const AJP={moon:'月',sun:'太陽',dark:'闇',kaos:'混沌',air:'空気'};
+const DIFF={weak:'やさしい',normal:'普通',strong:'強い'};
+const TYPE={aggressive:'攻撃的',cautious:'慎重',tricky:'トリッキー',random:'おまかせ'};
+const ATTRS=['moon','sun','dark','kaos','air'];
+
+// v1.0.0より前の変更履歴アーカイブ(v0.1.0〜v0.61.3)。
+// v1.0.0のフリーズ宣言に伴い、ゲーム本体(index.html)のお知らせベルからは撤去し、
+// 開発者向けにこの管理画面でのみ参照できるようにしたもの(index.htmlのCHANGELOGから移設)。
+const PRE_V1_CHANGELOG = [
+  { version:'v0.61.3', date:'2026-07-18', items:[
+    '<b>ラウンド結果画面のレイアウト崩れを修正</b>：結果カードの背景が半透明すぎたため、ヒント表示ONの状態だと縁のあたりに背後のスコア表示などが透けて見えてしまう不具合を修正（背景をほぼ不透明に変更）。',
+  ]},
+  { version:'v0.61.2', date:'2026-07-17', items:[
+    '<b>離脱率などの分析イベントが保存されない不具合を修正</b>：セッション開始・対戦開始・離脱・チュートリアル完走の記録が、Firestoreのルールと噛み合っておらずこれまで保存できていなかった問題を修正。管理画面(admin.html)に離脱率・チュートリアル完走率の表示を追加（見た目の変化なし・裏側の不具合修正＋管理画面の機能追加）。',
+  ]},
+  { version:'v0.61.1', date:'2026-07-17', items:[
+    '<b>プレイヤー名の登録漏れを救済</b>：Firestoreのセキュリティルール未設定期間に登録が失敗していた既存プレイヤーについて、次回起動時に自動でクラウドへ再登録するように修正（見た目の変化なし・裏側の不具合修正）。',
+  ]},
+  { version:'v0.61.0', date:'2026-07-17', items:[
+    '<b>管理画面に論理削除(非表示)機能を追加</b>：対戦ログ・アンケート回答・登録プレイヤーのそれぞれを、管理画面(admin.html)から「非表示」にできるように（テストデータや荒らし投稿などを集計・一覧から除外する用途）。データ自体は消さず「非表示イベント」を記録するだけなので、いつでも「元に戻す」で復元できる。',
+  ]},
+  { version:'v0.60.1', date:'2026-07-17', items:[
+    '<b>登録プレイヤー一覧にプレイ数を追加</b>：管理画面(admin.html)の登録プレイヤー一覧に、各プレイヤーの対戦回数を表示。今後の新規登録は端末ID(playerId)で対戦ログと正確に突き合わせ、それ以前の登録分は名前一致で概算。',
+  ]},
+  { version:'v0.60.0', date:'2026-07-17', items:[
+    '<b>初級・中級・上級もプレイ記録の対象に</b>：これまでプレイ記録（ホームの戦績バッジ・実績の一部条件）は「本戦」のみが対象だったが、練習モード（初級／中級／上級）で遊んだ分も同じ記録に加わるように変更。',
+    '<b>ホームの戦績バッジの表記を変更</b>：「勝率XX%」のみの表示から、「X勝（勝率XX%）」に変更し勝ち数も一目で分かるように。',
+    '<b>プレイヤー登録人数を管理画面に追加</b>：設定画面で名前を登録した人数を管理画面(admin.html)で確認できるように。登録があるとプッシュ通知が届く（アンケート回答の通知と同じ仕組み）。',
+    '<b>ホーム画面のメニュー並び替え</b>：「遊び方／ルール／実績」「ミッション／ランク／戦績」の順に整理（初見の人が迷わないよう、遊ぶ前に必要な情報を上段に）。',
+    '<b>対戦設定画面の文言・構成を整理</b>：「使う属性（むずかしさ）」→「使用するカード」に変更。CPUの強さボタンに「CPUが手加減／CPUが本気」の一言を追加。「本戦」の説明を「ランキング対象」ではなく実態に合わせて「勝敗を記録」に修正。ルールチップの文言をより分かりやすく（例：「+KAOS（特殊）」→「+KAOS（特殊カード）」）。「このレベルのルール」「このレベルの主」を折りたたみ（詳細を見る）にまとめ、初見でも①②の選択とボタンまでがすぐ見えるように。「クリア条件」の見出しを追加。',
+  ]},
+  { version:'v0.59.4', date:'2026-07-17', items:[
+    '<b>結果画面からアンケートへ誘導</b>：対戦が終わると「📝 感想を聞かせてください（1分・任意）」というリンクを表示（本戦・練習どちらも）。一度回答すると以降は表示されない。',
+  ]},
+  { version:'v0.59.3', date:'2026-07-17', items:[
+    '<b>アンケート通知から管理画面へワンタップで遷移できるように</b>：通知をタップすると管理画面(admin.html)が開き、URLに含めた合言葉で自動的にロックが解除される。',
+  ]},
+  { version:'v0.59.2', date:'2026-07-17', items:[
+    '<b>アンケート回答時のプッシュ通知が届かない不具合を修正</b>：通知に使うHTTPヘッダーに日本語を直接入れていたため、ブラウザの仕様(ヘッダー値は半角英数字のみ)によりリクエスト自体がエラーで止まっていた。画面上は「送信しました」と表示されるため気付きにくい不具合だった。',
+  ]},
+  { version:'v0.59.1', date:'2026-07-17', items:[
+    '<b>アンケート機能を追加</b>：設定画面から「📝 アンケートに回答する」で、面白さ（5段階）・またやりたいか・自由記述の3項目に回答できるように。匿名でクラウドに保存され、開発側で確認できる。',
+  ]},
+  { version:'v0.59.0', date:'2026-07-17', items:[
+    '<b>対戦設定画面のレベル選択を4択に統合</b>：「初級／中級／上級」＋別立てだった「アクション設定（基本／フル）」を、「初級／中級／上級／本戦」の1つの選択に統合。「本戦」を選ぶと上級のルール＋入替・奇襲などフル機能＋成績記録が一括で有効になる（以前は「上級」を選んだ上でさらに下の方にある「アクション設定」を「フル」にしないと本戦にならず、分かりにくかった）。あわせて、初回訪問者には出番のない「🔰初心者ではじめる」ボタンを削除（初回訪問時はこの画面自体を経由せず自動で初級に入るため、実質的に重複した導線だった）。',
+    '<b>仮面あて（読み）を勝敗に影響しない独立した成績に変更</b>：これまで的中1回+2ptとして最終得点に加算されていたが、CPU側には対応する仕組みがなく非対称だったため、得点計算から分離。結果画面では得点表ではなく「今回のMVP」などと同じ成績欄に「🎯 仮面あてN回的中（勝敗には影響しません）」として表示するのみに変更。実績「看破者」や★目標（3回見破る）などの的中回数ベースの判定は従来通り機能する。',
+  ]},
+  { version:'v0.58.1', date:'2026-07-17', items:[
+    '<b>ホーム画面の「Lv」表記を廃止</b>：対戦数から算出する見た目だけの疑似レベル表示をやめ、「◯戦」という実数表示に変更（存在しないレベル制度があるかのような誤解を避けるため）。勝率バーの表示内容自体は変更なし。',
+  ]},
+  { version:'v0.58.0', date:'2026-07-16', items:[
+    '<b>ホーム画面の整理（レビュー反映）</b>：「対戦する」ボタンを仮面カードより上に配置し視線誘導を強化。ロゴを縮小し仮面カードもコンパクトに。各カードに正確な一言説明を追加（例：MOON＝闇に勝つ／AIR＝多くは引分／KAOS＝特殊ルール）。メニュー6項目を1つのグループにまとめ、設定ボタンとの間に区切り線を追加。バージョン表記をホーム上部から設定画面下部へ移動。',
+    '<b>お知らせベルに未読バッジを追加</b>：前回開いた時点からの更新履歴の件数のみを表示（水増しなし、開けば既読になる）。',
+  ]},
+  { version:'v0.57.1', date:'2026-07-15', items:[
+    '<b>対戦設定画面を1画面に収まるよう圧縮</b>：文言短縮・余白詰め・チップ表示の簡素化により、標準的なスマホ画面ではスクロールせずに①〜⑤の全ステップと「対戦」ボタンが収まるように調整。',
+  ]},
+  { version:'v0.57.0', date:'2026-07-15', items:[
+    '<b>対戦設定画面を番号ステップに再構成</b>：①レベルを選ぶ→②CPUの強さ→③このレベルのルール→④このレベルの主→⑤アクション設定、の5ステップに整理。③は長文の説明文をやめ、アイコンチップ（属性／アクション／記録の有無／終盤2倍）で一目で分かる表示に変更。旧「詳細設定」の折りたたみは廃止し、アクション設定を常時表示のステップに格上げ。',
+    '④のライバル紹介に、CPUの強さとの関係を正しく説明する注記を追加（「CPUの強さは同じ相手の手加減を変えるだけで、対戦相手自体は変わらない」）。',
+  ]},
+  { version:'v0.56.0', date:'2026-07-15', items:[
+    '<b>v1.0前の画面整理（重複・未完成要素の除外）</b>：新機能は追加せず、各画面の「できること」を棚卸しして整理。①「はじめての対戦」ラダーを除外（新しいレベル制と教える内容が重複していたため）。②結果画面のボタンを実績／戦績の2つに集約（今回の履歴・対戦ログ一覧は戦績の中へ）。③「みんなの統計（クラウド）」を除外（運用前提の機能のため）。④初回ウェルカムを簡素化（「▶さっそく対戦する」中心に）。⑤上級ミッションの入口を「遊び方」画面に常設し、いつでも挑戦できるように。⑥①の影響で解除条件を失った実績「仮面騎士デビュー」を一覧から除外（実績19種→18種、達成不能な実績を整理）。',
+  ]},
+  { version:'v0.55.1', date:'2026-07-15', items:[
+    'テーマの表記を統一：世界観は「仮面舞踏会」ではなく<b>仮面をかぶった騎士たちの戦い</b>。文言を騎士・決闘テーマに修正（ライバルの肩書き・称号・実績名・紹介文など）。ゲーム内容・ルールは変更なし。',
+  ]},
+  { version:'v0.55.0', date:'2026-07-15', items:[
+    '<b>プレイログ計測の強化（ユーザーテスト準備）</b>：ゲーム表示・ルールは変更なし。分析用に、これまで<b>本戦しか記録していなかったプレイログを全レベル（初級〜本戦）で記録</b>し、<b>レベル/モード・実ラウンド数・仮面あて成績</b>を付与。さらに<b>セッション開始・対戦開始・離脱ラウンド・チュートリアル開始/完走</b>を軽量イベントとして記録（送信は従来どおり同意した場合のみ）。「どこで離脱するか・レベル別勝率・属性の使用/勝率」を測れるように。',
+  ]},
+  { version:'v0.54.0', date:'2026-07-15', items:[
+    '<b>チュートリアルを核だけに短縮（オンボーディングその2）</b>：基本ミッションを11問→<b>核4問</b>（出す・じゃんけん・数字・親の決戦/撤退）に。Air・Kaos・入替・奇襲・終盤などは、そのレベルに到達した時に<b>1問だけ学ぶ</b>（just-in-time）形へ。上級4問は任意の腕試しのまま。',
+    '<b>レベル解放の演出（その3）</b>：初級のライバルに勝つと<b>「🎉 新しい札が解放：AIR」</b>、中級を勝つと<b>KAOS</b>が解放。その場で「▷ 1問で学ぶ」ミニレッスンと「▶ 次のレベルに挑戦」へ進める。遊びながら少しずつ覚える導線に。',
+  ]},
+  { version:'v0.53.0', date:'2026-07-15', items:[
+    '<b>初回体験を「遊びながら」へ（オンボーディング再設計・その1）</b>：新機能は追加せず、既存の段階システムを初見の既定ルートに配線。<b>初めての人は「対戦する」でモード画面を飛ばして初級（3色・基本）へ直行</b>し、いきなり全ルールを浴びない形に。',
+    'ゲームモードの<b>既定を進行度で自動繰り上げ</b>：新規＝初級／ライバルを倒すごとに中級・上級・本戦へと既定が上がる（手動で選べば従来通りその設定を優先）。',
+  ]},
+  { version:'v0.52.0', date:'2026-07-15', items:[
+    '<b>「看破（確定）」と「バレ」を強調表示</b>：公開・使用が進んで相手の仮面の候補が1つに絞れたら、控えめな「で確定」から<b>「🔓 看破！ ◯◯で確定」</b>の金バッジに変更。逆に、あなたの札が相手に1つへ絞られると<b>「⚠ 相手に読まれている：◯◯」</b>の警告バッジを表示。「相手にバレる／こっちがわかる条件」が一目で分かるように（ルール説明にも一行追加）。',
+  ]},
+  { version:'v0.51.0', date:'2026-07-15', items:[
+    '<b>ライバルにボス感</b>：各レベルの主に<b>専用AI（性格固定）</b>を設定（初級=道化アルル＝トリッキー／中級=風唄いゼファ＝慎重／上級=仮面卿ノクス＝積極的）。対戦開始前に<b>立ち絵＋名乗りの登場演出</b>を追加。CPUの種類選択は廃止し、強さ（弱い/普通/強い）だけ選ぶ形に。',
+    '<b>称号アンロック</b>を追加：★集め・ライバル撃破・通算成績などで称号を獲得（例：三色の使い手／風読みの舞い手／混沌を制する者／看破者／主を退けし者／舞踏会の主 ほか）。実績画面で<b>装備の切替</b>ができ、装備した称号はホームのプレイヤーバッジに表示。結果画面で新規解除を通知。',
+  ]},
+  { version:'v0.50.0', date:'2026-07-15', items:[
+    '<b>仮面あて（予想）ボーナス</b>を追加：あなたの手番で、相手の伏せ札の候補をタップして<b>属性を予想</b>できるように（任意・ワンタップ・再タップで解除）。公開時に的中していれば<b>読みボーナス+2pt</b>。看板の「読み合い」が毎ラウンドの手応えある一手に。初級の★2目標も「相手の仮面を3回見破る」に刷新。',
+    '<b>クライマックス（最終ラウンド）演出</b>を全レベルに：どのレベルでも<b>最終ラウンドは決戦の得点2倍</b>に。開始時に「⚔ 最終ラウンド ―×2！」の山場バナー＋演出。短い初級・中級にも“逆転できる締め”が生まれる。',
+  ]},
+  { version:'v0.49.0', date:'2026-07-15', items:[
+    '<b>初級・中級・上級を「遊べるゲーム」に</b>：各レベルに<b>★クリア目標（3つ）</b>と<b>レベルの主（ライバル仮面）</b>を追加。ルールを覚える前の離脱を減らすのが狙い。',
+    '★目標はレベルごとに設定（初級：勝つ／じゃんけんで3回勝つ／完封勝ち、中級：勝つ／Airで引き分け／5点差勝ち、上級：勝つ／Kaos特殊を決める／大差or最終R勝ち）。獲得状況は保存され、対戦設定と結果画面に表示。',
+    'レベルの主（初級=三色の道化アルル／中級=風唄いのゼファ／上級=仮面卿ノクス）が対戦開始・結果でひとことリアクション。世界観と目的意識を強化。',
+  ]},
+  { version:'v0.48.2', date:'2026-07-15', items:[
+    '<b>ホームのボタンを画像素材に差し替え</b>：「⚔ 対戦する / START DUEL」の装飾フレームと、ミッション/実績/ランク・遊び方/ルール/戦績・設定の各ボタンを、金の意匠のボタン画像に変更（絵文字アイコンから置き換え）。',
+  ]},
+  { version:'v0.48.1', date:'2026-07-15', items:[
+    '<b>PWAアイコンを刷新</b>：ホーム画面に追加した時のアイコンを、仮プレースホルダ（金の◈）から<b>太陽の金仮面</b>に変更。あわせて<b>Web manifest</b>を追加し、iOSだけでなくAndroid/Chromeでもアプリ名「MASKD」・アイコン・テーマ色付きでインストールできるように（maskable対応）。',
+  ]},
+  { version:'v0.48.0', date:'2026-07-15', items:[
+    '<b>ホーム画面をロビー風に刷新</b>：仮面舞踏会の世界観を出すため、背景に館のアートを敷き、上部にプレイヤーバッジ（Lv・勝率・ゲージ）と🔔お知らせ、中央に大きな<b>MASKD</b>ロゴと5枚の仮面カードの扇（既存のカードアートを再利用）、<b>⚔ 対戦する / START DUEL</b>の装飾ボタン、JP＋ENのメニュー（ミッション/実績/ランク・遊び方/ルール/戦績）と⚙設定を配置。',
+    '※ Lv・ランクは見た目のみ（Lvは対戦数から簡易算出、ランクは近日公開）。勝率・戦績は実データ。仮面カードはゲーム内の実アートを流用し、背景のみ画像から取り込み。',
+  ]},
+  { version:'v0.47.0', date:'2026-07-15', items:[
+    '<b>画面構成を刷新：ホーム（ロビー）→ 対戦設定 → 対戦</b>の3段階に分離。トップは設定の羅列ではなく、大きな<b>「▶ 対戦する」</b>と戦績サマリー、ミッション/実績/戦績、遊び方/ルール/履歴、そして最下部に<b>⚙設定</b>を置いた“ゲームのロビー”に。',
+    '「対戦する」を押すと<b>対戦設定</b>へ：レベル（初級／中級／上級）とCPUの強さを選び、<b>詳細設定▼</b>にアクション（基本／フル）やCPUの種類をたたむ形に整理。<b>🔰初心者ではじめる</b>で「初級・弱いCPU・初心者表示・ヒントON」を一括適用。',
+    'カード表示・ヒント・レイアウト・効果音は<b>⚙設定</b>にまとめ、対戦設定と分離。今後の拡張（ランク・図鑑・イベント等）を見据えた導線に。',
+  ]},
+  { version:'v0.46.0', date:'2026-07-14', items:[
+    '<b>ゲームモード選択</b>を追加：タイトルで<b>ルール（属性のみ／＋AIR／＋AIR＋KAOS）</b>と<b>アクション（基本＝決戦・撤退／フル＝＋入替・奇襲）</b>を別々に選べるように。組み合わせで初級1〜上級2の6モードになり、覚えたい要素だけを切り出して練習できます。CPUの強さは今まで通り別に設定可能。',
+    '<b>上級2＝本戦</b>（全属性＋入替・奇襲＋終盤2倍＋残り手札ボーナス）は通算成績・実績に記録。ほかの5モードは<b>練習</b>（記録なし）として気軽に反復できます。',
+  ]},
+  { version:'v0.45.2', date:'2026-07-14', items:[
+    '不具合修正：初心者表示で相手の伏せ札の候補記号が<b>カードの左右からわずかにはみ出す</b>問題を修正（記号を9pxに縮小し、余白を詰めて1行に確実に収めた）。通常対戦の候補数は最大3つに収まるため、はみ出しは解消。',
+  ]},
+  { version:'v0.45.1', date:'2026-07-14', items:[
+    '不具合修正：v0.45.0で相手の伏せ札の候補記号を大きくした際、初心者表示で候補が複数行に折り返して<b>カード上部の数字を覆い隠していた</b>問題を修正。数字に専用の背景バッジを付けて常に読めるようにし、候補記号は<b>1行に固定</b>してカード下部に収めるよう調整。',
+  ]},
+  { version:'v0.45.0', date:'2026-07-14', items:[
+    'プレイヤーの疑問に対応（2点）。①<b>「相手の可能性」候補の見やすさ改善</b>：初心者表示で、これまで小さな点だった<b class="kaos">Kaos🌀</b>・<b class="air">Air🌬</b>を、じゃんけん記号（✊✌✋）と同じ大きさで表示。相手の伏せ札の候補（＝山札からあなたの札を除いた全属性）が漏れなく等しく見えるようにし、「予想に無い札が出た」という誤解を解消（候補は数学的に常に完全）。',
+    '②<b>奇襲の発生条件を明確化</b>：奇襲は<b>相手（親）が撤退を選んだ時だけ</b>現れる子の一手だとメッセージ・ルール解説を改善。発生時は「⚡奇襲チャンス！相手が勝負を降りようとしている。戦略2で強制決戦」と明示し、戦略カウンター不足で出せない場合も理由を一言表示。',
+  ]},
+  { version:'v0.44.0', date:'2026-07-14', items:[
+    '<b>「はじめての対戦」（段階的ルール開放）</b>を追加：ルールを1つずつ解放しながら実戦で覚える4ステージ。①色の対決（月/太陽/闇＝じゃんけんと数字・決戦/撤退・4R）→②風を読む（+Air＝引き分け・4R）→③混沌を制す（+Kaos＝数字勝負と特殊・6R）→④駆け引きの極み（入替・奇襲・終盤2倍・残り手札ボーナス＝全ルール・8R）。各ステージは<b>縮小デッキ</b>で相手も弱め、クリアで次が解放。4段階クリアで実績「仮面舞踏会デビュー」。タイトル／初回ウェルカムの「🎓 はじめての対戦」から。',
+  ]},
+  { version:'v0.43.0', date:'2026-07-14', items:[
+    '対戦画面のレイアウトを切替式に：<b>標準A</b>／<b>メリハリB</b>（上＝勝敗スコアを大きく／中央＝場／下＝手札の3層）。トップ設定またはフッター「🖼 配置A/B」で切替（保存）。Bでは最上段のスコアバーに得点・リード・終盤×2をまとめて表示。',
+    'Kaos・Airの発動演出を強化：<b class="kaos">Kaos</b>は紫のオーラが拡がる衝撃波リング＋「混沌」がポップ、<b class="air">Air</b>は「AIR」が文字間隔を広げながらふわっと現れて消える（静寂の風）。',
+    '不具合修正：対戦ログ一覧で記録が増えると各行が縦につぶれて文字が切れていた問題を修正（縦フレックスの縮み抑制）。',
+  ]},
+  { version:'v0.42.0', date:'2026-07-14', items:[
+    'CPUの手番に「🎭 相手 思考中 …」インジケータを表示（考えている間が分かり、テンポが良くなる）。',
+    '得点のリードを可視化：リードしている側の点数を強調し「▲ +N」バッジを表示（数字を読まなくても優勢が一目で分かる）。',
+  ]},
+  { version:'v0.41.0', date:'2026-07-14', items:[
+    'トップページのレイアウトを整理：上部のボタンを「🎓ミッションで学ぶ＋⚔️上級」と「🏅実績／📖遊び方／📜ルール」の2段に整頓し、折り返しの崩れを解消（更新履歴はタイトル「MASKD」タップで開けるため統合）。',
+    '結果画面のレイアウトを見直し：勝敗・最終スコア・MVP・連勝・実績を上部にまとめ、各ラウンドの内訳／残り手札／統計は「📊 …を見る」で折りたたみに。初期表示を短くして「もう一度」までスクロールせず届くように。',
+  ]},
+  { version:'v0.40.0', date:'2026-07-14', items:[
+    '<b>上級ミッション</b>を追加（本格派の4問）：🃏風を斬る刃（KaosはAirを斬る）、⚖️同値の落とし穴（Kaosは同値だと負け）、🌪️Airの過信（AirはKaosに通じない）、🎯三択の見極め（相性＞数字を総合判断）。タイトルの「⚔️ 上級ミッション」から挑戦。',
+    '<b>実績を6種追加（全18種に）</b>：🎖️上級突破・💯完全試合（決戦で無敗勝利）・🔄大逆転（4点差から勝利）・🌫️風の使い手（Air3回使用）・🏛️百戦の猛者・🏵️覇者（勝率70%）。',
+    '対戦画面の文言を整理：「あなたの手札」「相手の手札」の見出しを削除してすっきりと（機能は変更なし）。',
+    '管理ページ（対戦ログ）に<b>プレイヤー名</b>の列と検索を追加（詳細画面にも表示）。',
+  ]},
+  { version:'v0.39.0', date:'2026-07-14', items:[
+    '<b>実績（アチーブメント）</b>を追加：初勝利・三/五連勝・大勝・完封・混沌の一撃（Kaos0/1で5を食う）・静寂の風（Airで引分）・終盤の一撃・修練の達人（全ミッションクリア）・歴戦・実力者 など全12種。試合終了やミッション修了で自動解除し、結果画面で通知。タイトル／結果画面の「🏅 実績」から一覧を確認できる（進捗も表示）。長く遊ぶ目標に。',
+    'ミッションを3つ追加（全11問に）：<b>⚡ 奇襲でしとめる</b>（子が親の撤退を強制決戦に）、<b>🔥 終盤は2倍</b>（R7・R8の決戦は得点2倍）、<b>⚠️ Kaos5の弱点</b>（Kaos5は1に負ける）。',
+  ]},
+  { version:'v0.38.0', date:'2026-07-14', items:[
+    '初回プレイの案内を刷新：起動時にスライドを自動表示する代わりに、<b>「🎓 ミッションで学ぶ（おすすめ）／遊び方を読む／すぐに対戦」</b>を選べるウェルカム画面を表示。実践で覚えたい人をミッションへ誘導。',
+    'ミッションを2つ追加（全8問に）：<b>♻️ 入替で逆転</b>（親が子の数字を見て有利な札に差し替える）と <b>🏆 高い札を温存</b>（勝てる時は低い札で済ませ、高い札を残り手札ボーナスへ回す）。',
+    '効果音を追加：カードを出す/決戦の勝ち・負け・引き分け/Kaos・Air発動/ミッション正誤などに、<b>WebAudioで合成した効果音</b>（音声ファイル不要）。フッターの <b>🔊音ON/🔇音OFF</b> でいつでも切替（設定は保存）。',
+  ]},
+  { version:'v0.37.0', date:'2026-07-14', items:[
+    'ミッション形式のチュートリアルを追加：読むだけでなく、<b>実際にカードを出して操作とルールを覚える</b>6つのミッション（①基本操作 ②じゃんけん＝3すくみ ③同属性は数字勝負 ④不利なら撤退 ⑤Kaosの特殊効果 ⑥Airで引き分け）。本物の勝敗判定で答え合わせし、間違えると理由つき解説＋おすすめ札を表示してリトライ可。タイトルの「🎓 ミッションで学ぶ」から開始。',
+  ]},
+  { version:'v0.36.0', date:'2026-07-14', items:[
+    '初心者オンボーディングを追加：初回プレイの最初の3ラウンドだけ、ラウンド開始モーダルに「🔰 今回のポイント」を表示し、その場面で“何を考えるか”を役割（親／子）に合わせて案内（R1=相手の数字に勝てる札を探す／R2=決戦か撤退かの選び方／R3=高い札の温存＝残り手札ボーナス）。1試合終えると自動で終了し、以降は通常のヒントに任せる。',
+  ]},
+  { version:'v0.35.0', date:'2026-07-14', items:[
+    'リザルト・統計を拡充（遊び続ける動機づけ）：①結果画面に「今回のMVPカード（あなたが最も稼いだ札と得点）」「通算成績＝勝率」「連勝（現在／最高）」を表示。自己ベスト更新時は🏆を表示 ②通算統計モーダルにも勝率・連勝・通算MVPカード（あなたが通算で最も稼いだ札）を追加。',
+    '不具合修正：決戦／撤退の公開演出中にラウンドが切り替わると稀にエラーが発生し得た箇所へ安全装置を追加（非同期タイミングでカードが無効化されても落ちないように）。',
+  ]},
+  { version:'v0.34.0', date:'2026-07-14', items:[
+    '勝敗演出を強化（手触りの向上）：①カード公開を「裏から表へパタンとめくれる」3D演出に ②場に札を置いた瞬間に「フワッ」と落ちて収まる設置アニメーション ③決着（決戦の勝敗が付いた瞬間）に盤面が短く揺れ、勝敗色の光が弾ける「ドン！」というインパクト演出を追加 ④対応端末では決着・Kaos特殊発動時に軽い振動（ハプティクス）。※「動きを控えめに」設定の端末では演出を自動で抑制。',
+  ]},
+  { version:'v0.33.0', date:'2026-07-14', items:[
+    'CPU（相手）の思考を大幅強化：①親の先出しを「1手読み」で評価するように（相手の最善応手を想定し、決戦／撤退の有利な方を選べる前提で札を選ぶ。従来はほぼランダムだった） ②高い札は決戦・残り手札ボーナス用に温存し、低い札から切る方針を追加 ③入替（親の札交換）を数字条件に縛らず、期待値が上回る場面で活用 ④「積極的でも強い方が弱くなる」不具合を修正し、難易度（弱い／普通／強い）が素直に強さへ反映されるように（弱いはうっかり多め＝初心者向け、強いはほぼ最善手）。※本物のjudge/配札/得点を移植したシミュレータで、強い参照プレイヤー相手に勝率が旧CPUの13〜34%から約49〜54%（強い）まで改善することを確認。仮面キャラの個性（剛力＝積極／鉄壁＝慎重／技巧＝トリッキー）は維持。',
+  ]},
+  { version:'v0.32.6', date:'2026-07-13', items:[
+    '対戦画面の情報整理（要望を反映）：①両プレイヤーの手札枚数・山札枚数の表示を削除して画面をすっきりと ②山札を「一番上のカードの裏イメージ」で表示 ③盤面のメッセージエリアを廃止し、ラウンド開始時にモーダルで案内（ラウンド数／あなたは親or子／場に出すカードを選択してください）',
+  ]},
+  { version:'v0.32.5', date:'2026-07-13', items:[
+    'プレイヤー名と相手名を導入：初回プレイ時に名前を入力（保存＋クラウド登録）し、ゲーム内に表示。相手（CPU）は戦略に応じた仮面名で表示（積極的＝剛力仮面／慎重＝鉄壁仮面／トリッキー＝技巧仮面）',
+  ]},
+  { version:'v0.32.4', date:'2026-07-13', items:[
+    '入替のルールを整理：入替は「別の札で戦うと決めた」行動なので、入替する札を選んだ時点で決戦確定に。札を選ぶとそのまま勝敗へ進む（入替後に撤退できる無意味な選択肢を廃止）。',
+  ]},
+  { version:'v0.32.3', date:'2026-07-13', items:[
+    '対戦画面の改善（要望＋テスター意見を反映）：①属性名を英語に統一（SUN/DARK/MOON/KAOS/AIR） ②候補属性の表示を初心者モードでは「じゃんけん」に統一（手札の相手視点・山札モーダル・相手からの見え方など全て） ③入替の手札選択モーダルを廃止し、下部の手札を直接タップして入替できるように ④画面の文字を削減（「子の数字は…どうする？」→「どうする？」、相手手札や自分の手札のラベルを簡潔化）',
+  ]},
+  { version:'v0.32.2', date:'2026-07-13', items:[
+    '対戦画面の改善（要望を反映）：①山札モーダル（自分／相手）を中央のコンパクトなカード表示にして余白を削減 ②自分の手札に「相手視点」＝相手から絞り込める候補属性の小アイコンを表示（駆け引きの読みに） ③相手の山札モーダルで一番上（最小の数字）の行を強調',
+  ]},
+  { version:'v0.32.1', date:'2026-07-13', items:[
+    '対戦画面の改善（要望を反映）：①場に出たカードを大きく表示（狭い画面では自動で段階的に縮小） ②消えていた戦略カウンターのバーを復活（重複する「戦略N」テキストは省略） ③使用済みカードを実際のカード絵（上級者）／初心者カードのミニ表示に ④「自分の山札」を「相手の山札」と同じ一覧表示に（数字・枚数・属性＋次に引く札を強調）。自分・相手の山札はどちらも閉じるボタン付きのモーダル',
+  ]},
+  { version:'v0.32.0', date:'2026-07-13', items:[
+    'バランス調整（得点ルール変更）：残り手札ボーナスを見直し。従来は「残った全札の数字を合計（Airは数字×2）」だったため、強い札を温存するだけで勝ててしまう問題があった。今後は「残った非Air札のうち数字の大きい上位2枚のみ合計＋Airは数字に関係なく1枚2点」に変更。シミュレーション（各4万戦）で、温存戦略とバトル戦略がほぼ五分になることを確認。決戦（バトル）が勝敗の主軸になり、Airの数字が戦闘でも得点でも無関係で一貫。',
+  ]},
+  { version:'v0.31.12', date:'2026-07-13', items:[
+    '結果ダイアログを充実（レビュー反映）：勝敗表示の下に現在のスコア（あなた◯ – 相手◯）を大きく表示し、自分の山札の残り枚数も表示。「次へ」ボタンを「第◯ラウンドへ ›」に変えて次への期待感を強調',
+  ]},
+  { version:'v0.31.11', date:'2026-07-13', items:[
+    'レビュー反映（視認性の磨き込み）：①得点(pt)の数字を大きく強調（得点ゲームであることを明確に） ②ラウンド進行に「序盤／中盤／終盤」の局面ラベルを追加 ③「使用済」カードを属性色のミニカード風にして直感的に ④READMEの冒頭を短いキャッチコピーに',
+  ]},
+  { version:'v0.31.10', date:'2026-07-13', items:[
+    '相手の場札と自分の場札の間に「VS」の区切りを追加（金の細いラインと発光する VS 文字）。対戦の対峙感を強調',
+  ]},
+  { version:'v0.31.9', date:'2026-07-13', items:[
+    '見やすさの調整：①画面全体をさらに明るく（明るめのグレー系ネイビー／パープルに）して視認性を向上 ②場（フィールド）の上下の大きな余白を詰め、場札や情報を枠の中央に寄せて配置',
+  ]},
+  { version:'v0.31.8', date:'2026-07-13', items:[
+    '画面全体の明るさを改善：背景・場・枠の色を一段明るいネイビー／パープルに調整し、暗すぎて見えにくい状態を緩和（金×ネイビーの世界観は維持）。文字色も少し明るくして視認性を向上',
+  ]},
+  { version:'v0.31.7', date:'2026-07-13', items:[
+    'レビュー反映（磨き込み）：①ROUND表示の下に進行バーを追加し、終盤感を可視化 ②場に出たカードを一回り大きく表示して迫力アップ（画面が狭い端末では自動で調整） ③行動ボタン（決戦など）を大きくして押しやすく ④手札の間隔を広げて誤タップを減らし、タップ時にカードが少し浮き上がる演出を追加',
+  ]},
+  { version:'v0.31.6', date:'2026-07-13', items:[
+    'レビュー反映：①相手／自分のステータス（得点・親子・戦略・使用済）を、どちらも場の右側に縦に並べて配置し、視線移動を減らして比較しやすく ②行動選択（決戦・撤退・入替）を手札のすぐ上に移動して親指で押しやすく。あわせて上下の場札を近づけて対峙感を強調。縦に短い画面でもはみ出さないようステータス・フッターを圧縮',
+  ]},
+  { version:'v0.31.5', date:'2026-07-13', items:[
+    'レビュー反映：①決断時に「子の数字は N。どうする？」が中央と下部で重複していたのを、中央の1か所に統一（下部の重複案内を削除） ②細かい説明文（コーチのヒント・「相手からの見え方」など）の文字色を明るく・少し大きくして読みやすさを向上',
+  ]},
+  { version:'v0.31.4', date:'2026-07-13', items:[
+    '対戦画面の改善（要望を反映）：①「使用済」カードの表示にラベルを付け、単独の数字が浮いて見える不具合を解消 ②フッターに「初心者/上級者」表示と「ヒントON/OFF」の切替を追加し、ゲーム中いつでも切替可能に ③案内メッセージ・ヒントを手札の「上」にまとめて表示（場の中央からは行動選択のみを表示）',
+  ]},
+  { version:'v0.31.3', date:'2026-07-12', items:[
+    'レイアウト崩れを修正：縦に短い画面で、決断時のボタンやメッセージが「可能性」チップやカードと重なり、場の下部がはみ出す不具合を修正。中央の案内・行動選択を上下カードの「間」に流し込む方式に変更（重なりを根本的に解消）＋短い画面向けにカードと余白を自動で圧縮',
+  ]},
+  { version:'v0.31.2', date:'2026-07-12', items:[
+    'レイアウト崩れを修正：手札を大きくした際に、狭い画面幅で5枚が2行に折り返し場の表示が欠ける不具合を修正。手札は常に1行で、画面幅いっぱいまで自動で拡大するように調整',
+  ]},
+  { version:'v0.31.1', date:'2026-07-12', items:[
+    '相手の手札表示を調整（要望を反映）：①上級者向け表示では相手の手札にじゃんけんを出さない（候補属性は小アイコンで表示） ②相手の手札をカード裏面の画像で表示し、その上に数字と候補属性を重ねる ③自分の手札をさらに大きく表示',
+  ]},
+  { version:'v0.31.0', date:'2026-07-12', items:[
+    '対戦画面の改善（要望を反映）：①場の中央の仕切り線を削除 ②相手の手札を画面上部に表示（裏面・属性候補と数字／自分の手札と同じ形式）—「相手の手札を見る」ボタンは廃止 ③手札選択モーダルを廃止し、画面下部の手札を直接タップして選べるように（カードも大きく） ④相手が出した場のカードの候補属性を少し下に表示 ⑤画面最上部はラウンド数のみ表示',
+  ]},
+  { version:'v0.30.0', date:'2026-07-12', items:[
+    '対戦画面の改善（要望を反映）：①結果表示と行動ボタン・メッセージが重ならないよう修正 ②重複していた「出した札」表示を削除（使用済みは場に表示済み） ③相手の情報を場の右側に配置 ④中央の「VS」を消してメッセージと重ならないように ⑤場の余白を整理（カードを上下の端に寄せ、中央を案内/行動の場所に） ⑥各プレイヤーの得点(pt)を場にも表示 ⑦手札選択モーダル上部の重複情報を削除 ⑧手札選択を1列5枚に ⑨相手の手札モーダルを手札選択と同様のレイアウトに',
+  ]},
+  { version:'v0.29.0', date:'2026-07-12', items:[
+    '対戦画面の改善（要望を反映）：①メッセージと結果表示が重ならないよう調整 ②ラウンド表記の[ ]を削除 ③上部バーを「あなた=左／相手=右」に変更 ④戦略カウンターを山札の下に移動（相手=赤／あなた=金） ⑤決戦・撤退・入替を場の中央に表示（選べる時だけ・モーダル廃止で入替後に進まなくなる不具合も解消） ⑥上級者向け表示ではじゃんけん記号と相性バーを非表示 ⑦自分の山札は「次に引く数字」は分かるが属性は伏せる ⑧お互いの使用済みカードを山札の下に表示 ⑨手札補充を画面中央のメッセージ＋山札を光らせる演出に',
+  ]},
+  { version:'v0.28.0', date:'2026-07-12', items:[
+    'サンプル案に沿って対戦画面を再構成：画面上部に「相手（左）｜ROUND [n/8]（中央）｜あなた（右）」の統一バーを新設。各プレイヤーの得点(pt)・戦略カウンター（相手=赤／あなた=金の色分け）・アバターを上部に集約。カード横には親/子・山札・相手手札（タップで推理）のみを配置し、役割案内は場の中央のメッセージウィンドウに表示',
+  ]},
+  { version:'v0.27.0', date:'2026-07-12', items:[
+    '対戦画面の情報配置を調整（要望を反映）：①左右の柱をやめ、相手の情報を「場の上」・あなたの情報を「場の下」にコンパクト配置 ②山札の表示を各プレイヤーの戦略カウンターの下に移動 ③役割の案内（メッセージウィンドウ）を場の中央に表示',
+  ]},
+  { version:'v0.26.0', date:'2026-07-12', items:[
+    '対戦画面を大きくレイアウト刷新（要望を反映）：①得点・親/子・戦略カウンターを場の左右に配置（自分=左／相手=右） ②タイトル・バージョン・各ボタンを画面最下部へ移動 ③相手の手札はデフォルト非表示にし、右側「相手」エリアのタップでモーダル表示 ④相手の可能性表示を初心者モードでは「あり得るじゃんけん」に ⑤「あなたが親です…」等の案内をメッセージウィンドウで表示 ⑥決戦・撤退・入替を専用モーダルで選択（普段は非表示）',
+  ]},
+  { version:'v0.25.0', date:'2026-07-12', items:[
+    '対戦画面をさらに整理（UIモック案を反映）：①上部を「あなたの得点｜中央ROUND｜相手の得点」の1行バーに集約（ラウンドを中央に移動、ヘッダーをすっきり） ②決戦・撤退・入替・奇襲をアイコン＋ラベルのボタンに ③選べるとき手札を光らせて操作場所を明確化 ④対戦画面にも属性相性（月✊＞闇✌＞太陽✋、Kaos/Airは特殊）を常時表示。得点の仕組み（0から加点）は変更なし',
+  ]},
+  { version:'v0.24.0', date:'2026-07-12', items:[
+    '対戦画面のUIを改善（テスターの意見を反映）：①スコア表示を横長スリムな1行にまとめて余白を削減 ②手札を大きく表示 ③画面全体を明るく調整 ④相手の手札に「あり得るじゃんけん」を表示（属性は伏せたまま、月/闇/太陽の候補✊✌✋を表示し推理は維持。Kaos/Airは小アイコン）。ラベルや説明文も簡潔化',
+  ]},
+  { version:'v0.23.0', date:'2026-07-12', items:[
+    'カード表示モードを追加：「初心者向け」（属性色・大きなじゃんけん✊✌✋・大きな数字・属性名。KaosとAirは役割を明記）と「上級者向け」（従来のリッチな絵）を設定で切り替え可能に。初期値は初心者向け。手札・場・プレビュー・チュートリアルすべてに反映（相手の非公開情報の推理はそのまま維持）',
+  ]},
+  { version:'v0.22.0', date:'2026-07-12', items:[
+    'ルール説明を全面刷新：実際のカード画像を使った図解ガイド（仮面騎士テーマ・全7幕＋細則）に。属性一覧・配札図・じゃんけん三竦み図・Kaos/Airの対戦例・終盤×2・戦略カウンター・得点式を、ゲーム内の本物のカードで視覚的に解説',
+  ]},
+  { version:'v0.21.0', date:'2026-07-11', items:[
+    '3すくみ（月・闇・太陽）の相性を分かりやすく：カード右上にじゃんけん記号を表示（月✊＞闇✌＞太陽✋＞月）。手札・場・結果画面・ルール・チュートリアルに反映',
+  ]},
+  { version:'v0.20.5', date:'2026-07-11', items:[
+    '配札演出のステップメッセージを、画面中央（相手とあなたの間）に大きな文字で表示するようにして読みやすく',
+  ]},
+  { version:'v0.20.4', date:'2026-07-11', items:[
+    '配札演出の各ステップのメッセージ表示時間を長くして、読みやすく調整（各段階を1.2〜1.8秒しっかり表示。タップでスキップ可）',
+  ]},
+  { version:'v0.20.3', date:'2026-07-11', items:[
+    '配札演出を6段階の手順に：①AIRを3枚ずつ ②KAOSの0と1を1枚ずつ ③残りを同じ数字2枚ずつ配り、④裏返して山札に ⑤シャッフル ⑥5枚引いて手札に、を段階ごとのメッセージ付きで表示（配札ルールが分かるように）',
+  ]},
+  { version:'v0.20.2', date:'2026-07-11', items:[
+    '配札演出を「表向きで配ってから裏返す」形に変更：属性イラストが見える状態で30枚を配り、その後いっせいに裏返して手札5枚が光る（見せ札はデッキ全30枚で、実際の手札は伏せて配られるため相手の札は分かりません）',
+  ]},
+  { version:'v0.20.1', date:'2026-07-11', items:[
+    '配札演出を見やすく調整：カードを大きく、配るスピードをゆっくりにして、分配の様子が分かりやすいように',
+  ]},
+  { version:'v0.20.0', date:'2026-07-11', items:[
+    '親決めの後に「配札」の演出を追加：全30枚が相手・あなたへ15枚ずつ配られ、あなたの手札5枚が光る様子を表示（タップでスキップ可）',
+    '残り手札ボーナスを「手札のみ」に変更（山札は対象外に）。引き運を得点に持ち込まない設計にし、名前と実装のズレも解消。シミュレータで配札運が下がり実力・戦闘重視になることを確認',
+  ]},
+  { version:'v0.19.1', date:'2026-07-11', items:[
+    '結果画面のボタンのサイズを統一：上段3つ（履歴・対戦ログ・通算統計）を同幅・1行に、下段（もう一度・とじる）を同幅に揃えて、折り返しや不揃いを解消',
+  ]},
+  { version:'v0.19.0', date:'2026-07-11', items:[
+    '親決めのカード表面も、ゲーム本編と同じ属性イラスト＋数字バッジで表示するように統一',
+    '結果画面の各ラウンド欄に対戦カード（親札 vs 子札）を表示。獲得ポイントと合わせて一目で分かるように',
+    '結果画面に「最終的な残り手札」を追加。両者の使い残しカードと残り手札ボーナスの内訳を表示',
+  ]},
+  { version:'v0.18.0', date:'2026-07-11', items:[
+    '結果画面に「ラウンド別 獲得ポイント」を追加。各ラウンドで誰が何点取ったか（引分・撤退も）を一覧表示し、色でどちらの得点かを区別（決戦の得点の内訳）。終盤2倍のラウンドには×2表示',
+  ]},
+  { version:'v0.17.0', date:'2026-07-11', items:[
+    '結果画面を刷新：得点の内訳（決戦の得点／戦略カウンター／残り手札ボーナス→合計）を表で表示し、上の行から順に数字がカウントアップする演出を追加。加点の内訳が分かりやすくなった',
+  ]},
+  { version:'v0.16.0', date:'2026-07-11', items:[
+    'みんなの統計に「蓄積レコード数（総数）」を追加。Firestoreのサーバー側集計(getCountFromServer)で、全件をダウンロードせず正確な総数を取得（2000件を超えても総数は正確、以降の集計は直近サンプル）',
+  ]},
+  { version:'v0.15.0', date:'2026-07-11', items:[
+    '対戦ログ一覧で試合をタップすると、全ラウンドの詳細を専用モーダルで表示するように変更（インライン展開で全部見えなかった問題を解消）',
+  ]},
+  { version:'v0.14.0', date:'2026-07-11', items:[
+    '親決めの裏面を、ゲーム本編と同じカード裏面イメージに統一',
+    '相手の山札を推理表示：中央の仕切り左に相手の山札枚数チップを追加し、タップで「数字・枚数・候補の属性」を表示（配札から推理できる公平な情報のみ。中身は確定させない）',
+  ]},
+  { version:'v0.13.0', date:'2026-07-11', items:[
+    '親決めを刷新：各属性の「0」カード5枚を裏向きに並べ、両者1枚ずつめくって属性の相性で勝った方が第1ラウンドの親に。引き分け（Air絡み）ならその2枚を除いて選び直し（Airが抜けるので次は必ず決着）',
+    '結果に「どちらの属性が勝ったか」を明示（例：太陽0が月0に勝利）',
+    'モーダルを重ねて開いたとき背景が透けていた不具合を修正',
+  ]},
+  { version:'v0.12.0', date:'2026-07-11', items:[
+    '親決めを「引いた札で比較」から【完全ランダム＋ルーレット演出】に変更し、決定を強調表示',
+    '山札インジケータを画面中央の仕切りにコンパクト配置（邪魔にならない位置へ移動）',
+    'みんなの統計（Firebaseに蓄積された全プレイの集計）を追加。クラウドからの読み取り確認用',
+    'バージョン表記を修正（ルールは開発中のため 0.x 系に）',
+  ]},
+  { version:'v0.11.0', date:'2026-07-11', items:[
+    'カード構成・配り方をリニューアル。初期手札を「0〜5を1枚ずつ」から【ランダムな5枚】に変更し、毎回ちがう展開に（手札の数字構成が1通り→多数へ）',
+    '配札運を是正：強力な低Kaos（0・1）を必ず両者に1枚ずつ配るように。配札による勝率差を大幅圧縮（約10pt→約3pt）',
+    'テンポ改善：全12ラウンド→【全8ラウンド】に短縮（約33%）。終盤2倍は最終2R（第7・8R）に自動追従。接戦化し逆転も増加',
+    '自分の山札の残り枚数・次に引く札を表示し、タップで山札の中身を一覧できるように',
+  ]},
+  { version:'v0.10.0', date:'2026-07-11', items:[
+    '初心者向けヒント機能を追加：子のときは手札モーダルで「おすすめ札」に印、決戦前の親には有利/不利のアドバイス、相手の数字に応じた特殊ルールのリマインドを表示',
+    '決戦の結果に、なぜ勝った/負けたのかのやさしい解説を追加',
+    'ヒントは設定からいつでもオン/オフ可能（初期値オン）',
+  ]},
+  { version:'v0.9.0', date:'2026-07-11', items:[
+    'CPUの思考を強化：終盤2ラウンド(得点2倍)を正しく評価するように。強い札を終盤に活かし、終盤の失点を避ける判断ができるようになった',
+  ]},
+  { version:'v0.8.0', date:'2026-07-11', items:[
+    'プレイログのクラウド保存(Firebase Firestore)に対応。ゲーム終了時に匿名のプレイ結果を送信(同意した場合のみ)。バランス改善のためのデータ収集用',
+    '匿名プレイヤーID・同意管理・送信のオン/オフ切替(通算統計から変更可)を追加',
+  ]},
+  { version:'v0.7.0', date:'2026-07-11', items:[
+    '初回ガイド（チュートリアル）を追加：7ステップで目的・親子・出し方・相性・推理・得点を案内。初回自動表示＋スタート画面の「遊び方」からいつでも再表示',
+    '属性の予想アイコンを見直し：闇をハーレクインの菱形にして混沌と区別、コントラストを強化',
+  ]},
+  { version:'v0.6.0', date:'2026-07-11', items:[
+    'カード5属性を、枠まで属性色で統一した新しい仮面デザインに刷新（月=青／空気=緑青／太陽=金／混沌=赤／闇=紫）',
+    '英字表記を修正（DARK 等）し、各カードにMASKD見出し・和名・説明を統一',
+    'カード裏面を、金の装飾枠＋星空＋仮面の新デザインに刷新',
+  ]},
+  { version:'v0.5.1', date:'2026-07-11', items:[
+    '手札選択モーダルでカードの数字が見えなかった不具合を修正（数字バッジを大きく明確に）',
+    '場に出したカードの表示を大きくして見やすく',
+    '闇（DARK）のカードを新しい仮面イラストに差し替え',
+  ]},
+  { version:'v0.5.0', date:'2026-07-11', items:[
+    'カードを仮面モチーフのタロット調イラストに刷新（Sun/Moon/Dark/Kaos/Air＋裏面）',
+    '数字は金のバッジで各カードに重ね、相手の伏せ札は新しい裏面デザインに',
+    '手札・場・モーダル・場に出した札など全カード表示をイラストに対応（相手の残り手札は属性非表示のまま）',
+    '結果オーバーレイがラウンドを跨いで再表示されることがある不具合を修正',
+  ]},
+  { version:'v0.4.0', date:'2026-07-11', items:[
+    '勝敗演出を強化：勝者カードは輝いて光を放射、敗者カードは仮面にヒビが入り砕けて崩れる',
+    'Air使用時に「静寂の風」の画面演出を追加し、特別な一手だと感じられるようにした',
+    '戦略カウンターの増減を、バーの脈動＋フロートする「+1/-2」表示で目立たせた',
+    '勝敗の演出を見せてから結果カードを表示するよう表示タイミングを調整',
+  ]},
+  { version:'v0.3.0', date:'2026-07-11', items:[
+    'トップページ(スタート画面)にバージョン表記を追加',
+    'ルール説明・更新履歴をトップのボタンから開くモーダル表示にし、トップページをすっきり整理(全文スクロール可能)',
+  ]},
+  { version:'v0.2.0', date:'2026-07-10', items:[
+    'Kaos5の救済ルールを追加：全属性の5に同値でも打ち勝つ(所持者ゲーム勝率が約40%→46%に改善、他のKaos番号と同水準に)',
+    '終盤の逆転要素を追加：最終2ラウンド(第11・12R)の決戦は得点2倍(リード固定化を緩和、逆転率が約13%→17%に上昇)',
+    'Kaos特殊ルール発動時の演出を強化：勝者カードの脈動＋画面フラッシュ「混沌の特殊効果」',
+    'ラウンド開始時に補充された手札を光らせる演出を追加',
+    'スタート画面(トップ)から通算成績・履歴を確認できるボタンを追加',
+    '本物のゲームロジックを移植したシミュレータで上記2つのバランスを検証(先手勝率・引分率は不変を確認)',
+  ]},
+  { version:'v0.1.0', date:'2026-07-10', items:[
+    'Kaos0にも「全属性の5に勝つ」特殊ルールを追加(Kaos1のみだった弱点を緩和)',
+    '通算統計・プレイログの自動収集機能を追加(端末に保存、JSONエクスポート対応)',
+    'Air使用で結果に関わらず戦略カウンター+1(温存一択の解消)',
+    '「入替」実装：親の特権として、子の数字を見てから手札を交換可能に(1ラウンド1回、戦略-2)',
+    '戦略カウンターの用途を整理：撤退-1／入替-2／奇襲-2、決戦勝利で+1(上限5)',
+    '「信頼カウンター」を「戦略カウンター」に改名',
+    '全属性に0を追加(0〜5の6数字に拡張)、Airも3枚ずつの均等分配に変更(余りカード廃止)',
+    '残り手札ボーナスを追加：使わずに残ったカードの数字を加算(Airは2倍)',
+    'ラウンド数を12に調整、初期手札6枚(0〜5を1枚ずつ)',
+    'Kaosは数字問わずAirに勝利する特殊ルールを追加',
+  ]},
+  { version:'旧バージョン', date:'-', items:[
+    '親決めの引き直し演出、CPU種類・強さの選択機能を追加',
+    'Kaos特殊ルール(1が5に勝つ／5が1に負ける)の初期実装',
+    '決戦・撤退・奇襲の演出バナー、相手の可能性ヒント表示など基礎UIを整備',
+  ]}
+];
+
+let fb=null, allLogs=[], totalCount=null, allSurveys=[], surveyLoadError=null, allPlayers=[], totalPlayers=null, playerLoadError=null;
+let tableState={ sortKey:'ts', sortDir:-1, fWinner:'', fDiff:'', fVer:'', q:'' };
+// 論理削除(非表示)の状態。hidden_recordsコレクションへの追記(hide/unhideイベント)を
+// 時系列に並べて「最後のイベント」を現在の状態とみなす(追記のみ・更新削除なしの設計に合わせるため)。
+let hiddenMap={}, showHidden=false;
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pctOf=(a,b)=>b?(a/b*100).toFixed(1)+'%':'-';
+const tsMillis=e=>{ try{ return e && e.ts && e.ts.toDate ? e.ts.toDate().getTime() : 0; }catch(err){ return 0; } };
+function isHidden(col,id){ return !!(id && hiddenMap[col+'|'+id]); }
+// logsコレクションには「完了した対戦の記録」(type:'game'、v0.55より前はtype自体が無い)と、
+// v0.55.0で追加された「分析用の軽量イベント」(session_start/game_start/abandon/tutorial_*)が混在する。
+// 後者はwinner/playerFinal/cpuFinalを持たないため、勝敗集計などに混ぜるとおかしな値になる。
+function isGameRecord(g){ return !g.type || g.type==='game'; }
+function visibleLogs(){ return allLogs.filter(g=>isGameRecord(g) && !isHidden('logs', g._id)); }
+async function toggleHidden(col,id,hide){
+  if(hide && !confirm('この項目を非表示にしますか？(集計・一覧から除外されます。いつでも元に戻せます)')) return;
+  if(!fb || !fb.addDoc){ alert('この操作にはFirebase接続が必要です。'); return; }
+  try{
+    await fb.addDoc(fb.collection(fb.db,'hidden_records'), { col, docId:id, action:(hide?'hide':'unhide'), ts:fb.serverTimestamp() });
+    hiddenMap[col+'|'+id]=hide;
+    render();
+  }catch(e){
+    const code=(e&&(e.code||e.message))||'不明なエラー';
+    alert('操作に失敗しました。Firestoreのセキュリティルールで hidden_records の書き込みを許可してください。\n'+code);
+  }
+}
+function hideBtnHTML(col,id){
+  if(!id) return '';
+  const hidden=isHidden(col,id);
+  return `<span class="btn hidebtn" style="padding:2px 8px;font-size:10px;" data-col="${esc(col)}" data-id="${esc(id)}" data-hide="${hidden?'0':'1'}">${hidden?'元に戻す':'非表示'}</span>`;
+}
+function bindHideButtons(){
+  document.querySelectorAll('.hidebtn').forEach(el=>{
+    el.onclick=(ev)=>{
+      ev.stopPropagation();
+      toggleHidden(el.dataset.col, el.dataset.id, el.dataset.hide==='1');
+    };
+  });
+}
+// テスト/デバッグ用: Firebase接続なしでhiddenMapの変更→再描画だけを検証するためのフック(本番の書き込みは行わない)
+window.__adminHideMock=(col,id,hide)=>{ hiddenMap[col+'|'+id]=hide; render(); };
+
+async function sha256hex(str){
+  const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ===== ゲート =====
+async function tryUnlock(){
+  const v=$('pass').value;
+  const h=await sha256hex(v);
+  if(h===PASS_SHA256){
+    try{ sessionStorage.setItem(UNLOCK_KEY,'1'); }catch(e){}
+    showDash();
+  } else {
+    $('gateErr').textContent='パスフレーズが違います';
+  }
+}
+function lock(){ try{ sessionStorage.removeItem(UNLOCK_KEY); }catch(e){} location.reload(); }
+// URLに ?pass=合言葉 が付いていれば自動で解錠する(通知リンクからワンタップで開けるように)。
+// 一致したらURLからパスフレーズを消してブラウザ履歴に残らないようにする。
+async function tryAutoUnlockFromURL(){
+  try{
+    const p=new URLSearchParams(location.search).get('pass');
+    if(!p) return false;
+    const h=await sha256hex(p);
+    if(h!==PASS_SHA256) return false;
+    try{ sessionStorage.setItem(UNLOCK_KEY,'1'); }catch(e){}
+    try{ const u=new URL(location.href); u.searchParams.delete('pass'); history.replaceState(null,'',u.toString()); }catch(e){}
+    return true;
+  }catch(e){ return false; }
+}
+function showDash(){
+  $('gate').style.display='none';
+  $('dash').style.display='block';
+  init();
+}
+
+// ===== データ取得 =====
+async function init(){
+  if(!fb){
+    $('content').innerHTML='<p class="muted" style="margin-top:20px;">Firebaseを読み込み中…</p>';
+    try{
+      const appMod=await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js");
+      const fsMod=await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js");
+      const app=appMod.initializeApp(firebaseConfig);
+      fb={ db:fsMod.getFirestore(app), collection:fsMod.collection, getDocs:fsMod.getDocs,
+        query:fsMod.query, limit:fsMod.limit, getCountFromServer:fsMod.getCountFromServer,
+        addDoc:fsMod.addDoc, serverTimestamp:fsMod.serverTimestamp };
+    }catch(e){ $('content').innerHTML=banner('Firebaseの読み込みに失敗しました（ネットワーク/CDN）。<br><span style="font-size:10px;">'+esc(e&&e.message)+'</span>'); return; }
+  }
+  await loadData();
+}
+async function loadData(){
+  if(!fb){ return init(); }
+  $('content').innerHTML='<p class="muted" style="margin-top:20px;">クラウドから読み込み中…</p>';
+  try{
+    const [snap, count] = await Promise.all([
+      fb.getDocs(fb.query(fb.collection(fb.db,"logs"), fb.limit(5000))),
+      fb.getCountFromServer(fb.collection(fb.db,"logs")).then(s=>s.data().count).catch(()=>null)
+    ]);
+    allLogs=[]; snap.forEach(d=>allLogs.push({...d.data(), _id:d.id}));
+    totalCount=count;
+  }catch(e){
+    const code=(e&&(e.code||e.message))||'';
+    $('content').innerHTML=banner(
+      'クラウドからの読み取りに失敗しました。<br>Firestoreのセキュリティルールで <code>logs</code> の<b>読み取り</b>を許可してください：<br>'+
+      '<code>match /logs/{doc} { allow create: if true; allow read: if true; }</code><br>'+
+      '<span style="font-size:10px;">詳細: '+esc(code)+'</span>');
+    return;
+  }
+  // アンケートは失敗してもダッシュボード全体は表示する(独立して扱う)
+  try{
+    const snap=await fb.getDocs(fb.query(fb.collection(fb.db,"surveys"), fb.limit(2000)));
+    allSurveys=[]; snap.forEach(d=>allSurveys.push({...d.data(), _id:d.id}));
+    surveyLoadError=null;
+  }catch(e){
+    allSurveys=[]; surveyLoadError=(e&&(e.code||e.message))||'不明なエラー';
+  }
+  // 登録プレイヤー数(件数はサーバー集計、一覧は直近分のみ取得)
+  try{
+    const [snap, count] = await Promise.all([
+      fb.getDocs(fb.query(fb.collection(fb.db,"players"), fb.limit(300))),
+      fb.getCountFromServer(fb.collection(fb.db,"players")).then(s=>s.data().count).catch(()=>null)
+    ]);
+    allPlayers=[]; snap.forEach(d=>allPlayers.push({...d.data(), _id:d.id}));
+    totalPlayers=count;
+    playerLoadError=null;
+  }catch(e){
+    allPlayers=[]; totalPlayers=null; playerLoadError=(e&&(e.code||e.message))||'不明なエラー';
+  }
+  // 論理削除(非表示)イベント。読めなくても他機能は継続(何も非表示にしない扱い)。
+  try{
+    const snap=await fb.getDocs(fb.query(fb.collection(fb.db,'hidden_records'), fb.limit(5000)));
+    const events=[]; snap.forEach(d=>events.push(d.data()));
+    events.sort((a,b)=>tsMillis(a)-tsMillis(b));
+    hiddenMap={};
+    events.forEach(e=>{ if(e && e.col && e.docId) hiddenMap[e.col+'|'+e.docId]=(e.action==='hide'); });
+  }catch(e){ hiddenMap={}; }
+  render();
+}
+function banner(html){ return '<div class="banner">'+html+'</div>'; }
+
+// ===== アンケート =====
+function surveySectionHTML(){
+  if(surveyLoadError){
+    return '<h2>📝 アンケート回答</h2>'+banner(
+      'アンケート(<code>surveys</code>コレクション)の読み取りに失敗しました。<br>Firestoreのセキュリティルールで<b>読み取り</b>を許可してください：<br>'+
+      '<code>match /surveys/{doc} { allow create: if true; allow read: if true; }</code><br>'+
+      '<span style="font-size:10px;">詳細: '+esc(surveyLoadError)+'</span>');
+  }
+  const visible=allSurveys.filter(x=>!isHidden('surveys',x._id));
+  const hiddenCount=allSurveys.length-visible.length;
+  const N=visible.length;
+  let out='<h2>📝 アンケート回答</h2>';
+  if(hiddenCount) out+=`<div class="muted" style="font-size:11px;margin:0 0 8px;">（非表示 ${hiddenCount}件。集計からは除外されています）</div>`;
+  const list=showHidden?allSurveys:visible;
+  if(!N && !list.length) return out+'<div class="card muted">まだ回答がありません。</div>';
+  const avgFun=N?(visible.reduce((s,x)=>s+(Number(x.fun)||0),0)/N).toFixed(1):'-';
+  const replayLabel={yes:'ぜひ',maybe:'たぶん',no:'あまり'};
+  const replayCount={yes:0,maybe:0,no:0};
+  visible.forEach(x=>{ if(replayCount[x.replay]!=null) replayCount[x.replay]++; });
+  out+=`<div class="grid">
+    ${kpi(N,'回答数')}
+    ${kpi(avgFun,'平均の面白さ(5点満点)')}
+    ${kpi(`${replayCount.yes}/${replayCount.maybe}/${replayCount.no}`,'またやりたい(ぜひ/たぶん/あまり)')}
+  </div>`;
+  if(!list.length) return out;
+  const sorted=[...list].sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
+  out+='<div class="card"><div class="tbl-wrap" style="max-height:320px;">'+
+    sorted.map(x=>{
+      const t=(x.ts||'').replace('T',' ').slice(0,16);
+      const hidden=isHidden('surveys',x._id);
+      return `<div class="rrow"${hidden?' style="opacity:.55;"':''}>
+        <div class="rt"><span>⭐${esc(x.fun)} ／ またやりたい: ${esc(replayLabel[x.replay]||'-')} ／ ${esc(x.version||'')}${hidden?' <span class="muted">(非表示中)</span>':''}</span><span>${esc(t)} ${hideBtnHTML('surveys',x._id)}</span></div>
+        ${x.comment?`<div style="margin-top:4px;">${esc(x.comment)}</div>`:''}
+      </div>`;
+    }).join('')+
+    '</div></div>';
+  return out;
+}
+
+// ===== 登録プレイヤー =====
+function playersSectionHTML(){
+  if(playerLoadError){
+    return '<h2>👤 登録プレイヤー</h2>'+banner(
+      'プレイヤー登録(<code>players</code>コレクション)の読み取りに失敗しました。<br>Firestoreのセキュリティルールで<b>読み取り</b>を許可してください：<br>'+
+      '<code>match /players/{doc} { allow create: if true; allow read: if true; }</code><br>'+
+      '<span style="font-size:10px;">詳細: '+esc(playerLoadError)+'</span>');
+  }
+  const visible=allPlayers.filter(x=>!isHidden('players',x._id));
+  const hiddenCount=allPlayers.length-visible.length;
+  const N=(totalPlayers!=null)?totalPlayers:allPlayers.length;
+  let out='<h2>👤 登録プレイヤー</h2>';
+  out+=`<div class="grid">${kpi(N,'登録人数')}</div>`;
+  if(hiddenCount) out+=`<div class="muted" style="font-size:11px;margin:-6px 0 8px;">（うち非表示 ${hiddenCount}件。プレイ数の集計からは除外されています）</div>`;
+  const list=showHidden?allPlayers:visible;
+  if(!list.length) return out+'<div class="card muted">まだ登録がありません。</div>';
+  // プレイ数はlogsのplayerId(無ければ名前)で突き合わせた概算値(非表示にしたログは除く)。
+  // playerIdは端末ローカルのIDなので、同じ人が端末を変えると別カウントになる。
+  // playerIdが無い古い登録データは名前一致で数えるため、同名の別人がいる場合は不正確になりうる。
+  const playCountFor=x=>{
+    const logs=visibleLogs();
+    if(x.playerId) return logs.filter(g=>g.playerId===x.playerId).length;
+    if(!x.name) return 0;
+    return logs.filter(g=>g.playerName===x.name).length;
+  };
+  const tsOf=x=>{ try{ return x.serverTs && x.serverTs.toDate ? x.serverTs.toDate().getTime() : 0; }catch(e){ return 0; } };
+  const sorted=[...list].sort((a,b)=>tsOf(b)-tsOf(a));
+  out+='<div class="card"><div class="tbl-wrap" style="max-height:280px;">'+
+    sorted.slice(0,50).map(x=>{
+      let t=''; try{ t=x.serverTs&&x.serverTs.toDate ? x.serverTs.toDate().toISOString().replace('T',' ').slice(0,16) : ''; }catch(e){}
+      const pc=playCountFor(x);
+      const hidden=isHidden('players',x._id);
+      return `<div class="rrow"${hidden?' style="opacity:.55;"':''}><div class="rt"><span>${esc(x.name||'(名前なし)')} <span style="color:var(--goldb)">・${pc}戦</span>${hidden?' <span class="muted">(非表示中)</span>':''}</span><span>${esc(t)} ${hideBtnHTML('players',x._id)}</span></div></div>`;
+    }).join('')+
+    '</div></div>'+
+    '<div class="muted" style="font-size:10px;margin-top:4px;">※プレイ数は対戦ログとの突き合わせによる概算です（新規登録分は端末IDで正確に突き合わせ、それ以前の登録は名前一致のため同名の別人がいると誤差が出ます）。</div>';
+  return out;
+}
+
+// ===== 軽量イベント(離脱率・チュートリアル完走率) =====
+// v0.55.0で追加されたが、Firestoreルールがwinner等を必須にしていたため実際には
+// これまで一件も保存できていなかった不具合をv0.61.2で修正。ルール反映前のデータには
+// 出てこないため、件数が0の間はセクション自体を出さない。
+function eventStatsHTML(eventLogs){
+  if(!eventLogs.length){
+    return '<div class="muted" style="font-size:11px;margin:-4px 0 12px;">※離脱率などの計測イベントはまだ0件です(Firestoreルール反映前のデータのため、または反映直後でまだ収集中の可能性があります)。</div>';
+  }
+  const evCount={}; eventLogs.forEach(g=>{ evCount[g.type]=(evCount[g.type]||0)+1; });
+  const gameStart=evCount.game_start||0, abandon=evCount.abandon||0;
+  const tutStart=evCount.tutorial_start||0, tutComplete=evCount.tutorial_complete||0;
+  const abandonRate=gameStart?(abandon/gameStart*100):null;
+  const tutRate=tutStart?(tutComplete/tutStart*100):null;
+  let out=`<h2>計測イベント（離脱・チュートリアル完走）</h2><div class="cols">`;
+  out+=`<div class="card"><h3>イベント件数</h3>`+bars([
+    {label:'セッション開始',value:evCount.session_start||0,sub:String(evCount.session_start||0)},
+    {label:'対戦開始',value:gameStart,sub:String(gameStart)},
+    {label:'離脱(対戦中断)',value:abandon,sub:String(abandon)},
+    {label:'チュートリアル開始',value:tutStart,sub:String(tutStart)},
+    {label:'チュートリアル完走',value:tutComplete,sub:String(tutComplete)},
+  ])+`</div>`;
+  out+=`<div class="card"><h3>離脱率・完走率</h3>`+bars([
+    {label:'離脱率',value:abandonRate||0,sub:abandonRate!=null?abandonRate.toFixed(1)+'%':'データ不足'},
+    {label:'チュート完走率',value:tutRate||0,sub:tutRate!=null?tutRate.toFixed(1)+'%':'データ不足'},
+  ])+`<div class="muted" style="font-size:10px;margin-top:4px;">離脱率＝離脱数/対戦開始数、チュート完走率＝チュートリアル完走数/開始数</div></div>`;
+  out+=`</div>`;
+  return out;
+}
+
+// ===== 集計＆描画 =====
+function render(){
+  const gameLogsAll=allLogs.filter(isGameRecord);
+  const eventLogs=allLogs.filter(g=>!isGameRecord(g));
+  const lVisible=visibleLogs();
+  const N=lVisible.length;
+  const hiddenLogCount=gameLogsAll.length-N;
+  const total=(totalCount!=null)?totalCount:allLogs.length;
+  const sampled=(totalCount!=null && totalCount>allLogs.length);
+  $('meta').innerHTML=`総レコード数(サーバー集計・対戦+計測イベント): <b style="color:var(--goldb)">${total}</b> 件`+
+    (sampled?`　／　集計は直近 ${allLogs.length} 件のサンプル`:``)+
+    `　／　取得 ${allLogs.length} 件(対戦${gameLogsAll.length}・イベント${eventLogs.length})`+
+    (hiddenLogCount?`　／　非表示 <b style="color:var(--goldb)">${hiddenLogCount}</b> 件(集計から除外)`:``);
+
+  if(!N){ $('content').innerHTML=surveySectionHTML()+playersSectionHTML()+eventStatsHTML(eventLogs)+banner('対戦ログのデータはまだありません。')+preV1ChangelogHTML(); bindHideButtons(); return; }
+
+  // 基本集計
+  let pw=0,cw=0,dr=0,sumP=0,sumC=0,sumTime=0,timeCount=0;
+  const players=new Set(), days={}, diffAgg={}, typeAgg={}, verAgg={};
+  const marginBins={}, scoreBins={};
+  let fdWon=0, fdDecided=0;               // 先手(第1親)勝率
+  let rDealer=0,rChild=0,rDraw=0,rPass=0; // ラウンド結果
+  const attrPlay={}, attrWin={};          // 属性ごとの出現/勝利
+  ATTRS.forEach(a=>{attrPlay[a]=0;attrWin[a]=0;});
+
+  lVisible.forEach(g=>{
+    if(g.winner==='player')pw++; else if(g.winner==='cpu')cw++; else dr++;
+    sumP+=(g.playerFinal||0); sumC+=(g.cpuFinal||0);
+    if(typeof g.playTimeMs==='number'){ sumTime+=g.playTimeMs; timeCount++; }
+    if(g.playerId) players.add(g.playerId);
+    const day=(g.ts||'').slice(0,10); if(day) days[day]=(days[day]||0)+1;
+    agg(diffAgg, g.cpuDifficulty, g.winner);
+    agg(typeAgg, g.cpuStrategy, g.winner);
+    agg(verAgg, g.version, g.winner);
+    const m=Math.abs((g.playerFinal||0)-(g.cpuFinal||0)); const mb=Math.min(5,Math.floor(m/5))*5; marginBins[mb]=(marginBins[mb]||0)+1;
+    const sb=Math.min(11,Math.floor((g.playerFinal||0)/10))*10; scoreBins[sb]=(scoreBins[sb]||0)+1;
+    const log=Array.isArray(g.log)?g.log:[];
+    if(log.length && g.winner!=='draw'){
+      const firstDealerIsPlayer=!!log[0].dealerIsYou;
+      const fdWinner=firstDealerIsPlayer?'player':'cpu';
+      fdDecided++; if(g.winner===fdWinner) fdWon++;
+    }
+    log.forEach(r=>{
+      if(r.passed){ rPass++; }
+      else if(r.result==='draw'){ rDraw++; }
+      else if(r.result==='dealer'){ rDealer++; }
+      else if(r.result==='child'){ rChild++; }
+      [r.dealerCard,r.childCard].forEach((c,i)=>{
+        if(!c||!c.attr)return; attrPlay[c.attr]=(attrPlay[c.attr]||0)+1;
+        const isDealer=(i===0);
+        const won=(!r.passed)&&((isDealer&&r.result==='dealer')||(!isDealer&&r.result==='child'));
+        if(won) attrWin[c.attr]=(attrWin[c.attr]||0)+1;
+      });
+    });
+  });
+  const decided=pw+cw;
+  const avgTime=timeCount?(sumTime/timeCount/1000):null;
+
+  // アンケート・登録プレイヤー(最優先で確認したい項目なので一番上に表示)
+  let html=surveySectionHTML()+playersSectionHTML();
+
+  // KPI
+  html+=`<div class="grid">
+    ${kpi(total,'総レコード数')}
+    ${kpi(players.size,'参加プレイヤー数')}
+    ${kpi(pctOf(pw,decided),'プレイヤー勝率')}
+    ${kpi(pctOf(fdWon,fdDecided),'先手(第1親)勝率')}
+    ${kpi((sumP/N).toFixed(1)+' / '+(sumC/N).toFixed(1),'平均スコア P/C')}
+    ${kpi(avgTime!=null?avgTime.toFixed(0)+'秒':'-','平均対戦時間')}
+  </div>`;
+
+  html+=eventStatsHTML(eventLogs);
+
+  // バランス分析
+  html+=`<h2>バランス分析</h2><div class="cols">`;
+  html+=`<div class="card"><h3>勝敗の内訳</h3>`+bars([
+    {label:'プレイヤー勝ち',value:pw,sub:`${pw} (${pctOf(pw,N)})`},
+    {label:'CPU勝ち',value:cw,sub:`${cw} (${pctOf(cw,N)})`},
+    {label:'引き分け',value:dr,sub:`${dr} (${pctOf(dr,N)})`},
+  ])+`</div>`;
+  html+=`<div class="card"><h3>難易度別 プレイヤー勝率</h3>`+aggBars(diffAgg,DIFF)+`</div>`;
+  html+=`<div class="card"><h3>CPU性格別 プレイヤー勝率</h3>`+aggBars(typeAgg,TYPE)+`</div>`;
+  html+=`<div class="card"><h3>バージョン別 プレイヤー勝率</h3>`+aggBars(verAgg,{})+`</div>`;
+  html+=`<div class="card"><h3>ラウンド結果の内訳</h3>`+bars([
+    {label:'親の勝ち',value:rDealer,sub:`${rDealer} (${pctOf(rDealer,rDealer+rChild+rDraw+rPass)})`},
+    {label:'子の勝ち',value:rChild,sub:`${rChild} (${pctOf(rChild,rDealer+rChild+rDraw+rPass)})`},
+    {label:'引き分け',value:rDraw,sub:`${rDraw}`},
+    {label:'撤退',value:rPass,sub:`${rPass}`},
+  ])+`</div>`;
+  html+=`<div class="card"><h3>属性別 出現数と決戦勝率</h3>`+bars(ATTRS.map(a=>({
+    label:AJP[a], value:attrPlay[a], cls:'a-'+a, sub:`出${attrPlay[a]} / 勝率${pctOf(attrWin[a],attrPlay[a])}`
+  })))+`</div>`;
+  html+=`<div class="card"><h3>最終スコア差の分布</h3>`+binBars(marginBins,'差')+`</div>`;
+  html+=`<div class="card"><h3>プレイヤー最終スコアの分布</h3>`+binBars(scoreBins,'pt')+`</div>`;
+  html+=`</div>`;
+
+  // 日別
+  const dayKeys=Object.keys(days).sort();
+  html+=`<h2>日別プレイ数</h2><div class="card">`+bars(dayKeys.map(d=>({label:d,value:days[d],sub:String(days[d])})))+`</div>`;
+
+  // 生データ
+  html+=`<h2>生データ（対戦ログ）</h2>`+tableUI();
+
+  // v1.0.0より前の変更履歴アーカイブ(開発者向け、既定は折りたたみ)
+  html+=preV1ChangelogHTML();
+
+  $('content').innerHTML=html;
+  bindTable();
+}
+function preV1ChangelogHTML(){
+  const rows=PRE_V1_CHANGELOG.map(entry=>`
+    <div class="rrow">
+      <div class="rt"><span style="color:var(--goldb);font-weight:600;">${esc(entry.version)}</span><span>${esc(entry.date)}</span></div>
+      <ul style="margin:4px 0 0;padding-left:16px;font-size:11px;color:var(--dim);line-height:1.6;">
+        ${entry.items.map(i=>`<li>${i}</li>`).join('')}
+      </ul>
+    </div>`).join('');
+  return `<h2>📜 開発履歴アーカイブ（v1.0.0より前）</h2>
+    <details class="card">
+      <summary style="cursor:pointer;color:var(--gold);">v0.1.0〜v0.61.3（全${PRE_V1_CHANGELOG.length}件・タップで展開）</summary>
+      <div class="tbl-wrap" style="max-height:420px;margin-top:10px;">${rows}</div>
+    </details>`;
+}
+function kpi(v,l){ return `<div class="kpi"><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`; }
+function agg(obj,key,winner){ key=key||'?'; obj[key]=obj[key]||{games:0,pw:0}; obj[key].games++; if(winner==='player')obj[key].pw++; }
+function bars(rows){
+  const max=Math.max(1,...rows.map(r=>r.value||0));
+  return rows.map(r=>`<div class="bar-row"><div class="bar-label">${esc(r.label)}</div>
+    <div class="bar-track"><div class="bar-fill ${r.cls||''}" style="width:${(r.value||0)/max*100}%"></div></div>
+    <div class="bar-val">${esc(r.sub!=null?r.sub:r.value)}</div></div>`).join('');
+}
+function aggBars(obj,labelMap){
+  const keys=Object.keys(obj).sort();
+  if(!keys.length) return '<div class="muted">データなし</div>';
+  return bars(keys.map(k=>({ label:(labelMap[k]||k), value:obj[k].games, sub:`${pctOf(obj[k].pw,obj[k].games)}（${obj[k].games}戦）` })));
+}
+function binBars(bins,unit){
+  const keys=Object.keys(bins).map(Number).sort((a,b)=>a-b);
+  return bars(keys.map(k=>({ label:`${k}〜${k+ (unit==='pt'?9:4)}${unit}`, value:bins[k], sub:String(bins[k]) })));
+}
+
+// ===== 生データテーブル =====
+function filtered(){
+  const s=tableState;
+  const base=showHidden?allLogs.filter(isGameRecord):visibleLogs();
+  let rows=base.filter(g=>{
+    if(s.fWinner && g.winner!==s.fWinner) return false;
+    if(s.fDiff && g.cpuDifficulty!==s.fDiff) return false;
+    if(s.fVer && g.version!==s.fVer) return false;
+    if(s.q){ const hay=(g.playerName||'')+' '+(g.playerId||'')+' '+(g.version||''); if(!hay.toLowerCase().includes(s.q.toLowerCase())) return false; }
+    return true;
+  });
+  const k=s.sortKey, dir=s.sortDir;
+  rows.sort((a,b)=>{ let x=a[k],y=b[k]; if(k==='margin'){x=(a.playerFinal||0)-(a.cpuFinal||0);y=(b.playerFinal||0)-(b.cpuFinal||0);}
+    if(x==null)x=''; if(y==null)y=''; return (x>y?1:x<y?-1:0)*dir; });
+  return rows;
+}
+function tableUI(){
+  const vers=[...new Set(allLogs.filter(isGameRecord).map(g=>g.version).filter(Boolean))].sort().reverse();
+  const opt=(arr,cur,map)=>arr.map(v=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(map?(map[v]||v):v)}</option>`).join('');
+  return `<div class="filters">
+    <select id="fWinner"><option value="">勝者:すべて</option>${opt(['player','cpu','draw'],tableState.fWinner,{player:'プレイヤー',cpu:'CPU',draw:'引分'})}</select>
+    <select id="fDiff"><option value="">難易度:すべて</option>${opt(['weak','normal','strong'],tableState.fDiff,DIFF)}</select>
+    <select id="fVer"><option value="">バージョン:すべて</option>${opt(vers,tableState.fVer)}</select>
+    <input id="fq" placeholder="名前/ID/ver 検索" value="${esc(tableState.q)}">
+    <span class="muted" id="rowCount"></span>
+  </div>
+  <div class="tbl-wrap"><table><thead><tr>
+    ${th('ts','日時')}${th('version','ver')}${th('winner','勝者')}${th('playerName','名前')}${th('playerFinal','P')}${th('cpuFinal','C')}${th('margin','差')}
+    ${th('cpuDifficulty','難易度')}${th('cpuStrategy','性格')}${th('playTimeMs','時間')}<th>ID</th><th>操作</th>
+  </tr></thead><tbody id="tbody"></tbody></table></div>`;
+}
+function th(key,label){ const s=tableState; const ar=s.sortKey===key?(s.sortDir<0?' ▼':' ▲'):''; return `<th data-k="${key}">${esc(label)}${ar}</th>`; }
+function renderRows(){
+  const rows=filtered();
+  $('rowCount').textContent=`${rows.length} 件`;
+  $('tbody').innerHTML=rows.slice(0,500).map((g,i)=>{
+    const wl=g.winner==='player'?'win':(g.winner==='cpu'?'lose':'draw');
+    const wt=g.winner==='player'?'P勝':(g.winner==='cpu'?'C勝':'分');
+    const idx=allLogs.indexOf(g);
+    const t=(g.ts||'').replace('T',' ').slice(0,16);
+    const tm=typeof g.playTimeMs==='number'?Math.round(g.playTimeMs/1000)+'s':'-';
+    const hidden=isHidden('logs',g._id);
+    return `<tr class="row" data-i="${idx}"${hidden?' style="opacity:.5;"':''}>
+      <td>${esc(t)}</td><td>${esc(g.version||'')}</td><td><span class="tag ${wl}">${wt}</span></td>
+      <td>${esc(g.playerName||'-')}</td>
+      <td>${esc(g.playerFinal)}</td><td>${esc(g.cpuFinal)}</td><td>${esc((g.playerFinal||0)-(g.cpuFinal||0))}</td>
+      <td>${esc(DIFF[g.cpuDifficulty]||g.cpuDifficulty||'')}</td><td>${esc(TYPE[g.cpuStrategy]||g.cpuStrategy||'')}</td>
+      <td>${tm}</td><td>${esc((g.playerId||'').slice(0,8))}</td><td>${hideBtnHTML('logs',g._id)}</td></tr>`;
+  }).join('') || '<tr><td colspan="12" class="muted" style="text-align:center;padding:16px;">該当なし</td></tr>';
+  document.querySelectorAll('#tbody .row').forEach(tr=>tr.onclick=()=>showDetail(Number(tr.dataset.i)));
+  bindHideButtons();
+}
+function setHead(){
+  const tb=$('tbody'); if(!tb) return;
+  const head=tb.closest('table').querySelector('thead');
+  head.innerHTML=`<tr>${th('ts','日時')}${th('version','ver')}${th('winner','勝者')}${th('playerName','名前')}${th('playerFinal','P')}${th('cpuFinal','C')}${th('margin','差')}${th('cpuDifficulty','難易度')}${th('cpuStrategy','性格')}${th('playTimeMs','時間')}<th>ID</th><th>操作</th></tr>`;
+  head.querySelectorAll('th[data-k]').forEach(el=>{
+    el.onclick=()=>{ const k=el.dataset.k; if(tableState.sortKey===k)tableState.sortDir*=-1; else {tableState.sortKey=k;tableState.sortDir=-1;} setHead(); renderRows(); };
+  });
+}
+function bindTable(){
+  const bind=(id,key)=>{ const el=$(id); if(el)el.onchange=()=>{ tableState[key]=el.value; renderRows(); }; };
+  bind('fWinner','fWinner'); bind('fDiff','fDiff'); bind('fVer','fVer');
+  const q=$('fq'); if(q)q.oninput=()=>{ tableState.q=q.value; renderRows(); };
+  setHead();
+  renderRows();
+}
+
+// ===== 詳細モーダル =====
+function showDetail(i){
+  const g=allLogs[i]; if(!g) return;
+  const log=Array.isArray(g.log)?g.log:[];
+  const rounds=log.map(r=>{
+    const dl=r.dealerIsYou?'あなた(親)':'相手(親)', cl=r.dealerIsYou?'相手(子)':'あなた(子)';
+    let res=r.passed?'撤退':(r.result==='draw'?'引分':(r.result==='dealer'?dl+'勝ち':cl+'勝ち'));
+    if(!r.passed&&r.result!=='draw') res+=` (+${r.dmg||0})`;
+    return `<div class="rrow"><div class="rt"><span>第${r.round}R</span><span>${r.dealerIsYou?'あなたが親':'相手が親'}</span></div>
+      <div style="margin-top:3px;">
+        <span class="ctag c-${r.dealerCard.attr}">${dl} ${AJP[r.dealerCard.attr]}${r.dealerCard.num}</span>
+        <span class="muted"> vs </span>
+        <span class="ctag c-${r.childCard.attr}">${cl} ${AJP[r.childCard.attr]}${r.childCard.num}</span>
+        <span style="float:right;color:var(--dim);">${esc(res)}</span></div></div>`;
+  }).join('') || '<div class="muted">ラウンド詳細なし</div>';
+  $('detailInner').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <h2 style="margin:0;">対戦詳細</h2><span class="btn" id="closeDetail">閉じる</span></div>
+    <div class="muted" style="font-size:12px;margin-bottom:10px;">
+      プレイヤー <b style="color:var(--goldb)">${esc(g.playerName||'（名前なし）')}</b><br>
+      ${esc((g.ts||'').replace('T',' ').slice(0,19))} ／ ${esc(g.version||'')} ／ CPU:${esc(TYPE[g.cpuStrategy]||g.cpuStrategy)}/${esc(DIFF[g.cpuDifficulty]||g.cpuDifficulty)}<br>
+      最終 P<b style="color:var(--goldb)">${esc(g.playerFinal)}</b> - C<b style="color:var(--goldb)">${esc(g.cpuFinal)}</b>
+      ／ ID ${esc((g.playerId||'').slice(0,12))}
+    </div>${rounds}`;
+  $('detailModal').classList.add('show');
+  $('closeDetail').onclick=()=>$('detailModal').classList.remove('show');
+}
+
+// ===== エクスポート =====
+function download(name,text,type){
+  const blob=new Blob([text],{type}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function exportJSON(){ download('maskd-logs.json', JSON.stringify(visibleLogs(),null,2), 'application/json'); }
+function exportCSV(){
+  const cols=['ts','version','playerId','winner','playerFinal','cpuFinal','playerScore','cpuScore','rounds','cpuStrategy','cpuDifficulty','youWins','cpuWins','draws','passes','youAir','cpuAir','youKaos','cpuKaos','playTimeMs'];
+  const head=cols.join(',');
+  const body=visibleLogs().map(g=>cols.map(c=>{ let v=g[c]; if(v==null)v=''; v=String(v).replace(/"/g,'""'); return /[",\n]/.test(v)?`"${v}"`:v; }).join(',')).join('\n');
+  download('maskd-logs.csv', head+'\n'+body, 'text/csv');
+}
+
+// テスト用フック(モックデータで描画を確認する。害はない)
+window.__adminMock=(logs,count,surveys,players,playerCount,hiddenEvents)=>{
+  allLogs=logs; totalCount=count;
+  if(surveys)allSurveys=surveys;
+  if(players){ allPlayers=players; totalPlayers=(playerCount!=null)?playerCount:players.length; }
+  if(hiddenEvents){
+    const events=[...hiddenEvents].sort((a,b)=>tsMillis(a)-tsMillis(b));
+    hiddenMap={};
+    events.forEach(e=>{ if(e && e.col && e.docId) hiddenMap[e.col+'|'+e.docId]=(e.action==='hide'); });
+  }
+  render();
+};
+
+// ===== 起動 =====
+$('unlockBtn').onclick=tryUnlock;
+$('pass').addEventListener('keydown',e=>{ if(e.key==='Enter')tryUnlock(); });
+$('showHiddenBtn').onclick=()=>{ showHidden=!showHidden; $('showHiddenBtn').textContent=showHidden?'非表示を隠す':'非表示も表示'; render(); };
+$('reloadBtn').onclick=loadData;
+$('csvBtn').onclick=exportCSV;
+$('jsonBtn').onclick=exportJSON;
+$('lockBtn').onclick=lock;
+$('detailModal').onclick=e=>{ if(e.target===$('detailModal'))$('detailModal').classList.remove('show'); };
+(async ()=>{
+  const auto=await tryAutoUnlockFromURL();
+  let already=false; try{ already=sessionStorage.getItem(UNLOCK_KEY)==='1'; }catch(e){}
+  if(auto||already) showDash();
+})();
+</script>
+</body>
+</html>
