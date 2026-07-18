@@ -860,7 +860,11 @@
   .card.air-neutral{ box-shadow:0 0 16px 2px rgba(111,191,160,.4); }
 
   /* ===== 初心者向けカード表示(じゃんけん・数字・属性色を大きく) ===== */
-  .bcard{ position:relative; overflow:hidden; container-type:size; padding:0 !important; }
+  .bcard{ position:relative; container-type:size; padding:0 !important; }
+  /* カード内側の数字/じゃんけん/属性名だけをクリップする内側レイヤー。
+     .bcard自体にoverflow:hiddenを付けると、外側に少しはみ出す形で置く
+     .rec-badge(おすすめ札の印)まで角丸で切り取られてしまうため分離した。 */
+  .bcard .bc-inner{ position:absolute; inset:0; overflow:hidden; border-radius:inherit; }
   .card.faceup.bcard::before, .card.faceup.bcard::after{ display:none; }
   .bcard.moon{ background:linear-gradient(160deg,#2a3852,#151d2c) !important; }
   .bcard.sun{  background:linear-gradient(160deg,#5a3f16,#241a0c) !important; }
@@ -3871,9 +3875,9 @@ function beginnerInner(c, mini){
   const rps=BEG_RPS[c.attr];
   const center = rps ? `<span class="bc-big">${rps}</span>`
                      : `<span class="bc-big sym" style="color:var(--${c.attr})">${GLYPH[c.attr]}</span>`;
-  if(mini) return `<span class="bc-num">${c.num}</span>${center}`;
+  if(mini) return `<div class="bc-inner"><span class="bc-num">${c.num}</span>${center}</div>`;
   const role = ROLE_LABEL[c.attr] ? `<span class="bc-role">${ROLE_LABEL[c.attr]}</span>` : '';
-  return `<span class="bc-num">${c.num}</span><span class="bc-glyph">${GLYPH[c.attr]}</span>${center}${role}<span class="bc-name">${ALABEL[c.attr]}</span>`;
+  return `<div class="bc-inner"><span class="bc-num">${c.num}</span><span class="bc-glyph">${GLYPH[c.attr]}</span>${center}${role}<span class="bc-name">${ALABEL[c.attr]}</span></div>`;
 }
 // 表向きカード(属性が分かる自分の札・公開後の札)
 function faceCardHTML(c, extra){
@@ -4853,8 +4857,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.0.3';
+const GAME_VERSION = 'v1.0.4';
 const CHANGELOG = [
+  { version:'v1.0.4', date:'2026-07-18', items:[
+    '<b>不具合修正</b>：初心者向けカード表示で、手札の「おすすめ」の印がカードの角に隠れて読めなくなっていた不具合を修正しました。',
+  ]},
   { version:'v1.0.3', date:'2026-07-18', items:[
     '<b>不具合修正</b>：プレイヤー名の新規登録通知が、実際の登録に失敗していても届いてしまうことがある不具合を修正しました。',
   ]},
