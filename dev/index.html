@@ -2352,6 +2352,7 @@ const ATTRS5=['moon','sun','dark','kaos','air'];
 let stageConfig=null;          // null=通常対戦。段階チュートリアル中に設定
 let deckAttrs=ATTRS5;          // 現在のデッキの属性集合(縮小デッキ対応)
 let matchRounds=TOTAL_ROUNDS;  // この対戦のラウンド数(ステージで可変)
+let _preLearnHints=null;       // チュートリアル中は常にヒントONにするため、突入前の設定を退避(閉じたら復元)
 function inTutorialStage(){ return !!(stageConfig && !stageConfig.practice); } // 練習モード(レベル別)は対象外、段階チュートリアルのみ
 function stageAllows(k){ return stageConfig ? !!stageConfig[k] : true; } // 通常対戦は全ルール許可
 function computePossibleAttrs(myFullDeal){
@@ -2476,6 +2477,7 @@ function stageSummary(st){ return `${st.attrs.map(a=>ALABEL[a]).join('・')} ／
 function closeLearn(){
   document.getElementById('learnOverlay').classList.remove('show');
   stageConfig=null; deckAttrs=ATTRS5; matchRounds=TOTAL_ROUNDS;
+  if(_preLearnHints!==null){ hintsEnabled=_preLearnHints; _preLearnHints=null; }
 }
 // ステージ選択(ラダー)
 function openLearnLadder(){
@@ -2514,6 +2516,11 @@ function showStageIntro(id){
 function startLearnStage(id){
   const st=LEARN_STAGES.find(s=>s.id===id); if(!st) return;
   document.getElementById('learnOverlay').classList.remove('show');
+  // チュートリアル中は、プレイヤーの元のヒント設定に関わらず「おすすめ」札・コーチ助言を常にON
+  // (推理系ヒントの出し分けはstageConfig.hints側で別途制御。ここではON方向にしか倒さないので、
+  //  常時ヒントONの通常プレイヤーには一切影響しない)
+  if(_preLearnHints===null) _preLearnHints=hintsEnabled;
+  hintsEnabled=true;
   startGame(Math.random()<0.5, st);
 }
 // ステージ終了(専用結果。通算/実績/履歴には残さない)
@@ -4120,7 +4127,7 @@ function showChildCoach(oppNum){
   if(!hintsEnabled){ clearCoach(); return; }
   const tips=specialRuleReminder(oppNum, true);
   const rec = youHand.some(c=>playerEstimate(c,oppNum,false).win>=0.6);
-  let html=`<span class="ci">💡</span>手札から選ぼう。${rec?'手札を開くと<b>おすすめ札</b>に印が付きます。':'相手の数字に強い札を探そう。'}`;
+  let html=`<span class="ci">💡</span>手札から選ぼう。${rec?'<b>おすすめ札</b>は、相手の属性が分からなくても比較的勝ちやすい札の印です。':'相手の数字に強い札を探そう。'}`;
   if(tips.length) html+=`<span class="tips">${tips.join(' ／ ')}</span>`;
   coach(html);
 }
@@ -4183,15 +4190,20 @@ function checkPrediction(){
 // 相手が出した数字から、可能性のある属性をヒント表示（あなたの手番なら“仮面あて”のタップ予想付き）
 function showAttrHint(num){
   const el=document.getElementById('oppCardHint');
-  // チュートリアル序盤(ステージ1〜3)は推理をまだ教えていないため非表示。おすすめ札・コーチ表示など他の初心者ヒントは巻き込まない(ステージ自身のhintsフラグだけを見る)
-  if(inTutorialStage() && !stageConfig.hints){ el.textContent=''; return; }
   const {pool} = remainingPossibleForNum(num);
   const options = pool;
   if(options.length===0){ el.innerHTML=`可能性：<b style="color:var(--gold-bright)">全て公開済み</b>`; return; }
-  const predict = canPredictNow() && options.length>=2; // 候補が2つ以上ある時だけ予想を受付
   const glyph = a => cardStyle==='beginner'
     ? `<span class="oh-cand">${CAND_GLYPH[a]||''}</span>`
     : `<div class="hint-icon ${a}${options.length===1?' confirmed':''}"></div>`;
+  // チュートリアル序盤(ステージ1〜3)は、手札の札と同じ「可能性アイコン」だけ出す。
+  // 🔓看破/🎭予想/⚠読まれている等の推理用語・仕組みは、正式に教えるステージ4以降まで伏せる
+  if(inTutorialStage() && !stageConfig.hints){
+    const cand = options.map(a=>glyph(a)).join('');
+    el.innerHTML=`可能性: <span class="hint-icon-row" style="align-items:center;gap:4px;">${cand}</span>`;
+    return;
+  }
+  const predict = canPredictNow() && options.length>=2; // 候補が2つ以上ある時だけ予想を受付
   if(predict){
     const cand = options.map(a=>`<span class="pred-chip${youPrediction===a?' sel':''}" onclick="setPrediction('${a}')">${glyph(a)}</span>`).join('');
     const tail = youPrediction
@@ -4952,8 +4964,13 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.8.0';
+const GAME_VERSION = 'v1.9.0';
 const CHANGELOG = [
+  { version:'v1.9.0', date:'2026-07-19', items:[
+    '<b>チュートリアルのヒント表示を改善</b>：ヒント設定をOFFにしていてもチュートリアル中は常にONにし、「おすすめ」札の理由も分かりやすい文言にしました。',
+    '<b>不具合修正</b>：相手の手札では見えていた「候補」表示が、場に出した瞬間に消えてしまう矛盾を解消しました。',
+    '<b>チュートリアル序盤の表示を整理</b>：まだ教えていない「相手の山札(推理)」チップを、教えるステージまで非表示にしました。',
+  ]},
   { version:'v1.8.0', date:'2026-07-19', items:[
     '<b>チュートリアル ステージ1の初期手札を固定</b>：同属性の数字勝負と3すくみの全パターンの両方を体験しやすい手札で始まるようにしました。',
   ]},
@@ -5877,6 +5894,9 @@ function oppDrawPileCandidates(){
 function renderOppDeckChip(){
   const bar=document.getElementById('deckBarOpp');
   if(!bar) return;
+  // チュートリアル序盤(ステージ1〜3)は、相手の山札の推理候補という発展的な情報はまだ出さない(ステージ4以降で解禁)
+  if(inTutorialStage() && !stageConfig.hints){ bar.style.display='none'; return; }
+  bar.style.display='';
   const total=oppDrawPileCandidates().reduce((s,c)=>s+c.count,0);
   if(total<=0){ bar.className='deck-chip opp empty'; bar.innerHTML='<span class="deck-mini none">－</span><span>山札なし</span>'; return; }
   bar.className='deck-chip opp';
