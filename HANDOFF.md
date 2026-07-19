@@ -269,6 +269,14 @@
   **検証**：Playwrightで、対戦中の相手デッキチップの表示数字が実際の`cpuDrawPile`の末尾(次に引かれる札)の数字と一致すること、内訳モーダルの「次」バッジが同じ数字の行に付くことを確認。4パターンのCPU設定によるフルゲーム回帰テストも新規JSエラー・レイアウト崩れなしで通過。
   **運用**: 仕様変更のため、`1.x.0`・`develop`ブランチにpush(`main`には反映していない)。
 
+- **v1.17.0（develop・現在）**: ユーザーから「相手の仮面当ての要素はまだ残っていますか？」→「不要ではないですか？」→「削除してください」と段階的に確認を受け、仮面あて(🎭タップ予想のミニゲーム)を全面削除。
+  **経緯**: 仮面あては元々「決着時に的中していれば+2pt」という得点の一部だったが(v0.59.0)、CPU側に対応する仕組みが無く非対称という指摘を受けて「勝敗に影響しない独立した成績」に格下げ済み(HANDOFF内 v0.59.0 参照)。さらに直近(v1.1.0)では「看破しているはずなのに外れることがある」というユーザー体験上の混乱の一因として、「🎭予想(候補が複数残っている間の任意ミニゲーム、外れて当然)」と「🔓看破(候補が1つに絞れた時の自動確定バッジ、100%的中)」の用語的な紛らわしさが既に問題視されていた。今回ユーザーへの確認の結果、勝敗に影響しないおまけ機能である仮面あて自体が不要と判断され、削除が決定。看破/読まれている等の推理の根幹は現行のまま維持。
+  **実装**: `canPredictNow()`/`setPrediction()`/`checkPrediction()`/`cpuFieldCard()`/`READ_BONUS`定数を削除。状態変数`youPrediction`/`youReadBonus`/`youReadHits`とその全リセット箇所(`startGame()`/`startRound()`)を削除。`showAttrHint()`から候補2つ以上の時にタップ予想チップを出す`predict`分岐を削除し、候補表示(可能性)→看破(確定)の既存2分岐はそのまま残置(動作に変更なし)。決着/撤退の公開処理(`finishPassReveal()`/`resolveFightJudge()`)から`checkPrediction()`呼び出しを削除。結果画面(実戦`endGame()`のmilestoneSection、練習モード`endPracticeMode()`)から「🎯仮面あて的中N回」の表示行を削除。テレメトリ(`buildGameLog()`)から`readHits`/`readBonus`フィールドを削除。CSSの`.pred-chip`/`.pred-lb`/`.pred-hint`/`.pred-done`/`.pred-row`を削除(`.hint-icon-row`など看破/候補表示と共有のクラスは残置)。
+  **依存関係の整理**: ①初級レベルの★2つ目の目標「相手の仮面を3回見破る（仮面あて）」(`check:c=>c.readHits>=3`)を、既存の`buildStarCtx()`が既に算出していた`rpsWins`(3すくみの相性勝ちラウンド数、その試合限定)を使い「色の相性勝ちを2回決める」(`check:c=>c.rpsWins>=2`)に差し替え。新規の計測は追加せず、既存データの再利用のみ。②実績(称号)「看破者」(`desc:'仮面あてを通算20回的中させる'`, `check:c=>c.readHitsTotal>=20`)は、`id:'seer'`と名前「看破者」はそのまま維持しつつ(推理・看破の概念自体は現行ゲームに残っているため)、条件を「本戦の個別ラウンドで通算60勝する」(`check:c=>c.totalRoundWins>=60`)に変更。`totalRoundWins`は`buildTitleCtx()`内で`loadGameHistory()`の各試合が既に保持している`g.youWins`(その試合でのラウンド勝利数、`saveGameToHistory()`が`computeMatchSummary()`から保存済み)を合算するだけで新規計測不要。`loadProgress()`/`saveProgress()`/`updateProgress()`から`readHitsTotal`フィールドを完全に削除(バックワード互換の妥協は行わず、既存localStorageの当該キーは単に無視される)。
+  **README.md**: 「特徴」の仮面あて紹介文を「🔎 推理と看破」(残存する候補絞り込み/看破バッジの説明)に差し替え。
+  **検証**: Playwrightで、①`index.html`内のJSを`new Function()`で構文チェック、②通常対戦(tricky/normal)を実際に6ラウンドプレイし、`#oppCardHint`のHTMLに`pred-chip`が一度も出現しないこと・「可能性」表示は引き続き出ること、③実績画面(`openAchievements()`)に「看破者」が新しい説明文で表示され旧文言「仮面あて」が残っていないこと、④`buildTitleCtx()`が`totalRoundWins`(number型)を返し`readHitsTotal`キーが存在しないこと、⑤初級レベルの★構成が新条件で正しく表示され、`rpsWins:2`を含むctxで実際に★2つ目が解除されること、を確認。4パターンのCPU設定によるフルゲーム回帰テストも新規JSエラー・横スクロール崩れなしで通過(既知のFirebase CDNネットワークノイズ8件のみ)。
+  **運用**: 機能削除・仕様変更のため、`1.x.0`として`develop`ブランチにpush(`main`には反映していない)。
+
 ## 9. 次にやり得ること（未確定・候補）
 
 > 外部レビュー(9.2/10)の主な指摘は v0.33〜v0.37 で対応済み（CPU個性/難易度・勝敗演出・リザルト充実・初心者ガイド・ミッション式チュートリアル）。以下は残りの候補。
