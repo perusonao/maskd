@@ -1828,7 +1828,7 @@
         <div class="img-btn" style="background-image:url(btn-achieve.png)" onclick="openAchievements()" role="button" tabindex="0" aria-label="実績"></div>
       </div>
       <div class="home-menu">
-        <div class="img-btn" style="background-image:url(btn-mission.png)" onclick="openMissions()" role="button" tabindex="0" aria-label="ミッション"></div>
+        <div class="img-btn" style="background-image:url(btn-mission.png)" onclick="openLearnLadder()" role="button" tabindex="0" aria-label="チュートリアル"></div>
         <div class="img-btn" style="background-image:url(btn-rank.png)" onclick="homeRankSoon()" role="button" tabindex="0" aria-label="ランク"></div>
         <div class="img-btn" style="background-image:url(btn-record.png)" onclick="openStats()" role="button" tabindex="0" aria-label="戦績"></div>
       </div>
@@ -4964,8 +4964,12 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.9.0';
+const GAME_VERSION = 'v1.10.0';
 const CHANGELOG = [
+  { version:'v1.10.0', date:'2026-07-19', items:[
+    '<b>ホーム画面の「ミッション」を「チュートリアル」に変更</b>：タップで新しい段階式チュートリアルに遷移するようにしました。',
+    '<b>ルール説明を整理</b>：「推理と看破」の章から、任意ミニゲームである「予想」の説明を省き、看破・読まれているの2項目に絞りました。',
+  ]},
   { version:'v1.9.0', date:'2026-07-19', items:[
     '<b>チュートリアルのヒント表示を改善</b>：ヒント設定をOFFにしていてもチュートリアル中は常にONにし、「おすすめ」札の理由も分かりやすい文言にしました。',
     '<b>不具合修正</b>：相手の手札では見えていた「候補」表示が、場に出した瞬間に消えてしまう矛盾を解消しました。',
@@ -5187,7 +5191,7 @@ function renderRulesGuide(){
         <div style="display:flex;gap:5px;justify-content:center;margin-top:8px;">
           <span class="hint-icon moon"></span><span class="hint-icon sun"></span><span class="hint-icon air"></span>
         </div>
-        <div class="rl" style="margin-top:8px;">🎭 タップで予想（外れてもOK）</div>
+        <div class="rl" style="margin-top:8px;">まだ属性は絞れていない</div>
       </div>
       <div class="rg-arrow">➜</div>
       <div class="rg-mtile fin">
@@ -5197,8 +5201,7 @@ function renderRulesGuide(){
       </div>
     </div>
     <ul class="rg-list">
-      <li><b>予想（🎭）</b>：候補が<b>2つ以上</b>残っている間だけ現れる。任意でタップして予想できるミニゲームで、<b>当たっても外れても勝敗には影響しない</b>。外れて当然、当たればラッキー、くらいの位置づけ。</li>
-      <li><b>看破（🔓）</b>：候補が<b>ちょうど1つ</b>に絞れた瞬間、操作なしで自動的に「確定」と表示される。ここまで絞れたら<b>100%間違いない</b>（予想とは違い、外れることはない）。</li>
+      <li><b>看破（🔓）</b>：候補が<b>ちょうど1つ</b>に絞れた瞬間、操作なしで自動的に「確定」と表示される。ここまで絞れたら<b>100%間違いない</b>。</li>
       <li><b>読まれている（⚠）</b>：同じ理屈で、<b>あなたの札も相手から絞り込まれる</b>。あなたの手番の下に、相手からどう見えているかが表示され、候補が1つに絞られると「読まれている」と警告が出る。</li>
     </ul>
   </div>
