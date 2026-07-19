@@ -734,17 +734,29 @@ function playersSectionHTML(){
     if(!x.name) return 0;
     return logs.filter(g=>g.playerName===x.name).length;
   };
+  // チュートリアル(段階式LEARN_STAGES)の進行度: learn_stage_clearイベントのplayerId突き合わせで、
+  // クリア済みの最大ステージ番号を出す(playerIdが無い古い登録は対象外＝概算すらできないため空欄)。
+  const learnProgressFor=x=>{
+    if(!x.playerId) return null;
+    const events=allLogs.filter(g=>g.type==='learn_stage_clear' && g.playerId===x.playerId && !isHidden('logs', g._id));
+    if(!events.length) return null;
+    const stage=Math.max(...events.map(g=>g.stage||0));
+    const total=events.find(g=>g.totalStages)?.totalStages || 7;
+    return { stage, total };
+  };
   const tsOf=x=>{ try{ return x.serverTs && x.serverTs.toDate ? x.serverTs.toDate().getTime() : 0; }catch(e){ return 0; } };
   const sorted=[...list].sort((a,b)=>tsOf(b)-tsOf(a));
   out+='<div class="card"><div class="tbl-wrap" style="max-height:280px;">'+
     sorted.slice(0,50).map(x=>{
       let t=''; try{ t=x.serverTs&&x.serverTs.toDate ? x.serverTs.toDate().toISOString().replace('T',' ').slice(0,16) : ''; }catch(e){}
       const pc=playCountFor(x);
+      const lp=learnProgressFor(x);
+      const lpHTML = lp ? ` <span style="color:${lp.stage>=lp.total?'var(--win, #7bd88f)':'var(--goldb)'}">・チュート${lp.stage}/${lp.total}</span>` : '';
       const hidden=isHidden('players',x._id);
-      return `<div class="rrow"${hidden?' style="opacity:.55;"':''}><div class="rt"><span>${esc(x.name||'(名前なし)')} <span style="color:var(--goldb)">・${pc}戦</span>${hidden?' <span class="muted">(非表示中)</span>':''}</span><span>${esc(t)} ${hideBtnHTML('players',x._id)}</span></div></div>`;
+      return `<div class="rrow"${hidden?' style="opacity:.55;"':''}><div class="rt"><span>${esc(x.name||'(名前なし)')} <span style="color:var(--goldb)">・${pc}戦</span>${lpHTML}${hidden?' <span class="muted">(非表示中)</span>':''}</span><span>${esc(t)} ${hideBtnHTML('players',x._id)}</span></div></div>`;
     }).join('')+
     '</div></div>'+
-    '<div class="muted" style="font-size:10px;margin-top:4px;">※プレイ数は対戦ログとの突き合わせによる概算です（新規登録分は端末IDで正確に突き合わせ、それ以前の登録は名前一致のため同名の別人がいると誤差が出ます）。</div>';
+    '<div class="muted" style="font-size:10px;margin-top:4px;">※プレイ数は対戦ログとの突き合わせによる概算です（新規登録分は端末IDで正確に突き合わせ、それ以前の登録は名前一致のため同名の別人がいると誤差が出ます）。チュート進行度は「learn_stage_clear」計測イベントに基づくため、v1.14.0以降にクリアしたステージのみ反映されます。</div>';
   return out;
 }
 
