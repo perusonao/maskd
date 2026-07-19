@@ -535,6 +535,18 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pctOf=(a,b)=>b?(a/b*100).toFixed(1)+'%':'-';
 const tsMillis=e=>{ try{ return e && e.ts && e.ts.toDate ? e.ts.toDate().getTime() : 0; }catch(err){ return 0; } };
+// 日時表示は全て日本時間(JST)に統一する。Firestoreのタイムスタンプ・クライアント側ISO文字列(UTC)
+// のどちらもDate化してここを通すことで、投稿・来訪の実時刻を直感的に突き合わせられるようにする。
+const JST_OPTS={ timeZone:'Asia/Tokyo', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false };
+function fmtJST(d, withSeconds){
+  try{
+    const opts=withSeconds?{...JST_OPTS, second:'2-digit'}:JST_OPTS;
+    return new Intl.DateTimeFormat('sv-SE', opts).format(d);
+  }catch(e){ return ''; }
+}
+function jstDay(d){ try{ return new Intl.DateTimeFormat('sv-SE', {timeZone:'Asia/Tokyo', year:'numeric', month:'2-digit', day:'2-digit'}).format(d); }catch(e){ return ''; } }
+function jstFromIso(iso, withSeconds){ if(!iso) return ''; const d=new Date(iso); return isNaN(d)?'':fmtJST(d, withSeconds); }
+function jstFromTimestamp(ts, withSeconds){ try{ return ts && ts.toDate ? fmtJST(ts.toDate(), withSeconds) : ''; }catch(e){ return ''; } }
 function isHidden(col,id){ return !!(id && hiddenMap[col+'|'+id]); }
 // logsコレクションには「完了した対戦の記録」(type:'game'、v0.55より前はtype自体が無い)と、
 // v0.55.0で追加された「分析用の軽量イベント」(session_start/game_start/abandon/tutorial_*)が混在する。
@@ -707,7 +719,7 @@ function surveySectionHTML(){
   const sorted=[...list].sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
   out+='<div class="card"><div class="tbl-wrap" style="max-height:320px;">'+
     sorted.map(x=>{
-      const t=(x.ts||'').replace('T',' ').slice(0,16);
+      const t=jstFromIso(x.ts, false);
       const hidden=isHidden('surveys',x._id);
       return `<div class="rrow"${hidden?' style="opacity:.55;"':''}>
         <div class="rt"><span>⭐${esc(x.fun)} ／ またやりたい: ${esc(replayLabel[x.replay]||'-')} ／ ${esc(x.version||'')}${hidden?' <span class="muted">(非表示中)</span>':''}</span><span>${esc(t)} ${hideBtnHTML('surveys',x._id)}</span></div>
@@ -757,7 +769,7 @@ function playersSectionHTML(){
   const sorted=[...list].sort((a,b)=>tsOf(b)-tsOf(a));
   out+='<div class="card"><div class="tbl-wrap" style="max-height:280px;">'+
     sorted.slice(0,50).map(x=>{
-      let t=''; try{ t=x.serverTs&&x.serverTs.toDate ? x.serverTs.toDate().toISOString().replace('T',' ').slice(0,16) : ''; }catch(e){}
+      const t=jstFromTimestamp(x.serverTs, false);
       const pc=playCountFor(x);
       const lp=learnProgressFor(x);
       const lpHTML = lp ? ` <span style="color:${lp.stage>=lp.total?'var(--win, #7bd88f)':'var(--goldb)'}">・チュート${lp.stage}/${lp.total}</span>` : '';
@@ -777,13 +789,13 @@ function visitsSectionHTML(){
   const tsOf=x=>{ try{ return x.serverTs && x.serverTs.toDate ? x.serverTs.toDate().getTime() : 0; }catch(e){ return 0; } };
   const sorted=[...allVisits].sort((a,b)=>tsOf(b)-tsOf(a));
   const days={};
-  sorted.forEach(x=>{ const t=tsOf(x); if(!t) return; const day=new Date(t).toISOString().slice(0,10); days[day]=(days[day]||0)+1; });
+  sorted.forEach(x=>{ const t=tsOf(x); if(!t) return; const day=jstDay(new Date(t)); if(day) days[day]=(days[day]||0)+1; });
   const dayKeys=Object.keys(days).sort();
-  let out='<h2>🚪 来訪履歴（同意不要・全訪問）</h2>';
+  let out='<h2>🚪 来訪履歴（同意不要・全訪問・日本時間）</h2>';
   out+='<div class="card">'+bars(dayKeys.map(d=>({label:d,value:days[d],sub:String(days[d])})))+'</div>';
   out+='<div class="card" style="margin-top:8px;"><h3>直近の来訪</h3><div class="tbl-wrap" style="max-height:220px;">'+
     sorted.slice(0,50).map(x=>{
-      let t=''; try{ t=x.serverTs&&x.serverTs.toDate ? x.serverTs.toDate().toISOString().replace('T',' ').slice(0,19) : ''; }catch(e){}
+      const t=jstFromTimestamp(x.serverTs, true);
       return `<div class="rrow"><div class="rt"><span>${esc(t||'（時刻不明）')}</span></div></div>`;
     }).join('')+
     '</div></div>';
@@ -849,7 +861,7 @@ function render(){
     sumP+=(g.playerFinal||0); sumC+=(g.cpuFinal||0);
     if(typeof g.playTimeMs==='number'){ sumTime+=g.playTimeMs; timeCount++; }
     if(g.playerId) players.add(g.playerId);
-    const day=(g.ts||'').slice(0,10); if(day) days[day]=(days[day]||0)+1;
+    const day=g.ts?jstDay(new Date(g.ts)):''; if(day) days[day]=(days[day]||0)+1;
     agg(diffAgg, g.cpuDifficulty, g.winner);
     agg(typeAgg, g.cpuStrategy, g.winner);
     agg(verAgg, g.version, g.winner);
@@ -919,7 +931,7 @@ function render(){
 
   // 日別
   const dayKeys=Object.keys(days).sort();
-  html+=`<h2>日別プレイ数</h2><div class="card">`+bars(dayKeys.map(d=>({label:d,value:days[d],sub:String(days[d])})))+`</div>`;
+  html+=`<h2>日別プレイ数（日本時間）</h2><div class="card">`+bars(dayKeys.map(d=>({label:d,value:days[d],sub:String(days[d])})))+`</div>`;
 
   // 生データ
   html+=`<h2>生データ（対戦ログ）</h2>`+tableUI();
@@ -1001,7 +1013,7 @@ function renderRows(){
     const wl=g.winner==='player'?'win':(g.winner==='cpu'?'lose':'draw');
     const wt=g.winner==='player'?'P勝':(g.winner==='cpu'?'C勝':'分');
     const idx=allLogs.indexOf(g);
-    const t=(g.ts||'').replace('T',' ').slice(0,16);
+    const t=jstFromIso(g.ts, false);
     const tm=typeof g.playTimeMs==='number'?Math.round(g.playTimeMs/1000)+'s':'-';
     const hidden=isHidden('logs',g._id);
     return `<tr class="row" data-i="${idx}"${hidden?' style="opacity:.5;"':''}>
@@ -1050,7 +1062,7 @@ function showDetail(i){
       <h2 style="margin:0;">対戦詳細</h2><span class="btn" id="closeDetail">閉じる</span></div>
     <div class="muted" style="font-size:12px;margin-bottom:10px;">
       プレイヤー <b style="color:var(--goldb)">${esc(g.playerName||'（名前なし）')}</b><br>
-      ${esc((g.ts||'').replace('T',' ').slice(0,19))} ／ ${esc(g.version||'')} ／ CPU:${esc(TYPE[g.cpuStrategy]||g.cpuStrategy)}/${esc(DIFF[g.cpuDifficulty]||g.cpuDifficulty)}<br>
+      ${esc(jstFromIso(g.ts, true))} ／ ${esc(g.version||'')} ／ CPU:${esc(TYPE[g.cpuStrategy]||g.cpuStrategy)}/${esc(DIFF[g.cpuDifficulty]||g.cpuDifficulty)}<br>
       最終 P<b style="color:var(--goldb)">${esc(g.playerFinal)}</b> - C<b style="color:var(--goldb)">${esc(g.cpuFinal)}</b>
       ／ ID ${esc((g.playerId||'').slice(0,12))}
     </div>${rounds}`;
