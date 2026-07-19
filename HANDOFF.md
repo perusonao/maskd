@@ -1,7 +1,7 @@
 # MASKD 開発引き継ぎ資料
 
 > 別セッション／別担当への引き継ぎ用。この1枚を最初に読めば、すぐに開発を再開できるようにまとめています。
-> 最終更新: 2026-07-19 / 到達バージョン: **main v1.1.0**（develop は v1.17.0 まで進行中）
+> 最終更新: 2026-07-19 / 到達バージョン: **main v1.1.1（develop v1.19.0）**
 
 ---
 
@@ -268,6 +268,27 @@
   **実装**：`renderOppDeckChip()`を、`oppDrawPileCandidates()`由来の「推理 ›」ラベルから、自分の山札(`renderDeckChip()`)と全く同じ「次<b>${num}</b>」形式に変更(`cpuDrawPile[cpuDrawPile.length-1].num`を直接参照。属性は引き続き非公開)。`openOppDeckModal()`(タップ時の内訳モーダル)も、従来「最小」だった先頭バッジを、実際の次の数字と一致する行に「次」バッジが付くよう修正(自分の山札の`openDeckModal()`と同じ`nextNum`照合パターンに統一)。
   **検証**：Playwrightで、対戦中の相手デッキチップの表示数字が実際の`cpuDrawPile`の末尾(次に引かれる札)の数字と一致すること、内訳モーダルの「次」バッジが同じ数字の行に付くことを確認。4パターンのCPU設定によるフルゲーム回帰テストも新規JSエラー・レイアウト崩れなしで通過。
   **運用**: 仕様変更のため、`1.x.0`・`develop`ブランチにpush(`main`には反映していない)。
+
+- **v1.17.0（develop・現在）**: ユーザーから「相手の仮面当ての要素はまだ残っていますか？」→「不要ではないですか？」→「削除してください」と段階的に確認を受け、仮面あて(🎭タップ予想のミニゲーム)を全面削除。
+  **経緯**: 仮面あては元々「決着時に的中していれば+2pt」という得点の一部だったが(v0.59.0)、CPU側に対応する仕組みが無く非対称という指摘を受けて「勝敗に影響しない独立した成績」に格下げ済み(HANDOFF内 v0.59.0 参照)。さらに直近(v1.1.0)では「看破しているはずなのに外れることがある」というユーザー体験上の混乱の一因として、「🎭予想(候補が複数残っている間の任意ミニゲーム、外れて当然)」と「🔓看破(候補が1つに絞れた時の自動確定バッジ、100%的中)」の用語的な紛らわしさが既に問題視されていた。今回ユーザーへの確認の結果、勝敗に影響しないおまけ機能である仮面あて自体が不要と判断され、削除が決定。看破/読まれている等の推理の根幹は現行のまま維持。
+  **実装**: `canPredictNow()`/`setPrediction()`/`checkPrediction()`/`cpuFieldCard()`/`READ_BONUS`定数を削除。状態変数`youPrediction`/`youReadBonus`/`youReadHits`とその全リセット箇所(`startGame()`/`startRound()`)を削除。`showAttrHint()`から候補2つ以上の時にタップ予想チップを出す`predict`分岐を削除し、候補表示(可能性)→看破(確定)の既存2分岐はそのまま残置(動作に変更なし)。決着/撤退の公開処理(`finishPassReveal()`/`resolveFightJudge()`)から`checkPrediction()`呼び出しを削除。結果画面(実戦`endGame()`のmilestoneSection、練習モード`endPracticeMode()`)から「🎯仮面あて的中N回」の表示行を削除。テレメトリ(`buildGameLog()`)から`readHits`/`readBonus`フィールドを削除。CSSの`.pred-chip`/`.pred-lb`/`.pred-hint`/`.pred-done`/`.pred-row`を削除(`.hint-icon-row`など看破/候補表示と共有のクラスは残置)。
+  **依存関係の整理**: ①初級レベルの★2つ目の目標「相手の仮面を3回見破る（仮面あて）」(`check:c=>c.readHits>=3`)を、既存の`buildStarCtx()`が既に算出していた`rpsWins`(3すくみの相性勝ちラウンド数、その試合限定)を使い「色の相性勝ちを2回決める」(`check:c=>c.rpsWins>=2`)に差し替え。新規の計測は追加せず、既存データの再利用のみ。②実績(称号)「看破者」(`desc:'仮面あてを通算20回的中させる'`, `check:c=>c.readHitsTotal>=20`)は、`id:'seer'`と名前「看破者」はそのまま維持しつつ(推理・看破の概念自体は現行ゲームに残っているため)、条件を「本戦の個別ラウンドで通算60勝する」(`check:c=>c.totalRoundWins>=60`)に変更。`totalRoundWins`は`buildTitleCtx()`内で`loadGameHistory()`の各試合が既に保持している`g.youWins`(その試合でのラウンド勝利数、`saveGameToHistory()`が`computeMatchSummary()`から保存済み)を合算するだけで新規計測不要。`loadProgress()`/`saveProgress()`/`updateProgress()`から`readHitsTotal`フィールドを完全に削除(バックワード互換の妥協は行わず、既存localStorageの当該キーは単に無視される)。
+  **README.md**: 「特徴」の仮面あて紹介文を「🔎 推理と看破」(残存する候補絞り込み/看破バッジの説明)に差し替え。
+  **検証**: Playwrightで、①`index.html`内のJSを`new Function()`で構文チェック、②通常対戦(tricky/normal)を実際に6ラウンドプレイし、`#oppCardHint`のHTMLに`pred-chip`が一度も出現しないこと・「可能性」表示は引き続き出ること、③実績画面(`openAchievements()`)に「看破者」が新しい説明文で表示され旧文言「仮面あて」が残っていないこと、④`buildTitleCtx()`が`totalRoundWins`(number型)を返し`readHitsTotal`キーが存在しないこと、⑤初級レベルの★構成が新条件で正しく表示され、`rpsWins:2`を含むctxで実際に★2つ目が解除されること、を確認。4パターンのCPU設定によるフルゲーム回帰テストも新規JSエラー・横スクロール崩れなしで通過(既知のFirebase CDNネットワークノイズ8件のみ)。
+  **運用**: 機能削除・仕様変更のため、`1.x.0`として`develop`ブランチにpush(`main`には反映していない)。
+
+- **v1.18.0（develop・現在）**: ユーザーが「Xに投稿しているがまったくプレイしてもらえない」と相談してきたのを機に発覚した、来訪数計測の不備を修正。
+  **経緯**: Xの投稿スクリーンショット(インプレッション31/73/157件)とadmin.htmlのダッシュボード(登録プレイヤー5人・実プレイヤーのべ3人・対戦記録42件)を突き合わせたところ、「そもそも投稿の閲覧数自体が数十〜百数十件と少ない」ことが主因と判明(コンテンツの質の問題ではなくリーチの問題)。あわせてダッシュボードの「計測イベント」欄が`セッション開始:0 / 対戦開始:0`なのに`離脱:14`だけ計上されているという矛盾に気づき調査。**原因**: `logEvent()`(session_start/game_start/abandon/tutorial_*用)は`LOG_CONSENT_KEY==='yes'`の時だけ送信するが、`session_start`はページ読み込み直後、`game_start`は初回対戦開始時という「同意が得られているはずがないタイミング」で発火時点の同意状態をチェックしていた。加えてFirebase初期化(`<script type="module">`側の`await import(...)`)は非同期・低優先度(module=defer相当)で、クラシックscript側の同期実行(session_start呼び出しを含む)より確実に遅れて完了するため、初回セッションでは`window.__maskdSaveLog`自体がまだ存在しない可能性が高い。一方`abandon`や試合結果送信(`maybeSendGameLog`、同意は「明示的に拒否しない限り送信」という別モデル)はゲームがある程度進行した後に発火するため、その頃には両方の問題が解消されており送信できていた。つまり「セッション開始:0」は不具合の反映であり、実際の来訪数はもっと多いと推測された。
+  **設計判断**: 既存の同意モーダル(`logConsentModal`)は「プレイ結果を送らないを選べば送信しません」とユーザーに明示的に約束しているため、この約束を破らない形で来訪数だけを正確に取りたいとユーザーに確認。「①匿名の来訪カウントを新設(推奨)」と「②既存の軽量イベントの同意チェックを撤廃(約束と矛盾するため文言修正が必要)」を提示し、①を選択。
+  **実装**: 新設の`visits`/`visits_dev`コレクションに、`serverTs`のみ(playerId等の識別子は一切含まない)のドキュメントを、Firebase初期化成功直後に無条件で1件書き込む(`window.__maskdLoggingReady = true`の直後、`<script type="module">`内)。既存の`LOG_CONSENT_KEY`・`showLogConsent()`・`maybeSendGameLog()`には一切変更なし(「プレイ結果を送らない」の約束は従来通り維持)。`firestore.rules`に`isValidVisit()`(フィールド数上限3・`playerId`禁止)を追加。`admin.html`に`totalVisits`(`getCountFromServer`によるサーバー側集計)を追加し、KPIグリッド先頭に「来訪数(同意不要・全訪問)」タイルとして表示。
+  **要作業**: Firebaseコンソール →「Firestore Database」→「ルール」タブに、更新後の`firestore.rules`の内容を貼り付けて公開する必要がある(過去の`hidden_records`等追加時と同じ手順)。これをしないと`visits`への書き込み・読み取りは権限エラーで失敗する。
+  **検証**: `new Function()`/`AsyncFunction`でindex.html全script(クラシック・module)・admin.htmlのモジュールscriptの構文チェックを実施。admin.htmlは`__adminMock`フックで来訪数タイルの描画を確認(JSエラー0)。index.htmlは同意`'no'`状態でも来訪カウントの書き込み試行がページの動作を妨げないことを確認(このサンドボックスはFirebase CDNへの外向き通信自体が塞がれているため実際の書き込み成否は未検証・本番では上記のルール公開が前提)。4パターンのCPU設定によるフルゲーム回帰テストも新規JSエラー・横スクロール崩れなしで通過(既知のFirebase CDNネットワークノイズ8件のみ)。
+  **運用**: 計測基盤の追加のため、`1.x.0`として`develop`ブランチにpush(`main`には反映していない)。
+
+- **v1.19.0（develop・現在）**: ユーザーがFirestoreルールを公開した後、「訪問日時などもわかりますか？」と質問。v1.18.0の`visits`コレクションは総数(`getCountFromServer`)のみ取得しており、個々の来訪日時は見えていなかったため追加対応。
+  **実装**: `admin.html`の`loadData()`で、`visits`コレクションの総数に加えて直近2000件の実データも取得(`allVisits`)。新設`visitsSectionHTML()`が、既存の「日別プレイ数」と同じ`bars()`パターンで日別の来訪数グラフを描画し、その下に直近50件の来訪日時(`serverTs.toDate()`)を一覧表示(`players`セクションの行スタイル`.rrow`/`.rt`を流用)。対戦ログが0件の早期リターン分岐(`render()`冒頭の`if(!N)`)にも`visitsSectionHTML()`を追加し、対戦記録が無くても来訪データだけは見えるようにした。テスト用フック`window.__adminMock`に`visits`/`visitCount`引数を追加。
+  **検証**: Playwrightで、`__adminMock`に`serverTs.toDate()`互換のダミーTimestampを渡し、①来訪データが空の状態では見出しなしの案内文のみ表示、②来訪データがある状態では見出し・日別グラフ・個々の日時が正しく描画されることをJSエラー0で確認。
+  **運用**: 管理画面の機能追加のため、`1.x.0`として`develop`ブランチにpush(`main`には反映していない)。
 
 ## 9. 次にやり得ること（未確定・候補）
 

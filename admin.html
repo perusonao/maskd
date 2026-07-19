@@ -525,7 +525,7 @@ const isDevPreview = location.pathname.includes('/dev/');
 const envCol = name => name + (isDevPreview ? '_dev' : '');
 if(isDevPreview){ const b=document.getElementById('envBadge'); if(b){ b.textContent='DEV'; b.classList.add('dev'); } }
 
-let fb=null, allLogs=[], totalCount=null, allSurveys=[], surveyLoadError=null, allPlayers=[], totalPlayers=null, playerLoadError=null;
+let fb=null, allLogs=[], totalCount=null, allSurveys=[], surveyLoadError=null, allPlayers=[], totalPlayers=null, playerLoadError=null, totalVisits=null, allVisits=[];
 let tableState={ sortKey:'ts', sortDir:-1, fWinner:'', fDiff:'', fVer:'', q:'' };
 // 論理削除(非表示)の状態。hidden_recordsコレクションへの追記(hide/unhideイベント)を
 // 時系列に並べて「最後のイベント」を現在の状態とみなす(追記のみ・更新削除なしの設計に合わせるため)。
@@ -658,6 +658,15 @@ async function loadData(){
   }catch(e){
     allPlayers=[]; totalPlayers=null; playerLoadError=(e&&(e.code||e.message))||'不明なエラー';
   }
+  // 匿名の来訪カウント(同意不要)。総数はサーバー側集計、日時を見るため直近分の実データも取得。
+  try{
+    const [snap, count] = await Promise.all([
+      fb.getDocs(fb.query(fb.collection(fb.db,envCol("visits")), fb.limit(2000))),
+      fb.getCountFromServer(fb.collection(fb.db,envCol("visits"))).then(s=>s.data().count).catch(()=>null)
+    ]);
+    allVisits=[]; snap.forEach(d=>allVisits.push(d.data()));
+    totalVisits=count;
+  }catch(e){ allVisits=[]; totalVisits=null; }
   // 論理削除(非表示)イベント。読めなくても他機能は継続(何も非表示にしない扱い)。
   try{
     const snap=await fb.getDocs(fb.query(fb.collection(fb.db,envCol('hidden_records')), fb.limit(5000)));
@@ -760,6 +769,27 @@ function playersSectionHTML(){
   return out;
 }
 
+// ===== 匿名の来訪カウント(同意不要・playerId等の識別子なし) =====
+function visitsSectionHTML(){
+  if(!allVisits.length){
+    return '<div class="muted" style="font-size:11px;margin:-4px 0 12px;">※来訪記録はまだありません(Firestoreルール反映前、または反映直後でまだ収集中の可能性があります)。</div>';
+  }
+  const tsOf=x=>{ try{ return x.serverTs && x.serverTs.toDate ? x.serverTs.toDate().getTime() : 0; }catch(e){ return 0; } };
+  const sorted=[...allVisits].sort((a,b)=>tsOf(b)-tsOf(a));
+  const days={};
+  sorted.forEach(x=>{ const t=tsOf(x); if(!t) return; const day=new Date(t).toISOString().slice(0,10); days[day]=(days[day]||0)+1; });
+  const dayKeys=Object.keys(days).sort();
+  let out='<h2>🚪 来訪履歴（同意不要・全訪問）</h2>';
+  out+='<div class="card">'+bars(dayKeys.map(d=>({label:d,value:days[d],sub:String(days[d])})))+'</div>';
+  out+='<div class="card" style="margin-top:8px;"><h3>直近の来訪</h3><div class="tbl-wrap" style="max-height:220px;">'+
+    sorted.slice(0,50).map(x=>{
+      let t=''; try{ t=x.serverTs&&x.serverTs.toDate ? x.serverTs.toDate().toISOString().replace('T',' ').slice(0,19) : ''; }catch(e){}
+      return `<div class="rrow"><div class="rt"><span>${esc(t||'（時刻不明）')}</span></div></div>`;
+    }).join('')+
+    '</div></div>';
+  return out;
+}
+
 // ===== 軽量イベント(離脱率・チュートリアル完走率) =====
 // v0.55.0で追加されたが、Firestoreルールがwinner等を必須にしていたため実際には
 // これまで一件も保存できていなかった不具合をv0.61.2で修正。ルール反映前のデータには
@@ -803,7 +833,7 @@ function render(){
     `　／　取得 ${allLogs.length} 件(対戦${gameLogsAll.length}・イベント${eventLogs.length})`+
     (hiddenLogCount?`　／　非表示 <b style="color:var(--goldb)">${hiddenLogCount}</b> 件(集計から除外)`:``);
 
-  if(!N){ $('content').innerHTML=surveySectionHTML()+playersSectionHTML()+eventStatsHTML(eventLogs)+banner('対戦ログのデータはまだありません。')+preV1ChangelogHTML(); bindHideButtons(); return; }
+  if(!N){ $('content').innerHTML=surveySectionHTML()+playersSectionHTML()+visitsSectionHTML()+eventStatsHTML(eventLogs)+banner('対戦ログのデータはまだありません。')+preV1ChangelogHTML(); bindHideButtons(); return; }
 
   // 基本集計
   let pw=0,cw=0,dr=0,sumP=0,sumC=0,sumTime=0,timeCount=0;
@@ -852,6 +882,7 @@ function render(){
 
   // KPI
   html+=`<div class="grid">
+    ${kpi(totalVisits!=null?totalVisits:'-','来訪数(同意不要・全訪問)')}
     ${kpi(total,'総レコード数')}
     ${kpi(players.size,'参加プレイヤー数')}
     ${kpi(pctOf(pw,decided),'プレイヤー勝率')}
@@ -860,6 +891,7 @@ function render(){
     ${kpi(avgTime!=null?avgTime.toFixed(0)+'秒':'-','平均対戦時間')}
   </div>`;
 
+  html+=visitsSectionHTML();
   html+=eventStatsHTML(eventLogs);
 
   // バランス分析
@@ -1040,10 +1072,11 @@ function exportCSV(){
 }
 
 // テスト用フック(モックデータで描画を確認する。害はない)
-window.__adminMock=(logs,count,surveys,players,playerCount,hiddenEvents)=>{
+window.__adminMock=(logs,count,surveys,players,playerCount,hiddenEvents,visits,visitCount)=>{
   allLogs=logs; totalCount=count;
   if(surveys)allSurveys=surveys;
   if(players){ allPlayers=players; totalPlayers=(playerCount!=null)?playerCount:players.length; }
+  if(visits){ allVisits=visits; totalVisits=(visitCount!=null)?visitCount:visits.length; }
   if(hiddenEvents){
     const events=[...hiddenEvents].sort((a,b)=>tsMillis(a)-tsMillis(b));
     hiddenMap={};
