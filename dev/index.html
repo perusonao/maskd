@@ -2420,6 +2420,21 @@ function dealHandsStage(attrs){
   }
   return (Math.random()<0.5) ? {you:shuffle(p1), cpu:shuffle(p2)} : {you:shuffle(p2), cpu:shuffle(p1)};
 }
+// シナリオ固定ステージ用の配札: stage.openingHandで指定した初期手札はそのまま両者に配り、
+// 縮小デッキの残りカードだけをシャッフルして山札分に均等配分する(狙った属性の対決を確実に体験させるため)
+function buildScriptedDeal(stage){
+  const oh=stage.openingHand;
+  const key=c=>c.attr+c.num;
+  const all=[];
+  stage.attrs.forEach(a=>{ for(let n=0;n<=5;n++) all.push({attr:a,num:n}); });
+  const fixedKeys=new Set([...oh.you,...oh.cpu].map(key));
+  const rest=shuffle(all.filter(c=>!fixedKeys.has(key(c))));
+  const half=Math.floor(rest.length/2);
+  return {
+    you:[...oh.you.map(c=>({...c})), ...rest.slice(0,half)],
+    cpu:[...oh.cpu.map(c=>({...c})), ...rest.slice(half, half*2)],
+  };
+}
 // 段階チュートリアルの各ステージ定義(縮小デッキ＋解放ルール)
 // hints: このステージで初心者ヒント(候補アイコン等)を強制ON/OFFする(未指定時はtrue)。
 //        ステージ1〜3は属性そのものに集中してもらうためOFF、ステージ4で読み合いとして正式に教える。
@@ -2428,7 +2443,12 @@ function dealHandsStage(attrs){
 const LEARN_STAGES=[
   { id:1, name:'３つの属性', icon:'🎨', attrs:['moon','sun','dark'], rounds:4,
     swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak', hints:false,
-    intro:'まずは<b>属性</b>と<b>数字</b>の基本。異属性は<b>じゃんけん</b>（<b>MOON</b>✊＞<b>DARK</b>✌＞<b>SUN</b>✋）、同属性は<b>数字</b>が大きい方が勝ち。あなたが親のときは<b>決戦</b>か<b>撤退</b>を選べます。' },
+    intro:'まずは<b>属性</b>と<b>数字</b>の基本。異属性は<b>じゃんけん</b>（<b>MOON</b>✊＞<b>DARK</b>✌＞<b>SUN</b>✋）、同属性は<b>数字</b>が大きい方が勝ち。あなたが親のときは<b>決戦</b>か<b>撤退</b>を選べます。',
+    // 初期手札を固定し、同属性の数字勝負(DARK同士)と3すくみ全パターン(MOON→DARK→SUN→MOON)の両方を体験しやすくする
+    openingHand:{
+      you:[{attr:'dark',num:3},{attr:'moon',num:4},{attr:'sun',num:2},{attr:'dark',num:0},{attr:'moon',num:1}],
+      cpu:[{attr:'dark',num:1},{attr:'sun',num:3},{attr:'moon',num:0},{attr:'dark',num:5},{attr:'sun',num:5}],
+    } },
   { id:2, name:'風を読む', icon:'🌬️', attrs:['moon','sun','dark','air'], rounds:4,
     swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak', hints:false,
     intro:'<b class="air">AIR</b>が仲間入り。<b>AIRが絡むと必ず引き分け</b>（使うと戦略カウンター+1）。勝てない相手を受け流す一手です。' },
@@ -3293,20 +3313,29 @@ function startGame(initialDealerIsYou, stage){
   stageConfig = stage || null;
   deckAttrs = stageConfig ? [...stageConfig.attrs] : ATTRS5;
   matchRounds = stageConfig ? stageConfig.rounds : TOTAL_ROUNDS;
+  const scripted = stageConfig && stageConfig.openingHand; // 初期手札を固定するシナリオ付きステージ
   const reducedDeck = stageConfig && stageConfig.attrs.length < 5; // Kaosなしの縮小デッキ(ステージ1・2)
-  const {you,cpu}= reducedDeck ? dealHandsStage(stageConfig.attrs) : dealHands();
+  const {you,cpu}= scripted ? buildScriptedDeal(stageConfig) : (reducedDeck ? dealHandsStage(stageConfig.attrs) : dealHands());
   youFullDeal=you; cpuFullDeal=cpu;
   // 初期手札はランダムに選ぶ(数字構成が毎回変わり、序盤の展開が多様化する)。
   // 残りは山札。デッキ全15枚は破棄しない=相手手札の属性推理を正確に保つため。
-  const pick6=(fullDeal)=>{
+  // シナリオ付きステージでは、openingHandで指定した札をそのまま初期手札にする(狙った属性の対決を体験させるため)
+  const pick6=(fullDeal, fixedHand)=>{
+    if(fixedHand){
+      const key=c=>c.attr+c.num;
+      const fixedKeys=new Set(fixedHand.map(key));
+      const hand=fixedHand.map(c=>({...c}));
+      const drawPile=shuffle(fullDeal.filter(c=>!fixedKeys.has(key(c))));
+      return {hand, drawPile};
+    }
     const shuffled=shuffle([...fullDeal]);
     const hand=shuffled.slice(0,ACTIVE_HAND_SIZE);
     const drawPile=shuffled.slice(ACTIVE_HAND_SIZE);
     return {hand, drawPile};
   };
-  const youPick=pick6(youFullDeal);
+  const youPick=pick6(youFullDeal, scripted?stageConfig.openingHand.you:null);
   youHand=youPick.hand; youDrawPile=youPick.drawPile;
-  const cpuPick=pick6(cpuFullDeal);
+  const cpuPick=pick6(cpuFullDeal, scripted?stageConfig.openingHand.cpu:null);
   cpuHand=cpuPick.hand; cpuDrawPile=cpuPick.drawPile;
 
   // CPUの戦略パターン: 段階チュートリアルは固定(弱め)、練習モードはレベル別ライバル固定、
@@ -4923,8 +4952,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.7.0';
+const GAME_VERSION = 'v1.8.0';
 const CHANGELOG = [
+  { version:'v1.8.0', date:'2026-07-19', items:[
+    '<b>チュートリアル ステージ1の初期手札を固定</b>：同属性の数字勝負と3すくみの全パターンの両方を体験しやすい手札で始まるようにしました。',
+  ]},
   { version:'v1.7.0', date:'2026-07-19', items:[
     '<b>不具合修正</b>：入替がまだ解禁されていないチュートリアル序盤で、CPU側だけ入替を使えてしまうことがあった不具合を修正しました。',
   ]},
