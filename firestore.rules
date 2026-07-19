@@ -54,6 +54,19 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // 匿名の来訪カウント(同意不要)。playerId等の識別子は一切持たない
+    // 「ページが開かれた回数」だけの記録。プレイログ(logs)の同意フローとは無関係。
+    match /visits/{docId} {
+      allow read: if true;
+      allow create: if isValidVisit();
+      allow update, delete: if false;
+    }
+    match /visits_dev/{docId} {          // developプレビュー用
+      allow read: if true;
+      allow create: if isValidVisit();
+      allow update, delete: if false;
+    }
+
     // admin.htmlの論理削除(非表示)イベント。対象データ自体は書き換えず、
     // 「hide」「unhide」のイベントを追記するだけ(最新のイベントが現在の状態)。
     match /hidden_records/{docId} {
@@ -100,6 +113,12 @@ service cloud.firestore {
       let d = request.resource.data;
       return 'name' in d && d.name is string && d.name.size() <= 12
           && d.size() <= 5;
+    }
+
+    // 来訪カウントの最低限のバリデーション。playerId等の識別子フィールドは明示的に禁止する
+    function isValidVisit() {
+      let d = request.resource.data;
+      return d.size() <= 3 && !('playerId' in d);
     }
 
     // 論理削除イベントの最低限のバリデーション
