@@ -525,7 +525,7 @@ const isDevPreview = location.pathname.includes('/dev/');
 const envCol = name => name + (isDevPreview ? '_dev' : '');
 if(isDevPreview){ const b=document.getElementById('envBadge'); if(b){ b.textContent='DEV'; b.classList.add('dev'); } }
 
-let fb=null, allLogs=[], totalCount=null, allSurveys=[], surveyLoadError=null, allPlayers=[], totalPlayers=null, playerLoadError=null;
+let fb=null, allLogs=[], totalCount=null, allSurveys=[], surveyLoadError=null, allPlayers=[], totalPlayers=null, playerLoadError=null, totalVisits=null;
 let tableState={ sortKey:'ts', sortDir:-1, fWinner:'', fDiff:'', fVer:'', q:'' };
 // 論理削除(非表示)の状態。hidden_recordsコレクションへの追記(hide/unhideイベント)を
 // 時系列に並べて「最後のイベント」を現在の状態とみなす(追記のみ・更新削除なしの設計に合わせるため)。
@@ -658,6 +658,10 @@ async function loadData(){
   }catch(e){
     allPlayers=[]; totalPlayers=null; playerLoadError=(e&&(e.code||e.message))||'不明なエラー';
   }
+  // 匿名の来訪カウント(同意不要)。件数だけ分かればよいのでサーバー側集計のみ取得。
+  try{
+    totalVisits = await fb.getCountFromServer(fb.collection(fb.db,envCol("visits"))).then(s=>s.data().count);
+  }catch(e){ totalVisits=null; }
   // 論理削除(非表示)イベント。読めなくても他機能は継続(何も非表示にしない扱い)。
   try{
     const snap=await fb.getDocs(fb.query(fb.collection(fb.db,envCol('hidden_records')), fb.limit(5000)));
@@ -852,6 +856,7 @@ function render(){
 
   // KPI
   html+=`<div class="grid">
+    ${kpi(totalVisits!=null?totalVisits:'-','来訪数(同意不要・全訪問)')}
     ${kpi(total,'総レコード数')}
     ${kpi(players.size,'参加プレイヤー数')}
     ${kpi(pctOf(pw,decided),'プレイヤー勝率')}

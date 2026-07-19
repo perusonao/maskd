@@ -4948,8 +4948,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.17.0';
+const GAME_VERSION = 'v1.18.0';
 const CHANGELOG = [
+  { version:'v1.18.0', date:'2026-07-19', items:[
+    '<b>来訪データの計測を追加</b>：SNS等からのアクセス数を正確に把握できるよう、匿名の来訪カウント（個人を識別する情報は一切含みません）を追加しました。プレイ結果の送信可否（「プレイログを送らない」設定）には変更ありません。',
+  ]},
   { version:'v1.17.0', date:'2026-07-19', items:[
     '<b>「仮面あて」（タップ予想のミニゲーム）を廃止</b>：勝敗に影響しない任意機能でしたが、看破（候補が1つに確定した時の自動表示）と紛らわしいとのご意見を踏まえ削除しました。候補の絞り込み表示・看破バッジは引き続き機能します。初級レベルの★目標「相手の仮面を3回見破る」は「色の相性勝ちを2回決める」に変更。実績「看破者」は、本戦の個別ラウンド累計勝利数を条件に変更しました。',
   ]},
@@ -6283,6 +6286,10 @@ if(typeof CARD_IMG!=='undefined' && CARD_IMG.back){
       // Firestoreのplayersルール未設定期間などで登録が失敗していた既存プレイヤーを、
       // 準備が整ったこのタイミングで一度だけ再登録しておく(通常の初回登録フローとは別経路)。
       try{ if(typeof window.ensurePlayerNameSynced==='function') window.ensurePlayerNameSynced(); }catch(e){}
+      // 匿名の来訪カウント(同意不要)。「プレイログを送らない」設定とは無関係の、
+      // playerId等の識別子を一切持たない「ページが開かれた回数」のみの記録。
+      try{ await addDoc(collection(db, col("visits")), { serverTs: serverTimestamp() }); }
+      catch(e){ console.warn("MASKD: 来訪カウント記録に失敗", e); }
       // アクセス状況の把握(任意): Firebase Analytics
       try {
         if (firebaseConfig.measurementId) {
