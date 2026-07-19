@@ -1847,6 +1847,8 @@
         <div class="cpu-opt" data-val="tricky">アルル<span class="opt-sub">技巧仮面</span></div>
         <div class="cpu-opt" data-val="cautious">ゼファ<span class="opt-sub">鉄壁仮面</span></div>
         <div class="cpu-opt" data-val="aggressive">ノクス<span class="opt-sub">剛力仮面</span></div>
+        <div class="cpu-opt" data-val="balanced">リヴェル<span class="opt-sub">調和仮面</span></div>
+        <div class="cpu-opt" data-val="chaotic">カオス<span class="opt-sub">無秩序仮面</span></div>
         <div class="cpu-opt" data-val="random">ランダム</div>
       </div>
     </div>
@@ -1955,7 +1957,7 @@
         <div class="tut-btn" id="tutNext" onclick="tutNext()">次へ ›</div>
       </div>
       <div class="tut-skip" onclick="closeTutorial()">スキップして閉じる</div>
-      <div class="tut-skip" style="margin-top:4px;" onclick="closeTutorial(); openMissions('advanced');">⚔️ 上級ミッションに挑戦（任意の腕試し）</div>
+      <div class="tut-skip" style="margin-top:4px;" onclick="closeTutorial(); openMissions();">⚔️ 上級ミッションに挑戦（任意の腕試し）</div>
     </div>
   </div>
 
@@ -2647,7 +2649,7 @@ function renderLevelInfo(){
   if(selectedCpuType==='random'){
     el.innerHTML=`
       <div class="lv-head"><div class="lv-face" style="background:radial-gradient(circle at 35% 30%,#2a2436,#14111c);display:flex;align-items:center;justify-content:center;font-size:20px;">🎲</div>
-        <div class="lv-meta"><div class="lv-name">ランダム</div><div class="lv-quote">対戦相手はその場で3人の中から決まります。</div></div></div>
+        <div class="lv-meta"><div class="lv-name">ランダム</div><div class="lv-quote">対戦相手はその場で5人の中から決まります。</div></div></div>
       <div class="lv-note">※CPUの強さ＝<b>相手の手加減のみ</b>変更</div>`;
     return;
   }
@@ -2709,27 +2711,36 @@ const LEVEL_META={
       { label:'大差(8点差)勝ち、または最終ラウンドを勝って締める', short:'大差/最終R勝ち', check:c=>c.win && ((c.youFinal-c.cpuFinal)>=8 || c.wonLastRound) },
     ]},
 };
-// ===== 実戦の対戦相手(CPUタイプ別)。LEVEL_METAのライバル演出をレベルから切り離して流用。
-//       名前・画像は暫定で既存のものを使用(差し替え予定)。 =====
+// ===== 実戦の対戦相手(CPUタイプ別)。名前・プレイスタイルはユーザー提供のキャラクター設定に準拠。
+//       portraitは暫定で既存の属性カード絵を流用(専用の立ち絵は別途用意予定)。 =====
 const CPU_TYPE_META={
-  tricky:    { portrait:'dark', color:'var(--dark)',
-    rival:{ name:'三色の見習い アルル', role:'色の見習い騎士', intro:'ふふ、色の読み合い…見習いの君に分かるかな？',
-            win:'やるね！ 色を制する者は侮れない。', lose:'まだ早いよ。もう一度、色を見極めて。' } },
-  cautious:  { portrait:'air', color:'var(--air)',
-    rival:{ name:'風唄いのゼファ', role:'風の騎士', intro:'風は流れを変える。受け流せるかな？',
-            win:'見事。風を味方にしたね。', lose:'風に翻弄されたね。Airの使い所を掴んで。' } },
-  aggressive:{ portrait:'kaos', color:'var(--kaos)',
-    rival:{ name:'仮面卿ノクス', role:'仮面騎士の頂点', intro:'よくぞここまで。混沌の戦い、見せてもらおう。',
-            win:'…見事だ。君こそ頂に立つ仮面騎士だ。', lose:'混沌は甘くない。0と1、そして5の理を思い出せ。' } },
+  tricky:    { portrait:'moon', color:'var(--moon)',
+    rival:{ name:'技巧仮面アルル', role:'テクニカルなプレイスタイル', intro:'多彩な戦術とトリックで、君の一手を翻弄してみせよう。',
+            win:'知略が実を結んだね。技を通す骨は良い。', lose:'読み切られたか…なかなかの手筋だ。' } },
+  cautious:  { portrait:'dark', color:'var(--dark)',
+    rival:{ name:'鉄壁仮面ゼファ', role:'慎重的なプレイスタイル', intro:'焦らず、確実に。隙を見せた方が負けるよ。',
+            win:'堅実さが実を結んだ。守りの美学、見せてもらった。', lose:'崩されたか…まだ守りが甘かったようだ。' } },
+  aggressive:{ portrait:'sun', color:'var(--sun)',
+    rival:{ name:'剛力仮面ノクス', role:'積極的なプレイスタイル', intro:'問答無用、力でねじ伏せる。ついてこれるか？',
+            win:'圧倒した。これが力の理だ。', lose:'…やるな。力だけでは足りなかったか。' } },
+  balanced:  { portrait:'air', color:'var(--air)',
+    rival:{ name:'調和仮面リヴェル', role:'バランス型のプレイスタイル', intro:'攻めと守り、どちらにも偏らない。共に良い戦いをしよう。',
+            win:'均衡を制した。着実な一歩の積み重ねだね。', lose:'見事な均衡崩しだ。良い勝負だった。' } },
+  chaotic:   { portrait:'kaos', color:'var(--kaos)',
+    rival:{ name:'無秩序仮面カオス', role:'先の読めないプレイスタイル', intro:'常識？ルール？さあ、何が起こるか楽しみにしていて。',
+            win:'ふふ、読めなかったろう？ それが混沌の力さ。', lose:'まさか読み切るとは…面白い、実に面白い。' } },
+  mentor:    { portrait:'sun', color:'var(--sun)',
+    rival:{ name:'指導仮面アストラ', role:'初心者騎士を一人前に育成する', intro:'焦らなくていい。ひとつずつ、一緒に覚えていこう。',
+            win:'よくやった。もうひとり立ちできそうだね。', lose:'大丈夫、これも学びのひとつ。次はきっとうまくいく。' } },
 };
 // ===== 称号(★・ライバル撃破・通算からアンロック。装備してホームに表示) =====
 const TITLES=[
   { id:'newcomer',   name:'見習い仮面騎士',     desc:'はじめて勝利する',            check:c=>c.wins>=1 },
   { id:'tricolor',   name:'見習い卒業',         desc:'チュートリアルを修了する',     check:c=>c.learnAllCleared },
   { id:'winddancer', name:'強敵を制す者',       desc:'CPUの強さ「強い」で勝利する',  check:c=>c.beatStrongAny },
-  { id:'chaosbreaker',name:'全対戦相手を制す',  desc:'3タイプ全員に「強い」設定で勝利する', check:c=>c.beatStrongAll },
+  { id:'chaosbreaker',name:'全対戦相手を制す',  desc:'5タイプ全員に「強い」設定で勝利する', check:c=>c.beatStrongAll },
   { id:'seer',       name:'看破者',             desc:'仮面あてを通算20回的中させる', check:c=>c.readHitsTotal>=20 },
-  { id:'rivalslayer',name:'主を退けし者',       desc:'3人の対戦相手全員に勝利する',  check:c=>c.allRivalsBeaten },
+  { id:'rivalslayer',name:'主を退けし者',       desc:'5人の対戦相手全員に勝利する',  check:c=>c.allRivalsBeaten },
   { id:'champion',   name:'常勝の仮面',         desc:'本戦で通算15勝する',           check:c=>c.wins>=15 },
   { id:'ballmaster', name:'常勝の証',           desc:'本戦で通算30勝する',           check:c=>c.wins>=30 },
 ];
@@ -2762,12 +2773,12 @@ function buildTitleCtx(){
       if(g.isTop && g.result==='win' && g.cpuDifficulty==='strong' && g.cpuStrategy) beatStrongTypes[g.cpuStrategy]=true;
     });
   }catch(e){}
-  // 実戦の対戦相手タイプ(tricky/cautious/aggressive)で撃破を追跡(旧レベル別キーの分は引き続き有効)
+  // 実戦の対戦相手タイプ(tricky/cautious/aggressive/balanced/chaotic)で撃破を追跡(旧レベル別キーの分は引き続き有効)
   return { stars, totalStars, wins:s.wins, total:s.total, winRate:s.winRate,
-    readHitsTotal:p.readHitsTotal, allRivalsBeaten:!!(rb.tricky&&rb.cautious&&rb.aggressive),
+    readHitsTotal:p.readHitsTotal, allRivalsBeaten:!!(rb.tricky&&rb.cautious&&rb.aggressive&&rb.balanced&&rb.chaotic),
     learnAllCleared: learnAllCleared(),
     beatStrongAny: Object.keys(beatStrongTypes).length>=1,
-    beatStrongAll: !!(beatStrongTypes.tricky && beatStrongTypes.cautious && beatStrongTypes.aggressive) };
+    beatStrongAll: CPU_STRATEGIES.every(k=>beatStrongTypes[k]) };
 }
 // 未取得の称号を判定・解除。新規解除ぶんを返す(最初の解除は自動装備)
 function unlockTitles(){
@@ -2869,7 +2880,6 @@ function endPracticeMode(youFinal, cpuFinal, st){
     ${unlock?`<div class="unlock-block">
       <div class="ub-h">🎉 新しい札が解放！ <b>${unlock.element}</b></div>
       <div class="ub-line">${unlock.line}</div>
-      ${unlock.missionIdx!=null?`<div class="ub-learn" onclick="openMissionLesson(${unlock.missionIdx})">▷ ${unlock.element}を1問で学ぶ</div>`:''}
     </div>`:''}
     ${surveyPromptHTML()}
     <div class="tutm-controls" style="flex-direction:column;margin-top:12px;">
@@ -3348,7 +3358,7 @@ function startGame(initialDealerIsYou, stage){
   // CPUの戦略パターン: 段階チュートリアルは固定(弱め)、練習モードはレベル別ライバル固定、
   // 実戦はプレイヤーが選んだ対戦相手タイプ(selectedCpuType)をそのまま使う
   if(stageConfig && !stageConfig.practice){
-    cpuStrategy='cautious'; cpuDifficulty=stageConfig.cpuDiff;
+    cpuStrategy='mentor'; cpuDifficulty=stageConfig.cpuDiff; // 指導仮面アストラ(専用キャラ)。AI行動の個性補正は付かない(公平な基準AI)
   } else if(stageConfig && stageConfig.practice){
     const lvKey = levelKeyFromAttrs(stageConfig.attrs);
     let strat = (LEVEL_META[lvKey] && LEVEL_META[lvKey].cpuType) || selectedCpuType;
@@ -4256,7 +4266,7 @@ function cpuPossibleAttrsFor(n){
   return options;
 }
 // CPU視点: 自分のカード(myCard)が相手の数字(oppNum)に対してどれくらい勝てそうか
-const CPU_STRATEGIES=['aggressive','cautious','tricky'];
+const CPU_STRATEGIES=['aggressive','cautious','tricky','balanced','chaotic'];
 let cpuStrategy='aggressive'; // ゲーム開始時に選ばれる(選択またはランダム)
 let cpuDifficulty='normal'; // 'weak'/'normal'/'strong'
 let selectedCpuType='random';
@@ -4293,7 +4303,7 @@ function onHomePlay(){
   openMatchSetup();
 }
 // 相手(CPU)の戦略ごとの仮面名
-const CPU_MASK_NAME={aggressive:'剛力仮面', cautious:'鉄壁仮面', tricky:'技巧仮面'};
+const CPU_MASK_NAME={aggressive:'剛力仮面', cautious:'鉄壁仮面', tricky:'技巧仮面', balanced:'調和仮面', chaotic:'無秩序仮面', mentor:'指導仮面'};
 function cpuMaskName(){ return CPU_MASK_NAME[cpuStrategy] || '仮面の騎士'; }
 // プレイヤー名(初回に入力・保存)。未設定なら「あなた」
 let playerName=''; try{ playerName=(localStorage.getItem('maskd_playername')||'').trim(); }catch(e){}
@@ -4435,6 +4445,8 @@ function cpuDecide(){
     if(S==='aggressive') threshold-=0.4;   // 積極的: 多少不利でも勝負に出る
     else if(S==='cautious') threshold+=0.6; // 慎重: 十分有利でないと勝負しない
     else if(S==='tricky') threshold+=(Math.random()*1.2-0.6); // トリッキー: 毎回ブレる
+    else if(S==='chaotic') threshold+=(Math.random()*2.4-1.2); // 無秩序: トリッキーよりさらに大きくブレる(予測不能)
+    // balanced(調和): 補正なし=攻守どちらにも偏らないニュートラルな基準AI
 
     // 戦略カウンターが尽きかけているなら、撤退/奇襲に頼れない分やや積極的に
     if(cpuTrust<=1) threshold-=0.3;
@@ -4452,7 +4464,7 @@ function cpuChooseCard(hand, oppNum){
   // 難易度に応じたうっかり: 一定確率でランダムな札を出す(初心者が付け入る隙)
   if(Math.random()<cpuEps()) return Math.floor(Math.random()*hand.length);
   // 同点付近の自然な揺らぎ用の微小ノイズ(トリッキーは大きめ)
-  const noise = 0.35 + (S==='tricky' ? 1.2 : 0);
+  const noise = 0.35 + (S==='tricky' ? 1.2 : (S==='chaotic' ? 2.2 : 0));
   const lm=scoreMultiplier(); // 終盤2倍を意識(勝ちの価値・負けの痛みが倍)
   const roundsLeft = matchRounds - round + 1;
   // Airは残せば少し得点(1枚2点)、使えば即座に戦略カウンター+1を得られる。
@@ -4496,6 +4508,7 @@ function cpuWantsForce(){
   if(S==='aggressive') bar-=0.6;
   else if(S==='cautious') bar+=0.8;
   else if(S==='tricky') bar+=(Math.random()*1.2-0.6);
+  else if(S==='chaotic') bar+=(Math.random()*2.4-1.2);
 
   // 状況判断: 負けていて残り少ないなら強気に、リード中で戦略が乏しいなら温存
   const scoreDiff = cpuLP - youLP;
@@ -4964,8 +4977,13 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.10.0';
+const GAME_VERSION = 'v1.11.0';
 const CHANGELOG = [
+  { version:'v1.11.0', date:'2026-07-19', items:[
+    '<b>対戦相手を2タイプ追加</b>：「調和仮面リヴェル」（バランス型）と「無秩序仮面カオス」（先の読めない型）が選べるようになりました。既存の3タイプの名前・説明も整理しました。',
+    '<b>チュートリアル専用の指導キャラクターを追加</b>：チュートリアル中の相手表示が「指導仮面アストラ」になりました。',
+    '<b>不具合修正・整理</b>：旧・基本ミッション（新チュートリアルと内容重複）を削除しました。上級ミッションは引き続き遊べます。',
+  ]},
   { version:'v1.10.0', date:'2026-07-19', items:[
     '<b>ホーム画面の「ミッション」を「チュートリアル」に変更</b>：タップで新しい段階式チュートリアルに遷移するようにしました。',
     '<b>ルール説明を整理</b>：「推理と看破」の章から、任意ミニゲームである「予想」の説明を省き、看破・読まれているの2項目に絞りました。',
@@ -5301,102 +5319,27 @@ function welcomeChoose(what){
 }
 
 // ===== ミッション形式チュートリアル(実際に操作しながらルールを覚える) =====
+// 基本セット(核となる10問)は、段階チュートリアル(LEARN_STAGES)と内容が重複するため廃止。
+// 上級ミッション(TUT_ADVANCED、下方に定義)のみ、より踏み込んだ腕試しとして「遊び方」画面から引き続き利用可能。
 // role:'child' … 相手(親)の札cpuに対し、手札handから1枚選んでgoal(勝ち/引分)を達成する
 // role:'dealerDecide' … あなた(親)の札youと相手(子)の札cpuを見て、決戦/撤退を選ぶ
-const TUT_MISSIONS=[
-  { icon:'🎴', title:'出してみよう', role:'child', core:true,
-    intro:'まずは基本操作。<b>手札のカードをタップ</b>すると場に出せます。相手の札より強い1枚を出してみましょう。',
-    cpu:{attr:'sun',num:2}, hand:[{attr:'dark',num:3}], goal:'win', correct:0,
-    objective:'相手は <b class="sun">SUN✋2</b>。手札の <b class="dark">DARK✌3</b> をタップして出そう。',
-    okMsg:'できました！<b class="dark">DARK✌</b>は<b class="sun">SUN✋</b>に勝ちます（闇✌＞太陽✋）。これがカードの出し方です。' },
-  { icon:'✊', title:'じゃんけんで勝つ', role:'child', core:true,
-    intro:'異なる属性どうしは<b>じゃんけん（3すくみ）</b>で決まり、<b>数字は関係ありません</b>。<br>月✊＞闇✌＞太陽✋＞月…',
-    cpu:{attr:'sun',num:4}, hand:[{attr:'moon',num:5},{attr:'dark',num:1}], goal:'win', correct:1,
-    objective:'相手は <b class="sun">SUN✋4</b>。じゃんけんで<b>勝てる</b>のはどっち？',
-    okMsg:'正解！<b class="dark">DARK✌1</b>は数字が低くても<b class="sun">SUN✋</b>に勝ちます。異属性は<b>じゃんけんが最優先</b>です。',
-    ngMsg:'惜しい！<b class="moon">MOON✊5</b>は数字は高いけれど<b class="sun">SUN✋</b>に負けます（太陽✋＞月✊）。数字より<b>じゃんけんの相性</b>が大事。' },
-  { icon:'🔢', title:'数字で勝つ（同属性）', role:'child', core:true,
-    intro:'<b>同じ属性</b>どうしがぶつかった時は、<b>数字が大きい方</b>が勝ちます。',
-    cpu:{attr:'moon',num:2}, hand:[{attr:'moon',num:4},{attr:'dark',num:1}], goal:'win', correct:0,
-    objective:'相手は <b class="moon">MOON✊2</b>。勝てる札はどっち？',
-    okMsg:'正解！同属性の <b class="moon">MOON✊4</b> は数字で上回り勝ち。<br>（<b class="dark">DARK✌1</b>だと闇は月に負けます＝月✊＞闇✌）',
-    ngMsg:'<b class="dark">DARK✌1</b>は<b class="moon">MOON✊</b>に負けます（月✊＞闇✌）。同属性なら<b>数字が大きい札</b>で勝てます。' },
-  { icon:'🏳', title:'不利なら撤退', role:'dealerDecide', core:true,
-    intro:'あなたは<b>親</b>。親だけが<b>決戦</b>（勝負）か<b>撤退</b>（見送り）を選べます。不利な時に撤退すれば<b>失点ゼロ</b>（戦略カウンター−1のみ）で切り抜けられます。',
-    you:{attr:'sun',num:5}, cpu:{attr:'dark',num:2},
-    objective:'あなたの <b class="sun">SUN✋5</b> vs 相手の <b class="dark">DARK✌2</b>。<br>闇✌は太陽✋に強い…さあどうする？',
-    okMsg:'正解！このまま決戦すると大事な<b>5点</b>を奪われます。ここは<b>撤退</b>して失点ゼロに抑えるのが好判断。',
-    ngMsg:'決戦すると<b class="dark">DARK✌</b>が<b class="sun">SUN✋</b>に勝ち、<b>5点</b>を相手に献上…。不利な時は<b>撤退</b>を選びましょう。' },
-  { icon:'🌀', title:'Kaosの奇跡', role:'child',
-    intro:'<b class="kaos">Kaos</b>は属性を問わず<b>数字勝負</b>。さらに特殊効果として、<b class="kaos">Kaos0・1</b>は最強の<b>5</b>を打ち破ります。',
-    cpu:{attr:'sun',num:5}, hand:[{attr:'kaos',num:0},{attr:'moon',num:5}], goal:'win', correct:0,
-    objective:'相手は最強格の <b class="sun">SUN✋5</b>。これを食える札は？',
-    okMsg:'正解！<b class="kaos">Kaos0</b>は特殊効果で<b>あらゆる5に勝利</b>。数字の常識をひっくり返す切り札です。',
-    ngMsg:'<b class="moon">MOON✊5</b>は<b class="sun">SUN✋</b>に負けます（太陽✋＞月✊）。ここは<b class="kaos">Kaos0</b>の特殊効果で5を食いましょう。' },
-  { icon:'🌬', title:'Airで引き分け', role:'child',
-    intro:'<b class="air">Air</b>が絡むと<b>必ず引き分け</b>。強い相手の攻撃を無効化する「流れを止める一手」です（使うと戦略カウンター+1）。',
-    cpu:{attr:'dark',num:5}, hand:[{attr:'air',num:2},{attr:'sun',num:1}], goal:'draw', correct:0,
-    objective:'相手は強力な <b class="dark">DARK✌5</b>。まともにぶつかると負け。被害を防ぐには？',
-    okMsg:'正解！<b class="air">Air</b>で<b>引き分け</b>に持ち込み、5点の失点を回避（さらに戦略カウンター+1）。守りの名手です。',
-    ngMsg:'<b class="sun">SUN✋1</b>は<b class="dark">DARK✌</b>に負けます（闇✌＞太陽✋）。勝てない相手は<b class="air">Air</b>で引き分けに持ち込みましょう。' },
-  { icon:'♻️', title:'入替で逆転', role:'swap',
-    intro:'親は<b>入替</b>で、子の数字を見てから自分の札を<b>より強い1枚に交換</b>できます（戦略カウンター−2で決戦確定）。',
-    you:{attr:'moon',num:1}, cpu:{attr:'sun',num:2}, hand:[{attr:'dark',num:3},{attr:'moon',num:0}], goal:'win', correct:0,
-    objective:'今のあなたは <b class="moon">MOON✊1</b>で、相手の <b class="sun">SUN✋2</b> に負けそう…。どの札に入替える？',
-    okMsg:'正解！<b class="dark">DARK✌3</b>に入替えれば<b class="sun">SUN✋</b>に相性勝ち（闇✌＞太陽✋）。不利な手を有利な札へ差し替えるのが入替です。',
-    ngMsg:'<b class="moon">MOON✊0</b>だと<b class="sun">SUN✋</b>に負けたまま（太陽✋＞月✊）。ここは<b class="dark">DARK✌3</b>で相性勝ちを狙いましょう。' },
-  { icon:'🏆', title:'高い札を温存', role:'child', strict:true,
-    intro:'使わず残した手札は最後に<b>ボーナス点</b>（非Airの<b>上位2枚</b>＋Air各2点）。勝てる時は<b>低い札で済ませ</b>、高い札は温存しよう。',
-    cpu:{attr:'moon',num:2}, hand:[{attr:'moon',num:3},{attr:'moon',num:5}], goal:'win', correct:0,
-    objective:'相手は <b class="moon">MOON✊2</b>。<b>勝ちつつ、高い札を残す</b>にはどちらで勝つ？',
-    okMsg:'正解！<b class="moon">MOON✊3</b>で十分勝てます。最強の<b>5</b>は温存して<b>残り手札ボーナス</b>に回すのが上手い戦い方。',
-    ngMsg:'<b class="moon">MOON✊5</b>でも勝てますが、<b>5は貴重なボーナス札</b>。勝てるなら<b>低い札（3）</b>で済ませ、5は温存しましょう。' },
-  { icon:'⚡', title:'奇襲でしとめる', role:'forceDecide',
-    intro:'子は<b>奇襲</b>で、親の<b>撤退</b>を強制的に<b>決戦</b>へ引き込めます（戦略カウンター−2）。勝てる場面なら奇襲でしとめよう。',
-    cpu:{attr:'sun',num:3}, you:{attr:'dark',num:4},
-    objective:'相手（親）は <b class="sun">SUN✋3</b> で<b>撤退</b>しようとしている。あなたは <b class="dark">DARK✌4</b>。どうする？',
-    okMsg:'正解！<b class="dark">DARK✌</b>は<b class="sun">SUN✋</b>に勝てます（闇✌＞太陽✋）。奇襲で決戦に持ち込み、相手の得点札を奪います。',
-    ngMsg:'見送ると勝てる勝負を逃します。勝てる場面は<b>奇襲</b>でしとめましょう（闇✌＞太陽✋）。' },
-  { icon:'🔥', title:'終盤は2倍', role:'dealerDecide',
-    intro:'<b>最終2ラウンド（R7・R8）の決戦は得点2倍</b>！ 有利な終盤は強気に決戦で大きく稼ごう。',
-    you:{attr:'dark',num:4}, cpu:{attr:'sun',num:2},
-    objective:'終盤R8。あなたの <b class="dark">DARK✌4</b> vs 相手の <b class="sun">SUN✋2</b>。2倍のチャンス、どうする？',
-    okMsg:'正解！<b class="dark">DARK✌</b>は<b class="sun">SUN✋</b>に勝ち、終盤なので得点は<b>2倍</b>。有利な終盤は積極的に決戦を。',
-    ngMsg:'撤退はもったいない！有利な終盤の決戦は<b>2倍</b>。勝てる時は決戦で大きく稼ぎましょう。' },
-  { icon:'⚠️', title:'Kaos5の弱点', role:'child',
-    intro:'万能に見える<b class="kaos">Kaos</b>にも弱点が。<b class="kaos">Kaos5</b>は、最も小さい<b>1</b>に不覚を取ります。',
-    cpu:{attr:'sun',num:1}, hand:[{attr:'kaos',num:5},{attr:'dark',num:3}], goal:'win', correct:1,
-    objective:'相手は <b class="sun">SUN✋1</b>。強力な <b class="kaos">Kaos5</b> を出したいところだが…？',
-    okMsg:'正解！<b class="kaos">Kaos5</b>は<b>1</b>に負けるので危険。ここは<b class="dark">DARK✌3</b>で堅実に勝ちましょう（闇✌＞太陽✋）。',
-    ngMsg:'<b class="kaos">Kaos5</b>は特殊弱点で<b>1</b>に敗北します。万能ではありません。相性で勝てる<b class="dark">DARK✌3</b>を選びましょう。' },
-];
-const MISSIONS_DONE_KEY='maskd_missions_done_v1';
 const ADVANCED_DONE_KEY='maskd_advanced_done_v1';
 let tutMi=0, tutLocked=false;
-let tutList=TUT_MISSIONS, tutSet='basic'; // 現在挑戦中のミッションセット
+let tutList=[], tutSet='advanced'; // 現在挑戦中のミッションセット(上級のみ)
 // チュートリアル用のカード描画(常に初心者表示＝じゃんけん記号+数字+属性名で分かりやすく)
 function tutCardHTML(c){ return `<div class="card faceup bcard ${c.attr}">${beginnerInner(c)}</div>`; }
-// 基本チュートリアルは「核」だけに絞る(Air/Kaos/上級系は解放時のjust-in-timeで教える)
-const TUT_CORE=TUT_MISSIONS.filter(m=>m.core);
-function openMissions(which){
-  tutSet = (which==='advanced') ? 'advanced' : 'basic';
-  tutList = (tutSet==='advanced') ? TUT_ADVANCED : TUT_CORE;
+function openMissions(){
+  tutSet='advanced';
+  tutList=TUT_ADVANCED;
   tutMi=0;
   logEvent('tutorial_start', { set: tutSet, count: tutList.length }); // ★チュートリアル開始を計測(完走とのペアで離脱率)
   document.getElementById('tutMissionOverlay').classList.add('show');
   renderMission();
 }
-// 解放時などに、特定の1問だけを「その場で1つ学ぶ」ミニレッスンとして開く
-function openMissionLesson(idx){
-  const el=document.getElementById('learnOverlay'); if(el) el.classList.remove('show');
-  tutSet='lesson'; tutList=[TUT_MISSIONS[idx]]; tutMi=0;
-  document.getElementById('tutMissionOverlay').classList.add('show');
-  renderMission();
-}
 // レベル解放の定義(初級→中級=AIR / 中級→上級=KAOS)。本戦は最上位なので解放演出なし
 const UNLOCKS={
-  beginner:{ next:'r2', nextName:'中級', element:'AIR', line:'AIRが絡むと必ず引き分け。強い相手を受け流す「流れを止める札」です。', missionIdx:5 },
-  inter:{ next:'r3', nextName:'上級', element:'KAOS', line:'KAOSは属性を問わず数字勝負。0と1は最強の5を食う特殊札です。', missionIdx:4 },
+  beginner:{ next:'r2', nextName:'中級', element:'AIR', line:'AIRが絡むと必ず引き分け。強い相手を受け流す「流れを止める札」です。' },
+  inter:{ next:'r3', nextName:'上級', element:'KAOS', line:'KAOSは属性を問わず数字勝負。0と1は最強の5を食う特殊札です。' },
 };
 // 解放時: 次レベルに挑戦(＝そのモードで即開始)
 function challengeNextLevel(rule){
@@ -5511,28 +5454,20 @@ function tutForceDecide(force){
 }
 function tutNextMission(){ tutMi++; renderMission(); }
 function tutFinish(){
-  const isAdv=(tutSet==='advanced');
   logEvent('tutorial_complete', { set: tutSet, count: tutList.length }); // ★チュートリアル完走を計測
-  try{ localStorage.setItem(isAdv?ADVANCED_DONE_KEY:MISSIONS_DONE_KEY,'1'); }catch(e){}
-  const fresh=checkAchievements({ missionsCleared:missionsCleared(), advancedCleared:advancedCleared(),
+  try{ localStorage.setItem(ADVANCED_DONE_KEY,'1'); }catch(e){}
+  const fresh=checkAchievements({ advancedCleared:advancedCleared(),
     agg:computeAggregateStats(loadGameHistory()), streak:computeStreaksAndRate(loadGameHistory()) });
   const achNote = fresh.length ? `<div class="tutm-intro" style="text-align:center;margin-top:10px;border-color:rgba(201,162,74,.5);background:rgba(201,162,74,.08);">🎉 実績解除：${fresh.map(a=>a.icon+' '+a.title).join(' / ')}</div>` : '';
-  const advBtn = (!isAdv && !advancedCleared())
-    ? `<div class="btn danger" style="width:100%;" onclick="openMissions('advanced')">⚔️ 上級ミッションに挑戦</div>` : '';
-  const body = isAdv
-    ? '<b>上級ミッション</b>を制覇！ Kaosの弱点や特殊相性まで読み切る、上級者の一手を身につけました。'
-    : 'お疲れさまでした。基本操作と<b>じゃんけん・数字・撤退・Kaos・Air・入替・奇襲</b>を身につけました。次は<b>上級ミッション</b>に挑戦！';
   const box=document.querySelector('#tutMissionOverlay .tutm-box');
-  box.innerHTML=`<div class="tutm-head"><span class="tutm-title" style="text-align:center;flex:1;">${isAdv?'⚔️ 上級ミッション制覇！':'🎓 全ミッション修了！'}</span></div>
-    <div class="tutm-intro" style="text-align:center;margin-top:14px;">${body}</div>
+  box.innerHTML=`<div class="tutm-head"><span class="tutm-title" style="text-align:center;flex:1;">⚔️ 上級ミッション制覇！</span></div>
+    <div class="tutm-intro" style="text-align:center;margin-top:14px;"><b>上級ミッション</b>を制覇！ Kaosの弱点や特殊相性まで読み切る、上級者の一手を身につけました。</div>
     ${achNote}
     <div class="tutm-controls" style="flex-direction:column;margin-top:16px;">
-      ${advBtn}
       <div class="btn" style="width:100%;" onclick="closeMissions(); beginMatchSetup();">対戦を始める</div>
       <div class="btn ghost" style="width:100%;" onclick="closeMissions()">閉じる</div>
     </div>`;
 }
-function missionsCleared(){ try{ return localStorage.getItem(MISSIONS_DONE_KEY)==='1'; }catch(e){ return false; } }
 function advancedCleared(){ try{ return localStorage.getItem(ADVANCED_DONE_KEY)==='1'; }catch(e){ return false; } }
 // ===== 上級ミッション(本格派：ルールを総合して読み切る) =====
 const TUT_ADVANCED=[
@@ -6124,7 +6059,7 @@ function endGame(){
   const streak = computeStreaksAndRate(loadGameHistory());
   // 実績の判定(この試合の結果＋通算を渡す)
   const newAch = checkAchievements({ win:youFinal>cpuFinal, youFinal, cpuFinal, youLP, cpuLP, roundLog, summary:s,
-    agg:computeAggregateStats(loadGameHistory()), streak, missionsCleared:missionsCleared(), advancedCleared:advancedCleared(),
+    agg:computeAggregateStats(loadGameHistory()), streak, advancedCleared:advancedCleared(),
     learnDone:learnAllCleared() }); // チュートリアルを過去に修了済みなら実戦の結果画面でも遡って解除できるように
   // 得点内訳テーブル(上から順にカウントアップ演出)
   const numCell=(v,pre,who)=>`<span class="sb-n ${who}">${pre?`<span class="sb-pre">${pre}</span>`:''}<span class="num" data-t="${v}">0</span></span>`;
