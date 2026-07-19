@@ -5005,8 +5005,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.15.0';
+const GAME_VERSION = 'v1.16.0';
 const CHANGELOG = [
+  { version:'v1.16.0', date:'2026-07-19', items:[
+    '<b>相手の山札の表示を改善</b>：分かりにくかった「推理」表示を、自分の山札と同じ「次の数字」表示に変更しました（属性は引き続き非公開です）。',
+  ]},
   { version:'v1.15.0', date:'2026-07-19', items:[
     '<b>チュートリアル ステージ4に配札演出を追加</b>：全5属性30枚のデッキが初めて登場するこのステージの開始時に、本戦と同じ「30枚を2人に分配」の演出を追加しました。',
   ]},
@@ -5886,13 +5889,15 @@ function oppDrawPileCandidates(){
 function renderOppDeckChip(){
   const bar=document.getElementById('deckBarOpp');
   if(!bar) return;
-  // チュートリアル序盤(ステージ1〜3)は、相手の山札の推理候補という発展的な情報はまだ出さない(ステージ4以降で解禁)
+  // チュートリアル序盤(ステージ1〜3)は、相手の山札の情報という発展的な内容はまだ出さない(ステージ4以降で解禁)
   if(inTutorialStage() && !stageConfig.hints){ bar.style.display='none'; return; }
   bar.style.display='';
-  const total=oppDrawPileCandidates().reduce((s,c)=>s+c.count,0);
-  if(total<=0){ bar.className='deck-chip opp empty'; bar.innerHTML='<span class="deck-mini none">－</span><span>山札なし</span>'; return; }
+  const n=cpuDrawPile.length;
+  if(n<=0){ bar.className='deck-chip opp empty'; bar.innerHTML='<span class="deck-mini none">－</span><span>山札なし</span>'; return; }
   bar.className='deck-chip opp';
-  bar.innerHTML=`<span class="deck-mini"></span><span class="deck-next">推理 ›</span>`;
+  // 山札の「数字」は自分の山札と同様に確定表示(属性のみ非公開＝推理の対象)
+  const next=cpuDrawPile[n-1];
+  bar.innerHTML=`<span class="deck-mini"></span><span class="deck-next">次<b>${next.num}</b></span>`;
 }
 function openOppDeckModal(){
   const body=document.getElementById('oppDeckModalBody');
@@ -5901,10 +5906,13 @@ function openOppDeckModal(){
   if(total<=0){
     body.innerHTML='<div class="hist-empty">相手の山札は空です。</div>';
   } else {
-    body.innerHTML=cand.map((c,idx)=>{
+    const nextNum = cpuDrawPile.length>0 ? cpuDrawPile[cpuDrawPile.length-1].num : null;
+    let nextShown=false;
+    body.innerHTML=cand.map(c=>{
+      const isNext = !nextShown && c.num===nextNum; if(isNext) nextShown=true;
       const icons=candAttrsHTML(c.attrs, true);
-      return `<div class="odc-cand${idx===0?' next':''}">
-        <div class="odc-num">${c.num}${idx===0?'<span class="odc-nextbadge">最小</span>':''}</div>
+      return `<div class="odc-cand${isNext?' next':''}">
+        <div class="odc-num">${c.num}${isNext?'<span class="odc-nextbadge">次</span>':''}</div>
         <div class="odc-x">×${c.count}</div>
         <div class="odc-poss"><span class="odc-lbl">${c.attrs.length===1?'確定':'候補'}</span>${icons}</div>
       </div>`;
