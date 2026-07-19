@@ -1447,15 +1447,14 @@
   /* ===== レベルの主(ライバル) と ★クリア目標(1画面に収めるため縦を圧縮) ===== */
   .level-info{ width:100%; max-width:360px; margin:2px auto 0; padding:8px 10px; border-radius:10px;
     border:1px solid rgba(201,162,74,.3); background:rgba(10,9,16,.5); text-align:left; }
-  .lv-head{ display:flex; align-items:center; gap:8px; }
+  .lv-head{ display:flex; align-items:flex-start; gap:8px; }
   .lv-face{ width:30px; height:30px; border-radius:50%; flex-shrink:0; background-size:cover; background-position:center top;
     border:1px solid rgba(201,162,74,.5); box-shadow:0 0 6px rgba(201,162,74,.2); }
   .lv-meta{ flex:1; min-width:0; }
   .lv-name{ font-size:13px; color:var(--gold-bright); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .lv-stars{ font-size:11px; letter-spacing:1px; margin-left:5px; }
   .lv-star{ color:#4a4550; } .lv-star.got{ color:var(--gold-bright); }
-  .lv-quote{ font-size:10px; color:#c9bfa8; font-style:italic; margin-top:1px;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lv-quote{ font-size:10px; color:#c9bfa8; font-style:italic; margin-top:1px; line-height:1.4; }
   .lv-goals-label{ margin-top:6px; padding-top:5px; border-top:1px solid rgba(201,162,74,.12);
     font-size:9px; color:var(--gold-dim); letter-spacing:.04em; }
   .lv-goals-line{ font-size:10px; color:var(--ink-dim); line-height:1.5;
@@ -1573,16 +1572,6 @@
   #cpuTypeOpts .co-face{ width:40px; height:40px; border-radius:50%; background-size:cover; background-position:center top;
     border:1px solid rgba(201,162,74,0.4); }
   #cpuTypeOpts .cpu-opt.with-face.selected .co-face{ border-color:#1a1608; }
-  /* 対戦設定: ルール・ボス情報は折りたたみに格納(初見は①②だけ決めればよい) */
-  .setup-details{ width:100%; max-width:360px; margin:5px auto 0; border-radius:10px; overflow:hidden;
-    border:1px solid rgba(201,162,74,0.22); }
-  .setup-details summary{ cursor:pointer; padding:9px 12px; font-size:11.5px; color:var(--gold-bright);
-    background:rgba(201,162,74,.05); text-align:center; user-select:none; list-style:none; }
-  .setup-details summary::-webkit-details-marker{ display:none; }
-  .setup-details summary::before{ content:'▸ '; }
-  .setup-details[open] summary::before{ content:'▾ '; }
-  .setup-details[open] summary{ border-bottom:1px solid rgba(201,162,74,0.22); }
-  .setup-details .setup-step{ border:none; border-radius:0; margin:0; background:transparent; }
   /* ルールの内訳をチップで表示(長文パラグラフの代わり) */
   .rule-chips{ display:flex; flex-wrap:wrap; gap:5px; justify-content:center; }
   .rule-chip{ display:flex; align-items:center; gap:4px; padding:4px 8px; border-radius:8px; font-size:10px;
@@ -1852,24 +1841,17 @@
     <div class="setup-step">
       <div class="step-head"><span class="step-num">1</span><span class="step-title">対戦相手を選ぶ</span></div>
       <div class="cpu-setting-opts" id="cpuTypeOpts"></div>
+      <div class="level-info" id="levelInfo"></div>
     </div>
 
     <div class="setup-step">
       <div class="step-head"><span class="step-num">2</span><span class="step-title">CPUの強さを選ぶ</span></div>
       <div class="cpu-setting-opts" id="cpuDiffOpts">
-        <div class="cpu-opt" data-val="weak">弱い<span class="opt-sub">CPUが手加減</span></div>
-        <div class="cpu-opt" data-val="normal">普通</div>
-        <div class="cpu-opt" data-val="strong">強い<span class="opt-sub">CPUが本気</span></div>
+        <div class="cpu-opt" data-val="weak">弱い<span class="opt-sub">CPUがよくミスする</span></div>
+        <div class="cpu-opt" data-val="normal">普通<span class="opt-sub">標準的な強さ</span></div>
+        <div class="cpu-opt" data-val="strong">強い<span class="opt-sub">CPUはミスしない</span></div>
       </div>
     </div>
-
-    <details class="setup-details">
-      <summary>詳細を見る（対戦相手の情報）</summary>
-      <div class="setup-step">
-        <div class="step-head"><span class="step-title">選んだ対戦相手</span></div>
-        <div class="level-info" id="levelInfo"></div>
-      </div>
-    </details>
 
     <div class="btn-wrap" style="display:flex;gap:8px;margin-top:6px;">
       <div class="btn" style="flex:1;" onclick="beginMatchSetup()">この設定で対戦 ▶</div>
@@ -2573,7 +2555,7 @@ function renderCpuTypeOpts(){
     const title=m?m[1]:''; const shortName=m?m[2]:meta.rival.name;
     return `<div class="cpu-opt with-face" data-val="${k}"><div class="co-face" style="background-image:url(${rivalImgUrl(k)})"></div>${shortName}<span class="opt-sub">${title}</span></div>`;
   }).join('');
-  wrap.innerHTML = rows + `<div class="cpu-opt" data-val="random">ランダム</div>`;
+  wrap.innerHTML = rows + `<div class="cpu-opt with-face" data-val="random"><div class="co-face" style="background-image:url(${rivalImgUrl('mentor')})"></div>🎲 ランダム<span class="opt-sub">おまかせ</span></div>`;
 }
 function initCpuSettingUI(){
   renderCpuTypeOpts();
@@ -2663,8 +2645,8 @@ function renderLevelInfo(){
   const el=document.getElementById('levelInfo'); if(!el) return;
   if(selectedCpuType==='random'){
     el.innerHTML=`
-      <div class="lv-head"><div class="lv-face" style="background:radial-gradient(circle at 35% 30%,#2a2436,#14111c);display:flex;align-items:center;justify-content:center;font-size:20px;">🎲</div>
-        <div class="lv-meta"><div class="lv-name">ランダム</div><div class="lv-quote">対戦相手はその場で5人の中から決まります。</div></div></div>
+      <div class="lv-head"><div class="lv-face" style="background-image:url(${rivalImgUrl('mentor')})"></div>
+        <div class="lv-meta"><div class="lv-name">🎲 ランダム</div><div class="lv-quote">対戦相手はその場で5人の中から決まります。</div></div></div>
       <div class="lv-note">※CPUの強さ＝<b>相手の手加減のみ</b>変更</div>`;
     return;
   }
@@ -4999,8 +4981,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.12.0';
+const GAME_VERSION = 'v1.13.0';
 const CHANGELOG = [
+  { version:'v1.13.0', date:'2026-07-19', items:[
+    '<b>対戦設定画面を改善</b>：「ランダム」にも専用の立ち絵を表示し、選んだ相手の台詞が省略されず全文表示されるようにしました。CPUの強さの説明も分かりやすくし、「詳細を見る」の開閉トグルを廃止して対戦相手の情報を常に表示するようにしました。',
+  ]},
   { version:'v1.12.0', date:'2026-07-19', items:[
     '<b>対戦相手の立ち絵を追加</b>：対戦相手を選ぶ画面・ライバル登場演出・対戦中の相手情報欄に、それぞれのキャラクターの立ち絵を表示するようにしました。',
   ]},
