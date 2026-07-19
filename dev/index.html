@@ -4351,7 +4351,7 @@ function cpuDecide(){
   hideCpuThinking();
   const S=cpuStrategy, lm=scoreMultiplier(); // 終盤2倍を意識(勝ちの価値・負けの痛みが倍)
   // 親の特権「入替」: 子の数字を見てから、より期待値の高い札があれば入替を検討(1ラウンド1回まで)
-  if(!cpuSwapUsedThisRound && cpuTrust>=SWAP_COST && cpuHand.length>0){
+  if(stageAllows('swap') && !cpuSwapUsedThisRound && cpuTrust>=SWAP_COST && cpuHand.length>0){
     const currentEst=cpuEstimate(dealerCard, childCard.num, true);
     const currentScore = currentEst.win*childCard.num*lm - currentEst.lose*dealerCard.num*lm;
     let best=currentScore, bi=-1;
@@ -4923,8 +4923,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.6.0';
+const GAME_VERSION = 'v1.7.0';
 const CHANGELOG = [
+  { version:'v1.7.0', date:'2026-07-19', items:[
+    '<b>不具合修正</b>：入替がまだ解禁されていないチュートリアル序盤で、CPU側だけ入替を使えてしまうことがあった不具合を修正しました。',
+  ]},
   { version:'v1.6.0', date:'2026-07-19', items:[
     '<b>チュートリアル ステージ1を調整</b>：名称を「色の対決」から「３つの属性」に変更し、属性の表記をMOON/SUN/DARKなど英語表記に統一しました。',
     '<b>不具合修正</b>：ステージ1〜3で、まだ教えていない推理ヒントを隠す処理が「おすすめ」札の印・コーチのアドバイス・決着時のやさしい解説まで一緒に消してしまっていたのを修正し、これらは引き続き表示されるようにしました。',
