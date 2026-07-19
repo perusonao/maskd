@@ -2948,9 +2948,9 @@ async function submitSurvey(){
 // ホーム: 仮面カードの扇(既存のカードアートを再利用)と戦績バッジを描画
 const MASK_FAN=[
   {attr:'moon', g:'☾', n:'MOON', d:'闇に勝つ'},
-  {attr:'air',  g:'≈', n:'AIR',  d:'多くは引分'},
+  {attr:'air',  g:'≈', n:'AIR',  d:'絡むと引分'},
   {attr:'sun',  g:'☀', n:'SUN',  d:'月に勝つ', center:true},
-  {attr:'kaos', g:'✷', n:'KAOS', d:'特殊ルール'},
+  {attr:'kaos', g:'✷', n:'KAOS', d:'Airに勝つ'},
   {attr:'dark', g:'✦', n:'DARK', d:'太陽に勝つ'},
 ];
 function renderMaskFan(){
@@ -4924,8 +4924,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.4.0';
+const GAME_VERSION = 'v1.5.0';
 const CHANGELOG = [
+  { version:'v1.5.0', date:'2026-07-19', items:[
+    '<b>属性の説明を見直し</b>：ホーム画面の仮面一覧で、AIRとKAOSの説明を「絡むと引分」「Airに勝つ」に変更し、MOON/SUN/DARKと同じ「何に勝つか」の形にそろえて分かりやすくしました。',
+  ]},
   { version:'v1.4.0', date:'2026-07-18', items:[
     '<b>実績・称号を作り直し</b>：チュートリアル導入・実戦の再構成に合わせて、旧レベルの★に紐づいていた称号4種を、チュートリアル修了や「CPUの強さ『強い』設定での勝利」など、新しい遊び方に沿った条件に変更しました。',
   ]},
