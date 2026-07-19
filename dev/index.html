@@ -2460,7 +2460,7 @@ const LEARN_STAGES=[
     swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak', hints:false,
     intro:'<b class="kaos">KAOS</b>解禁で全属性そろい踏み。KAOSは<b>属性問わず数字勝負</b>、さらに<b>0・1は最強の5に勝つ</b>特殊効果を持ちます。' },
   { id:4, name:'読み合い', icon:'🔍', attrs:['moon','sun','dark','kaos','air'], rounds:6,
-    swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak', hints:true,
+    swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak', hints:true, dealAnim:true,
     intro:'5属性がそろったところで、種明かし。デッキは<b>5属性×数字0〜5、全30枚</b>の固定デッキで、二人で<b>15枚ずつ</b>に分配されています。相手の<b>数字はすぐ見える</b>が<b>属性は伏せられたまま</b>。場に出た札から消去法で候補が絞られ、<b>1つに絞れたら🔓看破</b>（確定）。あなたの札も同じ理屈で相手に絞られ、絞られると<b>⚠読まれている</b>と警告が出ます。' },
   { id:5, name:'戦略・奇襲', icon:'✦', attrs:['moon','sun','dark','kaos','air'], rounds:6,
     swap:false, force:true, late2x:false, leftover:false, cpuDiff:'normal', hints:true,
@@ -2527,7 +2527,10 @@ function startLearnStage(id){
   //  常時ヒントONの通常プレイヤーには一切影響しない)
   if(_preLearnHints===null) _preLearnHints=hintsEnabled;
   hintsEnabled=true;
-  startGame(Math.random()<0.5, st);
+  const dealer=Math.random()<0.5;
+  // 全5属性30枚デッキが初登場するステージでは、本戦と同じ配札演出を挟んで実感してもらう
+  if(st.dealAnim) playDealAnimation(()=>startGame(dealer, st));
+  else startGame(dealer, st);
 }
 // ステージ終了(専用結果。通算/実績/履歴には残さない)
 function endLearnStage(youFinal, cpuFinal){
@@ -5002,8 +5005,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.14.0';
+const GAME_VERSION = 'v1.15.0';
 const CHANGELOG = [
+  { version:'v1.15.0', date:'2026-07-19', items:[
+    '<b>チュートリアル ステージ4に配札演出を追加</b>：全5属性30枚のデッキが初めて登場するこのステージの開始時に、本戦と同じ「30枚を2人に分配」の演出を追加しました。',
+  ]},
   { version:'v1.14.0', date:'2026-07-19', items:[
     '<b>初回プレイ時に「遊び方」を表示</b>：これまでの選択式の案内に代わり、ゲーム概要のスライドを直接表示するようにしました。',
     '<b>「遊び方」の内容を改善</b>：カードの枚数表示がカードの数字と紛らわしかった点、相性説明のアイコンが分かりにくかった点を修正。「上級ミッションに挑戦」は削除しました。',
