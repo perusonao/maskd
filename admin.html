@@ -529,8 +529,8 @@ if(isDevPreview){ const b=document.getElementById('envBadge'); if(b){ b.textCont
 let fb=null, surveyLoadError=null, playerLoadError=null;
 // *Raw = Firestoreから取得した生データ(表示基準日時の影響を受けない)。
 // 表示用のallLogs等は、applyDisplayFilter()が*Rawから都度算出する「今の画面に出すデータ」。
-let allLogsRaw=[], totalCountRaw=null, allSurveysRaw=[], allPlayersRaw=[], totalPlayersRaw=null, allVisitsRaw=[], totalVisitsRaw=null;
-let allLogs=[], totalCount=null, allSurveys=[], allPlayers=[], totalPlayers=null, totalVisits=null, allVisits=[];
+let allLogsRaw=[], totalCountRaw=null, allSurveysRaw=[], allPlayersRaw=[], totalPlayersRaw=null, allVisitsRaw=[], totalVisitsRaw=null, allTutEventsRaw=[];
+let allLogs=[], totalCount=null, allSurveys=[], allPlayers=[], totalPlayers=null, totalVisits=null, allVisits=[], allTutEvents=[];
 let tableState={ sortKey:'ts', sortDir:-1, fWinner:'', fDiff:'', fVer:'', q:'' };
 // 論理削除(非表示)の状態。hidden_recordsコレクションへの追記(hide/unhideイベント)を
 // 時系列に並べて「最後のイベント」を現在の状態とみなす(追記のみ・更新削除なしの設計に合わせるため)。
@@ -578,6 +578,7 @@ function applyDisplayFilter(){
   allSurveys=cut(allSurveysRaw);
   allPlayers=cut(allPlayersRaw);
   allVisits=cut(allVisitsRaw);
+  allTutEvents=cut(allTutEventsRaw);
   // サーバー側の総数(getCountFromServer)は基準日時を考慮できないため、基準が設定されている間は
   // 実際に絞り込んだ件数をそのまま総数として扱う(取得上限を超えるほど古いデータがある場合のみ誤差の余地あり)。
   totalCount = baseMs!=null ? allLogs.length : totalCountRaw;
@@ -734,6 +735,11 @@ async function loadData(){
     allVisitsRaw=[]; snap.forEach(d=>allVisitsRaw.push(d.data()));
     totalVisitsRaw=count;
   }catch(e){ allVisitsRaw=[]; totalVisitsRaw=null; }
+  // 匿名のチュートリアル開始/完走カウント(同意不要)。件数が少ないので全件取得のみ(サーバー集計は使わない)。
+  try{
+    const snap=await fb.getDocs(fb.query(fb.collection(fb.db,envCol("tutorial_events")), fb.limit(2000)));
+    allTutEventsRaw=[]; snap.forEach(d=>allTutEventsRaw.push(d.data()));
+  }catch(e){ allTutEventsRaw=[]; }
   // 論理削除(非表示)イベント。読めなくても他機能は継続(何も非表示にしない扱い)。
   try{
     const snap=await fb.getDocs(fb.query(fb.collection(fb.db,envCol('hidden_records')), fb.limit(5000)));
@@ -858,40 +864,54 @@ function visitsSectionHTML(){
   return out;
 }
 
-// ===== 軽量イベント(離脱率・チュートリアル完走率) =====
+// ===== 軽量イベント(離脱率) =====
 // v0.55.0で追加されたが、Firestoreルールがwinner等を必須にしていたため実際には
 // これまで一件も保存できていなかった不具合をv0.61.2で修正。ルール反映前のデータには
 // 出てこないため、件数が0の間はセクション自体を出さない。
 // v1.23.0でダッシュボード全体に「表示基準日時」フィルタ(displayResetCtrlHTML)を導入したため、
 // このセクション独自のリセット機能(旧v1.20.0)は廃止し、他のセクションと同様シンプルな単一表示に統一した。
+// v1.25.0: 「チュートリアル開始/完走」はここ(同意ゲート付きのlogs内イベント)では正しく計測できて
+// いなかった(旧UIの導線が現行のチュートリアルからは到達不能になっていた上、同意タイミングの問題も
+// あった)ため撤去。同意不要の匿名カウントに作り直し、tutorialEventsSectionHTML()へ移設した。
 function eventStatsHTML(eventLogs){
-  const intro='<div class="muted" style="font-size:11px;margin:-4px 0 10px;">プレイヤーがどこで離脱しているか・チュートリアルを最後まで終えているかを見る欄です。「セッション開始」「対戦開始」は同意設定のタイミングの関係で実際のアクセス数より少なく計測されるため、離脱率などは目安としてご覧ください。</div>';
+  const intro='<div class="muted" style="font-size:11px;margin:-4px 0 10px;">プレイヤーが対戦中にどこで離脱しているかを見る欄です。「セッション開始」「対戦開始」は同意設定のタイミングの関係で実際のアクセス数より少なく計測されるため、離脱率などは目安としてご覧ください。</div>';
   if(!eventLogs.length){
-    return '<h2>計測イベント（離脱・チュートリアル完走）</h2>'+intro+'<div class="muted" style="font-size:11px;margin:-4px 0 12px;">※離脱率などの計測イベントはまだ0件です(Firestoreルール反映前のデータのため、または反映直後でまだ収集中の可能性があります)。</div>';
+    return '<h2>計測イベント（離脱）</h2>'+intro+'<div class="muted" style="font-size:11px;margin:-4px 0 12px;">※離脱率などの計測イベントはまだ0件です(Firestoreルール反映前のデータのため、または反映直後でまだ収集中の可能性があります)。</div>';
   }
   const evCount={}; eventLogs.forEach(g=>{ evCount[g.type]=(evCount[g.type]||0)+1; });
   const gameStart=evCount.game_start||0, abandon=evCount.abandon||0;
-  const tutStart=evCount.tutorial_start||0, tutComplete=evCount.tutorial_complete||0;
   const abandonRate=gameStart?(abandon/gameStart*100):null;
-  const tutRate=tutStart?(tutComplete/tutStart*100):null;
   // 「対戦開始」は同意タイミングの関係で実際より少なく計測される既知の制限があり、
   // 離脱数がそれを上回ると離脱率が100%を超えて出てしまう。数値自体は消さず、注記で説明する。
   const rateUnreliable = abandonRate!=null && (abandonRate>100 || gameStart<3);
-  let out='<h2>計測イベント（離脱・チュートリアル完走）</h2>'+intro+`<div class="cols">`;
+  let out='<h2>計測イベント（離脱）</h2>'+intro+`<div class="cols">`;
   out+=`<div class="card"><h3>イベント件数</h3>`+bars([
     {label:'セッション開始',value:evCount.session_start||0,sub:String(evCount.session_start||0)},
     {label:'対戦開始',value:gameStart,sub:String(gameStart)},
     {label:'離脱(対戦中断)',value:abandon,sub:String(abandon)},
-    {label:'チュートリアル開始',value:tutStart,sub:String(tutStart)},
-    {label:'チュートリアル完走',value:tutComplete,sub:String(tutComplete)},
   ])+`</div>`;
-  out+=`<div class="card"><h3>離脱率・完走率</h3>`+bars([
+  out+=`<div class="card"><h3>離脱率</h3>`+bars([
     {label:'離脱率',value:Math.min(abandonRate||0,100),sub:abandonRate!=null?abandonRate.toFixed(1)+'%':'データ不足'},
-    {label:'チュート完走率',value:tutRate||0,sub:tutRate!=null?tutRate.toFixed(1)+'%':'データ不足'},
-  ])+`<div class="muted" style="font-size:10px;margin-top:4px;">離脱率＝離脱数/対戦開始数、チュート完走率＝チュートリアル完走数/開始数</div>`+
+  ])+`<div class="muted" style="font-size:10px;margin-top:4px;">離脱率＝離脱数/対戦開始数</div>`+
   (rateUnreliable?`<div class="muted" style="font-size:10px;margin-top:2px;color:#e0a45c;">⚠ 「対戦開始」の計測が実態より少なく出る既知の制限があるため、離脱率は参考値です。</div>`:``)+
   `</div>`;
   out+=`</div>`;
+  return out;
+}
+// ===== 匿名のチュートリアル開始/完走カウント(同意不要・playerId等の識別子なし) =====
+function tutorialEventsSectionHTML(){
+  if(!allTutEvents.length){
+    return '<div class="muted" style="font-size:11px;margin:-4px 0 12px;">※チュートリアルの開始/完走記録はまだありません(Firestoreルール反映前、または反映直後でまだ収集中の可能性があります)。</div>';
+  }
+  const starts=allTutEvents.filter(x=>x.type==='start').length;
+  const completes=allTutEvents.filter(x=>x.type==='complete').length;
+  const rate = starts ? (completes/starts*100) : null;
+  let out='<h2>🎓 チュートリアル開始/完走（同意不要）</h2>';
+  out+='<div class="card">'+bars([
+    {label:'開始（ステージ1）',value:starts,sub:String(starts)},
+    {label:'完走（ステージ7まで）',value:completes,sub:String(completes)},
+    {label:'完走率',value:rate||0,sub:rate!=null?rate.toFixed(1)+'%':'データ不足'},
+  ])+`<div class="muted" style="font-size:10px;margin-top:4px;">完走率＝完走数/開始数。同意不要の匿名カウントのため、離脱率などと違い実態に近い数値です。</div></div>`;
   return out;
 }
 
@@ -911,7 +931,7 @@ function render(){
     `　／　取得 ${allLogs.length} 件(対戦${gameLogsAll.length}・イベント${eventLogs.length})`+
     (hiddenLogCount?`　／　非表示 <b style="color:var(--goldb)">${hiddenLogCount}</b> 件(集計から除外)`:``);
 
-  if(!N){ $('content').innerHTML=resetCtrl+surveySectionHTML()+playersSectionHTML()+visitsSectionHTML()+eventStatsHTML(eventLogs)+banner('対戦ログのデータはまだありません。')+preV1ChangelogHTML(); bindHideButtons(); bindDisplayResetButtons(); return; }
+  if(!N){ $('content').innerHTML=resetCtrl+surveySectionHTML()+playersSectionHTML()+visitsSectionHTML()+tutorialEventsSectionHTML()+eventStatsHTML(eventLogs)+banner('対戦ログのデータはまだありません。')+preV1ChangelogHTML(); bindHideButtons(); bindDisplayResetButtons(); return; }
 
   // 基本集計
   let pw=0,cw=0,dr=0,sumP=0,sumC=0,sumTime=0,timeCount=0;
@@ -971,6 +991,7 @@ function render(){
   </div>`;
 
   html+=visitsSectionHTML();
+  html+=tutorialEventsSectionHTML();
   html+=eventStatsHTML(eventLogs);
 
   // バランス分析
@@ -1152,11 +1173,12 @@ function exportCSV(){
 }
 
 // テスト用フック(モックデータで描画を確認する。害はない)
-window.__adminMock=(logs,count,surveys,players,playerCount,hiddenEvents,visits,visitCount)=>{
+window.__adminMock=(logs,count,surveys,players,playerCount,hiddenEvents,visits,visitCount,tutEvents)=>{
   allLogsRaw=logs; totalCountRaw=count;
   if(surveys)allSurveysRaw=surveys;
   if(players){ allPlayersRaw=players; totalPlayersRaw=(playerCount!=null)?playerCount:players.length; }
   if(visits){ allVisitsRaw=visits; totalVisitsRaw=(visitCount!=null)?visitCount:visits.length; }
+  if(tutEvents)allTutEventsRaw=tutEvents;
   if(hiddenEvents){
     const events=[...hiddenEvents].sort((a,b)=>tsMillis(a)-tsMillis(b));
     hiddenMap={};

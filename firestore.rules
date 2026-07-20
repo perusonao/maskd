@@ -67,6 +67,20 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // 匿名のチュートリアル開始/完走カウント(同意不要)。playerId等の識別子は持たない。
+    // 既存のlogs内tutorial_start/tutorial_completeは同意ゲート+旧UIの計測で実質機能しなくなって
+    // いたため、visitsと同じ「同意不要・匿名」方式で新設(v1.25.0)。
+    match /tutorial_events/{docId} {
+      allow read: if true;
+      allow create: if isValidTutorialEvent();
+      allow update, delete: if false;
+    }
+    match /tutorial_events_dev/{docId} { // developプレビュー用
+      allow read: if true;
+      allow create: if isValidTutorialEvent();
+      allow update, delete: if false;
+    }
+
     // admin.htmlの論理削除(非表示)イベント。対象データ自体は書き換えず、
     // 「hide」「unhide」のイベントを追記するだけ(最新のイベントが現在の状態)。
     match /hidden_records/{docId} {
@@ -119,6 +133,12 @@ service cloud.firestore {
     function isValidVisit() {
       let d = request.resource.data;
       return d.size() <= 3 && !('playerId' in d);
+    }
+
+    // チュートリアル開始/完走カウントの最低限のバリデーション。playerIdは明示的に禁止する
+    function isValidTutorialEvent() {
+      let d = request.resource.data;
+      return d.size() <= 3 && 'type' in d && d.type in ['start', 'complete'] && !('playerId' in d);
     }
 
     // 論理削除イベントの最低限のバリデーション
