@@ -42,9 +42,8 @@
   .card{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:12px; }
   .cols{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   @media(max-width:640px){ .cols{ grid-template-columns:1fr; } }
-  .evgroup{ border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:12px; background:rgba(255,255,255,.015); }
-  .evgroup .card{ margin-bottom:0; }
-  .evgroup-h{ font-size:12px; font-weight:700; color:var(--goldb); margin-bottom:8px; }
+  .resetbar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; border:1px solid var(--line); border-radius:12px;
+    padding:8px 12px; margin:10px 0 14px; background:rgba(255,255,255,.02); font-size:11px; }
 
   .bar-row{ display:flex; align-items:center; gap:8px; margin:5px 0; font-size:12px; }
   .bar-label{ width:120px; flex-shrink:0; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -527,7 +526,11 @@ const isDevPreview = location.pathname.includes('/dev/');
 const envCol = name => name + (isDevPreview ? '_dev' : '');
 if(isDevPreview){ const b=document.getElementById('envBadge'); if(b){ b.textContent='DEV'; b.classList.add('dev'); } }
 
-let fb=null, allLogs=[], totalCount=null, allSurveys=[], surveyLoadError=null, allPlayers=[], totalPlayers=null, playerLoadError=null, totalVisits=null, allVisits=[];
+let fb=null, surveyLoadError=null, playerLoadError=null;
+// *Raw = Firestoreから取得した生データ(表示基準日時の影響を受けない)。
+// 表示用のallLogs等は、applyDisplayFilter()が*Rawから都度算出する「今の画面に出すデータ」。
+let allLogsRaw=[], totalCountRaw=null, allSurveysRaw=[], allPlayersRaw=[], totalPlayersRaw=null, allVisitsRaw=[], totalVisitsRaw=null;
+let allLogs=[], totalCount=null, allSurveys=[], allPlayers=[], totalPlayers=null, totalVisits=null, allVisits=[];
 let tableState={ sortKey:'ts', sortDir:-1, fWinner:'', fDiff:'', fVer:'', q:'' };
 // 論理削除(非表示)の状態。hidden_recordsコレクションへの追記(hide/unhideイベント)を
 // 時系列に並べて「最後のイベント」を現在の状態とみなす(追記のみ・更新削除なしの設計に合わせるため)。
@@ -550,6 +553,50 @@ function jstDay(d){ try{ return new Intl.DateTimeFormat('sv-SE', {timeZone:'Asia
 function jstFromIso(iso, withSeconds){ if(!iso) return ''; const d=new Date(iso); return isNaN(d)?'':fmtJST(d, withSeconds); }
 function jstFromTimestamp(ts, withSeconds){ try{ return ts && ts.toDate ? fmtJST(ts.toDate(), withSeconds) : ''; }catch(e){ return ''; } }
 function isHidden(col,id){ return !!(id && hiddenMap[col+'|'+id]); }
+
+// ===== 表示基準日時(ダッシュボード全体で「過去分を表示しない」ためのフィルタ) =====
+// 実データ(Firestore・*Raw変数)は一切変更・削除しない。admin.htmlのブラウザのlocalStorageに
+// 基準時刻を保存するだけの表示用フィルタで、いつでも解除して全期間表示に戻せる。
+const DISPLAY_RESET_KEY = 'maskd_admin_display_reset_ts' + (isDevPreview ? '_dev' : '');
+function getDisplayResetTs(){ try{ return localStorage.getItem(DISPLAY_RESET_KEY); }catch(e){ return null; } }
+function setDisplayResetTs(iso){ try{ localStorage.setItem(DISPLAY_RESET_KEY, iso); }catch(e){} }
+function clearDisplayResetTs(){ try{ localStorage.removeItem(DISPLAY_RESET_KEY); }catch(e){} }
+// レコードの時刻をmillisで返す(Firestoreサーバータイムスタンプを優先、無ければクライアント側ISO文字列)
+function recMillis(rec){
+  try{
+    if(rec.serverTs && rec.serverTs.toDate) return rec.serverTs.toDate().getTime();
+    if(rec.ts){ const d=new Date(rec.ts); if(!isNaN(d)) return d.getTime(); }
+  }catch(e){}
+  return 0;
+}
+// *Rawから表示用のallLogs等を算出する。基準日時が設定されていれば、それより前のレコードを除外する。
+function applyDisplayFilter(){
+  const resetTs=getDisplayResetTs();
+  const baseMs=resetTs?new Date(resetTs).getTime():null;
+  const cut=arr=>baseMs!=null?arr.filter(r=>recMillis(r)>=baseMs):arr;
+  allLogs=cut(allLogsRaw);
+  allSurveys=cut(allSurveysRaw);
+  allPlayers=cut(allPlayersRaw);
+  allVisits=cut(allVisitsRaw);
+  // サーバー側の総数(getCountFromServer)は基準日時を考慮できないため、基準が設定されている間は
+  // 実際に絞り込んだ件数をそのまま総数として扱う(取得上限を超えるほど古いデータがある場合のみ誤差の余地あり)。
+  totalCount = baseMs!=null ? allLogs.length : totalCountRaw;
+  totalPlayers = baseMs!=null ? allPlayers.length : totalPlayersRaw;
+  totalVisits = baseMs!=null ? allVisits.length : totalVisitsRaw;
+}
+function displayResetCtrlHTML(){
+  const resetTs=getDisplayResetTs();
+  const resetLabel=resetTs?jstFromIso(resetTs, true):null;
+  return `<div class="resetbar">🗄️ ${
+    resetLabel
+      ? `<span>表示基準: <b style="color:var(--goldb)">${esc(resetLabel)}</b>（日本時間）より前のデータは非表示中</span><span class="btn dispreset-clear" style="padding:2px 8px;font-size:10px;">解除(全期間を表示)</span>`
+      : `<span class="muted">現在は全期間のデータを表示中です</span>`
+  }<span class="btn dispreset-set" style="padding:2px 8px;font-size:10px;">${resetLabel?'今からに更新':'ここから表示をリセット'}</span></div>`;
+}
+function bindDisplayResetButtons(){
+  document.querySelectorAll('.dispreset-set').forEach(el=>{ el.onclick=()=>{ setDisplayResetTs(new Date().toISOString()); applyDisplayFilter(); render(); }; });
+  document.querySelectorAll('.dispreset-clear').forEach(el=>{ el.onclick=()=>{ clearDisplayResetTs(); applyDisplayFilter(); render(); }; });
+}
 // logsコレクションには「完了した対戦の記録」(type:'game'、v0.55より前はtype自体が無い)と、
 // v0.55.0で追加された「分析用の軽量イベント」(session_start/game_start/abandon/tutorial_*)が混在する。
 // 後者はwinner/playerFinal/cpuFinalを持たないため、勝敗集計などに混ぜるとおかしな値になる。
@@ -648,8 +695,8 @@ async function loadData(){
       fb.getDocs(fb.query(fb.collection(fb.db,envCol("logs")), fb.limit(5000))),
       fb.getCountFromServer(fb.collection(fb.db,envCol("logs"))).then(s=>s.data().count).catch(()=>null)
     ]);
-    allLogs=[]; snap.forEach(d=>allLogs.push({...d.data(), _id:d.id}));
-    totalCount=count;
+    allLogsRaw=[]; snap.forEach(d=>allLogsRaw.push({...d.data(), _id:d.id}));
+    totalCountRaw=count;
   }catch(e){
     const code=(e&&(e.code||e.message))||'';
     $('content').innerHTML=banner(
@@ -661,10 +708,10 @@ async function loadData(){
   // アンケートは失敗してもダッシュボード全体は表示する(独立して扱う)
   try{
     const snap=await fb.getDocs(fb.query(fb.collection(fb.db,envCol("surveys")), fb.limit(2000)));
-    allSurveys=[]; snap.forEach(d=>allSurveys.push({...d.data(), _id:d.id}));
+    allSurveysRaw=[]; snap.forEach(d=>allSurveysRaw.push({...d.data(), _id:d.id}));
     surveyLoadError=null;
   }catch(e){
-    allSurveys=[]; surveyLoadError=(e&&(e.code||e.message))||'不明なエラー';
+    allSurveysRaw=[]; surveyLoadError=(e&&(e.code||e.message))||'不明なエラー';
   }
   // 登録プレイヤー数(件数はサーバー集計、一覧は直近分のみ取得)
   try{
@@ -672,11 +719,11 @@ async function loadData(){
       fb.getDocs(fb.query(fb.collection(fb.db,envCol("players")), fb.limit(300))),
       fb.getCountFromServer(fb.collection(fb.db,envCol("players"))).then(s=>s.data().count).catch(()=>null)
     ]);
-    allPlayers=[]; snap.forEach(d=>allPlayers.push({...d.data(), _id:d.id}));
-    totalPlayers=count;
+    allPlayersRaw=[]; snap.forEach(d=>allPlayersRaw.push({...d.data(), _id:d.id}));
+    totalPlayersRaw=count;
     playerLoadError=null;
   }catch(e){
-    allPlayers=[]; totalPlayers=null; playerLoadError=(e&&(e.code||e.message))||'不明なエラー';
+    allPlayersRaw=[]; totalPlayersRaw=null; playerLoadError=(e&&(e.code||e.message))||'不明なエラー';
   }
   // 匿名の来訪カウント(同意不要)。総数はサーバー側集計、日時を見るため直近分の実データも取得。
   try{
@@ -684,9 +731,9 @@ async function loadData(){
       fb.getDocs(fb.query(fb.collection(fb.db,envCol("visits")), fb.limit(2000))),
       fb.getCountFromServer(fb.collection(fb.db,envCol("visits"))).then(s=>s.data().count).catch(()=>null)
     ]);
-    allVisits=[]; snap.forEach(d=>allVisits.push(d.data()));
-    totalVisits=count;
-  }catch(e){ allVisits=[]; totalVisits=null; }
+    allVisitsRaw=[]; snap.forEach(d=>allVisitsRaw.push(d.data()));
+    totalVisitsRaw=count;
+  }catch(e){ allVisitsRaw=[]; totalVisitsRaw=null; }
   // 論理削除(非表示)イベント。読めなくても他機能は継続(何も非表示にしない扱い)。
   try{
     const snap=await fb.getDocs(fb.query(fb.collection(fb.db,envCol('hidden_records')), fb.limit(5000)));
@@ -695,6 +742,7 @@ async function loadData(){
     hiddenMap={};
     events.forEach(e=>{ if(e && e.col && e.docId) hiddenMap[e.col+'|'+e.docId]=(e.action==='hide'); });
   }catch(e){ hiddenMap={}; }
+  applyDisplayFilter();
   render();
 }
 function banner(html){ return '<div class="banner">'+html+'</div>'; }
@@ -814,24 +862,14 @@ function visitsSectionHTML(){
 // v0.55.0で追加されたが、Firestoreルールがwinner等を必須にしていたため実際には
 // これまで一件も保存できていなかった不具合をv0.61.2で修正。ルール反映前のデータには
 // 出てこないため、件数が0の間はセクション自体を出さない。
-//
-// セッション開始/対戦開始の計測が同意タイミングの問題でほぼ0件のまま溜まっており、
-// 全期間の集計だけだと見づらいという指摘を受け、v1.20.0で「リセット基準日時」を追加。
-// 実データ(Firestore)は一切変更・削除せず、admin.htmlのブラウザ内(localStorage)に
-// 基準時刻を保存し、それ以降のイベントだけを別カードとして並べて見せる。
-const EVRESET_KEY = 'maskd_admin_evreset_ts' + (isDevPreview ? '_dev' : '');
-function getEventResetTs(){ try{ return localStorage.getItem(EVRESET_KEY); }catch(e){ return null; } }
-function setEventResetTs(iso){ try{ localStorage.setItem(EVRESET_KEY, iso); }catch(e){} }
-function clearEventResetTs(){ try{ localStorage.removeItem(EVRESET_KEY); }catch(e){} }
-function evMillis(e){
-  try{
-    if(e.serverTs && e.serverTs.toDate) return e.serverTs.toDate().getTime();
-    if(e.ts){ const d=new Date(e.ts); if(!isNaN(d)) return d.getTime(); }
-  }catch(err){}
-  return 0;
-}
-function eventCountsCardHTML(logs){
-  const evCount={}; logs.forEach(g=>{ evCount[g.type]=(evCount[g.type]||0)+1; });
+// v1.23.0でダッシュボード全体に「表示基準日時」フィルタ(displayResetCtrlHTML)を導入したため、
+// このセクション独自のリセット機能(旧v1.20.0)は廃止し、他のセクションと同様シンプルな単一表示に統一した。
+function eventStatsHTML(eventLogs){
+  const intro='<div class="muted" style="font-size:11px;margin:-4px 0 10px;">プレイヤーがどこで離脱しているか・チュートリアルを最後まで終えているかを見る欄です。「セッション開始」「対戦開始」は同意設定のタイミングの関係で実際のアクセス数より少なく計測されるため、離脱率などは目安としてご覧ください。</div>';
+  if(!eventLogs.length){
+    return '<h2>計測イベント（離脱・チュートリアル完走）</h2>'+intro+'<div class="muted" style="font-size:11px;margin:-4px 0 12px;">※離脱率などの計測イベントはまだ0件です(Firestoreルール反映前のデータのため、または反映直後でまだ収集中の可能性があります)。</div>';
+  }
+  const evCount={}; eventLogs.forEach(g=>{ evCount[g.type]=(evCount[g.type]||0)+1; });
   const gameStart=evCount.game_start||0, abandon=evCount.abandon||0;
   const tutStart=evCount.tutorial_start||0, tutComplete=evCount.tutorial_complete||0;
   const abandonRate=gameStart?(abandon/gameStart*100):null;
@@ -839,7 +877,7 @@ function eventCountsCardHTML(logs){
   // 「対戦開始」は同意タイミングの関係で実際より少なく計測される既知の制限があり、
   // 離脱数がそれを上回ると離脱率が100%を超えて出てしまう。数値自体は消さず、注記で説明する。
   const rateUnreliable = abandonRate!=null && (abandonRate>100 || gameStart<3);
-  let out=`<div class="cols">`;
+  let out='<h2>計測イベント（離脱・チュートリアル完走）</h2>'+intro+`<div class="cols">`;
   out+=`<div class="card"><h3>イベント件数</h3>`+bars([
     {label:'セッション開始',value:evCount.session_start||0,sub:String(evCount.session_start||0)},
     {label:'対戦開始',value:gameStart,sub:String(gameStart)},
@@ -856,41 +894,11 @@ function eventCountsCardHTML(logs){
   out+=`</div>`;
   return out;
 }
-function eventGroupHTML(logs, label, emptyNote){
-  return `<div class="evgroup"><div class="evgroup-h">${esc(label)}</div>`+
-    (logs.length?eventCountsCardHTML(logs):`<div class="muted" style="font-size:11px;">${esc(emptyNote)}</div>`)+
-    `</div>`;
-}
-function eventResetCtrlHTML(){
-  const resetTs=getEventResetTs();
-  const resetLabel=resetTs?jstFromIso(resetTs, true):null;
-  return `<div class="muted" style="font-size:11px;margin:-2px 0 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-    ${resetLabel?`<span>🔄 リセット基準: <b style="color:var(--goldb)">${esc(resetLabel)}</b>（日本時間）</span><span class="btn evreset-clear" style="padding:2px 8px;font-size:10px;">解除</span>`:''}
-    <span class="btn evreset-set" style="padding:2px 8px;font-size:10px;">${resetLabel?'今からに更新':'ここからリセット'}</span>
-  </div>`;
-}
-function bindEventResetButtons(){
-  document.querySelectorAll('.evreset-set').forEach(el=>{ el.onclick=()=>{ setEventResetTs(new Date().toISOString()); render(); }; });
-  document.querySelectorAll('.evreset-clear').forEach(el=>{ el.onclick=()=>{ clearEventResetTs(); render(); }; });
-}
-function eventStatsHTML(eventLogs){
-  const intro='<div class="muted" style="font-size:11px;margin:-4px 0 10px;">プレイヤーがどこで離脱しているか・チュートリアルを最後まで終えているかを見る欄です。「セッション開始」「対戦開始」は同意設定のタイミングの関係で実際のアクセス数より少なく計測されるため、離脱率などは目安としてご覧ください。</div>';
-  const ctrl=eventResetCtrlHTML();
-  if(!eventLogs.length){
-    return '<h2>計測イベント（離脱・チュートリアル完走）</h2>'+intro+ctrl+'<div class="muted" style="font-size:11px;margin:-4px 0 12px;">※離脱率などの計測イベントはまだ0件です(Firestoreルール反映前のデータのため、または反映直後でまだ収集中の可能性があります)。</div>';
-  }
-  let out='<h2>計測イベント（離脱・チュートリアル完走）</h2>'+intro+ctrl;
-  out+=eventGroupHTML(eventLogs, '📊 全期間');
-  const resetTs=getEventResetTs();
-  if(resetTs){
-    const filtered=eventLogs.filter(g=>evMillis(g)>=new Date(resetTs).getTime());
-    out+=eventGroupHTML(filtered, `🔄 リセット後（${jstFromIso(resetTs, true)}〜・日本時間）`, 'リセット後のイベントはまだありません。');
-  }
-  return out;
-}
 
 // ===== 集計＆描画 =====
 function render(){
+  const resetActive=!!getDisplayResetTs();
+  const resetCtrl=displayResetCtrlHTML();
   const gameLogsAll=allLogs.filter(isGameRecord);
   const eventLogs=allLogs.filter(g=>!isGameRecord(g));
   const lVisible=visibleLogs();
@@ -898,12 +906,12 @@ function render(){
   const hiddenLogCount=gameLogsAll.length-N;
   const total=(totalCount!=null)?totalCount:allLogs.length;
   const sampled=(totalCount!=null && totalCount>allLogs.length);
-  $('meta').innerHTML=`総レコード数(サーバー集計・対戦+計測イベント): <b style="color:var(--goldb)">${total}</b> 件`+
+  $('meta').innerHTML=`${resetActive?'表示中のレコード数(表示基準以降・対戦+計測イベント)':'総レコード数(サーバー集計・対戦+計測イベント)'}: <b style="color:var(--goldb)">${total}</b> 件`+
     (sampled?`　／　集計は直近 ${allLogs.length} 件のサンプル`:``)+
     `　／　取得 ${allLogs.length} 件(対戦${gameLogsAll.length}・イベント${eventLogs.length})`+
     (hiddenLogCount?`　／　非表示 <b style="color:var(--goldb)">${hiddenLogCount}</b> 件(集計から除外)`:``);
 
-  if(!N){ $('content').innerHTML=surveySectionHTML()+playersSectionHTML()+visitsSectionHTML()+eventStatsHTML(eventLogs)+banner('対戦ログのデータはまだありません。')+preV1ChangelogHTML(); bindHideButtons(); bindEventResetButtons(); return; }
+  if(!N){ $('content').innerHTML=resetCtrl+surveySectionHTML()+playersSectionHTML()+visitsSectionHTML()+eventStatsHTML(eventLogs)+banner('対戦ログのデータはまだありません。')+preV1ChangelogHTML(); bindHideButtons(); bindDisplayResetButtons(); return; }
 
   // 基本集計
   let pw=0,cw=0,dr=0,sumP=0,sumC=0,sumTime=0,timeCount=0;
@@ -948,7 +956,7 @@ function render(){
   const avgTime=timeCount?(sumTime/timeCount/1000):null;
 
   // アンケート・登録プレイヤー(最優先で確認したい項目なので一番上に表示)
-  let html=surveySectionHTML()+playersSectionHTML();
+  let html=resetCtrl+surveySectionHTML()+playersSectionHTML();
 
   // KPI
   html+=`<div class="grid">
@@ -1000,7 +1008,7 @@ function render(){
 
   $('content').innerHTML=html;
   bindTable();
-  bindEventResetButtons();
+  bindDisplayResetButtons();
 }
 function preV1ChangelogHTML(){
   const rows=PRE_V1_CHANGELOG.map(entry=>`
@@ -1145,15 +1153,16 @@ function exportCSV(){
 
 // テスト用フック(モックデータで描画を確認する。害はない)
 window.__adminMock=(logs,count,surveys,players,playerCount,hiddenEvents,visits,visitCount)=>{
-  allLogs=logs; totalCount=count;
-  if(surveys)allSurveys=surveys;
-  if(players){ allPlayers=players; totalPlayers=(playerCount!=null)?playerCount:players.length; }
-  if(visits){ allVisits=visits; totalVisits=(visitCount!=null)?visitCount:visits.length; }
+  allLogsRaw=logs; totalCountRaw=count;
+  if(surveys)allSurveysRaw=surveys;
+  if(players){ allPlayersRaw=players; totalPlayersRaw=(playerCount!=null)?playerCount:players.length; }
+  if(visits){ allVisitsRaw=visits; totalVisitsRaw=(visitCount!=null)?visitCount:visits.length; }
   if(hiddenEvents){
     const events=[...hiddenEvents].sort((a,b)=>tsMillis(a)-tsMillis(b));
     hiddenMap={};
     events.forEach(e=>{ if(e && e.col && e.docId) hiddenMap[e.col+'|'+e.docId]=(e.action==='hide'); });
   }
+  applyDisplayFilter();
   render();
 };
 
