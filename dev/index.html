@@ -2941,8 +2941,9 @@ function surveyPromptHTML(){
   return `<div class="survey-prompt" onclick="promptSurvey()">📝 感想を聞かせてください（1分・任意）</div>`;
 }
 const NTFY_TOPIC='maskd-survey-20260717'; // 回答があった時にスマホへプッシュ通知するための宛先(ntfy.sh)
-// 通知をタップしたら管理画面(admin.html)へワンタップで遷移できるよう、URLに合言葉を含めて自動解錠する
-const ADMIN_URL='https://perusonao.github.io/maskd/admin.html?pass=maskd-admin';
+// 通知をタップしたら管理画面(admin.html)へ遷移する。ログインはGoogle認証(許可済みアカウントなら
+// 端末に保存された認証状態で自動的に入れる。未ログインならGoogleログイン画面が出る)。
+const ADMIN_URL='https://perusonao.github.io/maskd/admin.html';
 function openSurvey(){
   hideTitleScreens();
   const el=document.getElementById('surveyScreen'); if(el) el.style.display='flex';
@@ -4948,8 +4949,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.21.0';
+const GAME_VERSION = 'v1.22.0';
 const CHANGELOG = [
+  { version:'v1.22.0', date:'2026-07-20', items:[
+    '<b>管理画面(admin.html)のログインをGoogle認証に変更</b>：パスフレーズ方式から、許可された管理者のGoogleアカウントでログインする方式に変更しました（プレイヤー側の見た目に変更はありません）。',
+  ]},
   { version:'v1.21.0', date:'2026-07-20', items:[
     '<b>管理画面(admin.html)を見やすく改善</b>：計測イベント欄の「全期間」「リセット後」を枠で分けて分かりやすくし、離脱率が実態と異なって見える既知の制限がある場合は注記を表示するようにしました。トップの数値一覧に「登録プレイヤー数」も追加しました（プレイヤー側の見た目に変更はありません）。',
   ]},

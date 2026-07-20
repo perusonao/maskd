@@ -22,7 +22,6 @@
   /* ゲート */
   #gate{ min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:24px; }
   #gate .box{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:28px 24px; max-width:360px; width:100%; text-align:center; }
-  #gate input{ width:100%; padding:11px 12px; margin-top:14px; background:#0a0810; border:1px solid var(--line); border-radius:9px; color:var(--ink); font-size:15px; }
   #gate .err{ color:var(--lose); font-size:12px; min-height:16px; margin-top:8px; }
   .btn{ display:inline-block; background:linear-gradient(180deg,#2a2540,#1c1830); border:1px solid var(--line); color:var(--ink);
     padding:9px 18px; border-radius:9px; cursor:pointer; font-size:13px; user-select:none; }
@@ -86,12 +85,11 @@
 <div id="gate">
   <div class="box">
     <h1>MASKD 管理ダッシュボード</h1>
-    <p class="muted" style="margin-top:10px;">パスフレーズを入力してください</p>
-    <input id="pass" type="password" placeholder="パスフレーズ" autocomplete="off">
+    <p class="muted" style="margin-top:10px;">許可された管理者のGoogleアカウントでログインしてください</p>
+    <div class="btn primary" id="googleLoginBtn" style="margin-top:14px;width:100%;">Googleでログイン</div>
     <div class="err" id="gateErr"></div>
-    <div class="btn primary" id="unlockBtn" style="margin-top:10px;width:100%;">開く</div>
     <p class="muted" style="margin-top:14px;font-size:10px;line-height:1.6;">
-      ※このゲートは目隠しであり、真のセキュリティではありません。データは匿名です。
+      ※許可されたGoogleアカウントのみアクセスできます。閲覧するデータ自体は匿名です。
     </p>
   </div>
 </div>
@@ -101,11 +99,12 @@
     <h1>MASKD ダッシュボード</h1>
     <span id="envBadge"></span>
     <span class="sp"></span>
+    <span class="muted" id="authEmailTag" style="font-size:11px;"></span>
     <span class="btn" id="showHiddenBtn">非表示も表示</span>
     <span class="btn" id="reloadBtn">再読み込み</span>
     <span class="btn" id="csvBtn">CSV</span>
     <span class="btn" id="jsonBtn">JSON</span>
-    <span class="btn" id="lockBtn">ロック</span>
+    <span class="btn" id="lockBtn">ログアウト</span>
   </header>
   <div class="muted" id="meta"></div>
   <div id="content"><p class="muted" style="margin-top:20px;">読み込み中…</p></div>
@@ -127,11 +126,11 @@ const firebaseConfig = {
   measurementId: "G-3Q429M5PXD"
 };
 
-// ▼ パスフレーズ（SHA-256）。変更するには新しい合言葉のsha256を下記に貼る。
-//    現在の合言葉: "maskd-admin"
-//    生成: node -e "console.log(require('crypto').createHash('sha256').update('新しい合言葉').digest('hex'))"
-const PASS_SHA256 = "c8ba6a0556451eb3b8b2a233332d3f31ae7df18cb1a4fa7b7d2f0cc9e878844f";
-const UNLOCK_KEY = "maskd_admin_unlocked";
+// ▼ 管理画面へのアクセスを許可するGoogleアカウント。ここに無いアカウントでログインした場合は
+//    即座にサインアウトさせる(このUIレベルの制限であり、Firestore自体の読み取り権限には影響しない。
+//    Firestoreルール上、logs/surveys/players/visits/hidden_recordsは元々全て公開読み取り可)。
+const ADMIN_ALLOWED_EMAILS = ["58flyingcar@gmail.com"];
+let firebaseApp=null, auth=null, authMod=null;
 
 const AJP={moon:'月',sun:'太陽',dark:'闇',kaos:'混沌',air:'空気'};
 const DIFF={weak:'やさしい',normal:'普通',strong:'強い'};
@@ -584,39 +583,47 @@ function bindHideButtons(){
 // テスト/デバッグ用: Firebase接続なしでhiddenMapの変更→再描画だけを検証するためのフック(本番の書き込みは行わない)
 window.__adminHideMock=(col,id,hide)=>{ hiddenMap[col+'|'+id]=hide; render(); };
 
-async function sha256hex(str){
-  const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-// ===== ゲート =====
-async function tryUnlock(){
-  const v=$('pass').value;
-  const h=await sha256hex(v);
-  if(h===PASS_SHA256){
-    try{ sessionStorage.setItem(UNLOCK_KEY,'1'); }catch(e){}
-    showDash();
-  } else {
-    $('gateErr').textContent='パスフレーズが違います';
-  }
-}
-function lock(){ try{ sessionStorage.removeItem(UNLOCK_KEY); }catch(e){} location.reload(); }
-// URLに ?pass=合言葉 が付いていれば自動で解錠する(通知リンクからワンタップで開けるように)。
-// 一致したらURLからパスフレーズを消してブラウザ履歴に残らないようにする。
-async function tryAutoUnlockFromURL(){
+// ===== ゲート(Google認証) =====
+// Firebase Authenticationを使い、ADMIN_ALLOWED_EMAILSに載っているGoogleアカウントだけを通す。
+// 一度ログインすればFirebase Authが端末に認証状態を保存するため、次回以降は自動で入れる
+// (通知リンクをタップした時などもワンタップ相当で開ける)。許可外アカウントは即座にサインアウトさせる。
+async function initAuth(){
   try{
-    const p=new URLSearchParams(location.search).get('pass');
-    if(!p) return false;
-    const h=await sha256hex(p);
-    if(h!==PASS_SHA256) return false;
-    try{ sessionStorage.setItem(UNLOCK_KEY,'1'); }catch(e){}
-    try{ const u=new URL(location.href); u.searchParams.delete('pass'); history.replaceState(null,'',u.toString()); }catch(e){}
-    return true;
-  }catch(e){ return false; }
+    const appMod=await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js");
+    authMod=await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js");
+    firebaseApp=appMod.initializeApp(firebaseConfig);
+    auth=authMod.getAuth(firebaseApp);
+  }catch(e){
+    $('gateErr').textContent='Google認証の読み込みに失敗しました（ネットワーク/CDN）。';
+    return;
+  }
+  authMod.onAuthStateChanged(auth, async (user)=>{
+    if(user && ADMIN_ALLOWED_EMAILS.includes(user.email)){
+      showDash(user);
+    } else if(user){
+      try{ await authMod.signOut(auth); }catch(e){}
+      $('gateErr').textContent='このGoogleアカウント（'+user.email+'）には管理画面へのアクセス権がありません。';
+      $('gate').style.display='flex';
+      $('dash').style.display='none';
+    }
+  });
+  $('googleLoginBtn').onclick=async()=>{
+    $('gateErr').textContent='';
+    try{
+      await authMod.signInWithPopup(auth, new authMod.GoogleAuthProvider());
+    }catch(e){
+      $('gateErr').textContent='ログインに失敗しました：'+(e&&e.message||e);
+    }
+  };
+  $('lockBtn').onclick=async()=>{
+    try{ await authMod.signOut(auth); }catch(e){}
+    location.reload();
+  };
 }
-function showDash(){
+function showDash(user){
   $('gate').style.display='none';
   $('dash').style.display='block';
+  const tag=$('authEmailTag'); if(tag) tag.textContent=(user&&user.email)||'';
   init();
 }
 
@@ -625,10 +632,8 @@ async function init(){
   if(!fb){
     $('content').innerHTML='<p class="muted" style="margin-top:20px;">Firebaseを読み込み中…</p>';
     try{
-      const appMod=await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js");
       const fsMod=await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js");
-      const app=appMod.initializeApp(firebaseConfig);
-      fb={ db:fsMod.getFirestore(app), collection:fsMod.collection, getDocs:fsMod.getDocs,
+      fb={ db:fsMod.getFirestore(firebaseApp), collection:fsMod.collection, getDocs:fsMod.getDocs,
         query:fsMod.query, limit:fsMod.limit, getCountFromServer:fsMod.getCountFromServer,
         addDoc:fsMod.addDoc, serverTimestamp:fsMod.serverTimestamp };
     }catch(e){ $('content').innerHTML=banner('Firebaseの読み込みに失敗しました（ネットワーク/CDN）。<br><span style="font-size:10px;">'+esc(e&&e.message)+'</span>'); return; }
@@ -1153,19 +1158,12 @@ window.__adminMock=(logs,count,surveys,players,playerCount,hiddenEvents,visits,v
 };
 
 // ===== 起動 =====
-$('unlockBtn').onclick=tryUnlock;
-$('pass').addEventListener('keydown',e=>{ if(e.key==='Enter')tryUnlock(); });
 $('showHiddenBtn').onclick=()=>{ showHidden=!showHidden; $('showHiddenBtn').textContent=showHidden?'非表示を隠す':'非表示も表示'; render(); };
 $('reloadBtn').onclick=loadData;
 $('csvBtn').onclick=exportCSV;
 $('jsonBtn').onclick=exportJSON;
-$('lockBtn').onclick=lock;
 $('detailModal').onclick=e=>{ if(e.target===$('detailModal'))$('detailModal').classList.remove('show'); };
-(async ()=>{
-  const auto=await tryAutoUnlockFromURL();
-  let already=false; try{ already=sessionStorage.getItem(UNLOCK_KEY)==='1'; }catch(e){}
-  if(auto||already) showDash();
-})();
+initAuth();
 </script>
 </body>
 </html>
