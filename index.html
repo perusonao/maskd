@@ -2941,8 +2941,9 @@ function surveyPromptHTML(){
   return `<div class="survey-prompt" onclick="promptSurvey()">📝 感想を聞かせてください（1分・任意）</div>`;
 }
 const NTFY_TOPIC='maskd-survey-20260717'; // 回答があった時にスマホへプッシュ通知するための宛先(ntfy.sh)
-// 通知をタップしたら管理画面(admin.html)へワンタップで遷移できるよう、URLに合言葉を含めて自動解錠する
-const ADMIN_URL='https://perusonao.github.io/maskd/admin.html?pass=maskd-admin';
+// 通知をタップしたら管理画面(admin.html)へ遷移する。ログインはGoogle認証(許可済みアカウントなら
+// 端末に保存された認証状態で自動的に入れる。未ログインならGoogleログイン画面が出る)。
+const ADMIN_URL='https://perusonao.github.io/maskd/admin.html';
 function openSurvey(){
   hideTitleScreens();
   const el=document.getElementById('surveyScreen'); if(el) el.style.display='flex';
@@ -4948,11 +4949,14 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.1.1';
+const GAME_VERSION = 'v1.1.2';
 const CHANGELOG = [
+  { version:'v1.1.2', date:'2026-07-20', items:[
+    '<b>来訪データの計測を追加</b>：SNS等からのアクセス数を正確に把握できるよう、匿名の来訪カウント（個人を識別する情報は一切含みません）を追加しました。プレイ結果の送信可否（「プレイログを送らない」設定）には変更ありません。',
+    '<b>管理画面(admin.html)を大幅改善</b>：来訪履歴の表示、日時表示の日本時間への統一、ログインのGoogle認証化、ダッシュボード全体で古いデータを非表示にできる「表示基準日時」機能などを追加しました（プレイヤー側の見た目に変更はありません）。',
+  ]},
   { version:'v1.1.1', date:'2026-07-19', items:[
     '<b>「仮面あて」（タップ予想のミニゲーム）を廃止</b>：勝敗に影響しない任意機能でしたが、看破（候補が1つに確定した時の自動表示）と紛らわしいとのご意見を踏まえ削除しました。候補の絞り込み表示・看破バッジは引き続き機能します。',
-    '<b>来訪データの計測を追加</b>：SNS等からのアクセス数を正確に把握できるよう、匿名の来訪カウント（個人を識別する情報は一切含みません）を追加しました。プレイ結果の送信可否（「プレイログを送らない」設定）には変更ありません。',
   ]},
   { version:'v1.1.0', date:'2026-07-19', items:[
     '<b>チュートリアルを一新</b>：属性を1つずつ覚える序盤から最終決戦まで、実際に対戦しながら段階的に学べる全7段階のチュートリアルに刷新しました。初回プレイ時は「遊び方」を自動で表示し、チュートリアルを修了しないと本戦には進めません。',
