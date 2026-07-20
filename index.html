@@ -1066,6 +1066,7 @@
   .action-banner.kessen{ color:var(--lose); }
   .action-banner.tettai{ color:var(--ink-dim); }
   .action-banner.kishuu{ color:var(--kaos); animation:bannerShake .5s ease; }
+  .action-banner.irekae{ color:var(--gold-bright); }
   /* CPU思考中インジケータ(待ち時間を可視化してテンポを出す) */
   .cpu-thinking{ position:absolute; top:7%; left:50%; transform:translateX(-50%); z-index:6; display:none;
     align-items:center; gap:8px; padding:6px 15px; border-radius:20px; white-space:nowrap;
@@ -4007,13 +4008,14 @@ function cardHTML(c, faceDown, ownerLabel){
 // ===== プレイヤーがカードを場に出す =====
 // カードを1枚使った後、山札から補充する(山札が尽きていれば何もしない)
 // (youSkipNextRefill/cpuSkipNextRefillは廃止: Airはもうカードとして手札に入らない)
-// 決戦・撤退・奇襲の分かりやすい演出バナーを表示する
+// 決戦・撤退・奇襲・入替の分かりやすい演出バナーを表示する
 function showActionBanner(type, callback){
   const banner=document.getElementById('actionBanner');
   const cfg={
     kessen:{icon:'⚔', text:'決戦', dur:750},
     tettai:{icon:'↩', text:'撤退', dur:650},
-    kishuu:{icon:'⚡', text:'奇襲！', dur:900}
+    kishuu:{icon:'⚡', text:'奇襲！', dur:1100},
+    irekae:{icon:'🔄', text:'入替！', dur:1100}
   }[type];
   banner.className='action-banner '+type;
   banner.querySelector('.ab-icon').textContent=cfg.icon;
@@ -4376,6 +4378,8 @@ function cpuDecide(){
   hideCpuThinking();
   const S=cpuStrategy, lm=scoreMultiplier(); // 終盤2倍を意識(勝ちの価値・負けの痛みが倍)
   // 親の特権「入替」: 子の数字を見てから、より期待値の高い札があれば入替を検討(1ラウンド1回まで)
+  // 判断はここで行うが、実際にカードを差し替えるのはirekaeバナーを見せてから(演出を挟んで分かりやすくする)
+  let swapIndex=-1;
   if(stageAllows('swap') && !cpuSwapUsedThisRound && cpuTrust>=SWAP_COST && cpuHand.length>0){
     const currentEst=cpuEstimate(dealerCard, childCard.num, true);
     const currentScore = currentEst.win*childCard.num*lm - currentEst.lose*dealerCard.num*lm;
@@ -4387,49 +4391,62 @@ function cpuDecide(){
     });
     // 慎重なほど入替しやすく、積極的なほど今の手を信じる(コスト分を上回る改善が必要)
     const swapBar = S==='cautious' ? SWAP_COST*0.6 : (S==='aggressive' ? SWAP_COST*1.1 : SWAP_COST*0.85);
-    if(bi>=0 && best > currentScore + swapBar){
+    if(bi>=0 && best > currentScore + swapBar) swapIndex=bi;
+  }
+
+  // 入替判断より後(=実際に場に出ているカード)を基準に決戦/撤退を決める。
+  // 入替が起きる場合はapplySwapThenDecide()内で、差し替え後にこの関数を呼ぶ。
+  const decideFightOrPass=()=>{
+    let doFight;
+    if(Math.random()<cpuEps()){
+      doFight = Math.random()<0.5; // うっかり: 難易度に応じてランダムに決める
+    } else {
+      const est=cpuEstimate(dealerCard, childCard.num, true);
+      const expLoss=est.lose*dealerCard.num*lm;
+      const expGain=est.win*childCard.num*lm;
+      let threshold=0;
+
+      // 状況判断: 点差(自分視点)と残りラウンドで積極/慎重を調整
+      const scoreDiff = cpuLP - youLP; // 正なら相手(CPU)がリード
+      const roundsLeft = matchRounds - round + 1;
+      const urgency = roundsLeft<=3 ? 1.6 : (roundsLeft<=6 ? 1.0 : 0.5);
+      if(scoreDiff < -2) threshold -= urgency;       // 負けている: 終盤ほど積極的に取り返しにいく
+      else if(scoreDiff > 2) threshold += urgency*0.6; // リード中: 終盤ほど手堅く逃げ切りたい
+
+      // 戦略パターンによる補正(期待値を壊さない範囲の「味付け」に抑える)
+      if(S==='aggressive') threshold-=0.4;   // 積極的: 多少不利でも勝負に出る
+      else if(S==='cautious') threshold+=0.6; // 慎重: 十分有利でないと勝負しない
+      else if(S==='tricky') threshold+=(Math.random()*1.2-0.6); // トリッキー: 毎回ブレる
+      else if(S==='chaotic') threshold+=(Math.random()*2.4-1.2); // 無秩序: トリッキーよりさらに大きくブレる(予測不能)
+      // balanced(調和): 補正なし=攻守どちらにも偏らないニュートラルな基準AI
+
+      // 戦略カウンターが尽きかけているなら、撤退/奇襲に頼れない分やや積極的に
+      if(cpuTrust<=1) threshold-=0.3;
+
+      doFight = (expGain-expLoss) > threshold;
+      if(!doFight && (expGain-expLoss) > -PASS_TRUST_COST*0.5) doFight=true;
+    }
+    hint(doFight ? '相手が決戦を仕掛けてきた！' : '相手はこのラウンドを撤退した');
+    setTimeout(()=>resolveFight(doFight, true), 600);
+  };
+
+  if(swapIndex>=0){
+    hint('相手が入替を検討している…');
+    showActionBanner('irekae', ()=>{
       const oldCard=dealerCard; oldCard.owner=undefined;
       cpuHand.push(oldCard);
-      dealerCard=cpuHand.splice(bi,1)[0];
+      dealerCard=cpuHand.splice(swapIndex,1)[0];
       dealerCard.owner='cpu';
       cpuTrust-=SWAP_COST;
       cpuSwapUsedThisRound=true;
       document.getElementById('cpuSlot').innerHTML=cardHTML(dealerCard,true,'相手');
       renderScore();
-    }
-  }
-
-  let doFight;
-  if(Math.random()<cpuEps()){
-    doFight = Math.random()<0.5; // うっかり: 難易度に応じてランダムに決める
+      hint('相手が場の札を入れ替えた！');
+      setTimeout(decideFightOrPass, 500); // 差し替わった札を確認する間を置く
+    });
   } else {
-    const est=cpuEstimate(dealerCard, childCard.num, true);
-    const expLoss=est.lose*dealerCard.num*lm;
-    const expGain=est.win*childCard.num*lm;
-    let threshold=0;
-
-    // 状況判断: 点差(自分視点)と残りラウンドで積極/慎重を調整
-    const scoreDiff = cpuLP - youLP; // 正なら相手(CPU)がリード
-    const roundsLeft = matchRounds - round + 1;
-    const urgency = roundsLeft<=3 ? 1.6 : (roundsLeft<=6 ? 1.0 : 0.5);
-    if(scoreDiff < -2) threshold -= urgency;       // 負けている: 終盤ほど積極的に取り返しにいく
-    else if(scoreDiff > 2) threshold += urgency*0.6; // リード中: 終盤ほど手堅く逃げ切りたい
-
-    // 戦略パターンによる補正(期待値を壊さない範囲の「味付け」に抑える)
-    if(S==='aggressive') threshold-=0.4;   // 積極的: 多少不利でも勝負に出る
-    else if(S==='cautious') threshold+=0.6; // 慎重: 十分有利でないと勝負しない
-    else if(S==='tricky') threshold+=(Math.random()*1.2-0.6); // トリッキー: 毎回ブレる
-    else if(S==='chaotic') threshold+=(Math.random()*2.4-1.2); // 無秩序: トリッキーよりさらに大きくブレる(予測不能)
-    // balanced(調和): 補正なし=攻守どちらにも偏らないニュートラルな基準AI
-
-    // 戦略カウンターが尽きかけているなら、撤退/奇襲に頼れない分やや積極的に
-    if(cpuTrust<=1) threshold-=0.3;
-
-    doFight = (expGain-expLoss) > threshold;
-    if(!doFight && (expGain-expLoss) > -PASS_TRUST_COST*0.5) doFight=true;
+    decideFightOrPass();
   }
-  hint(doFight ? '相手が決戦を仕掛けてきた！' : '相手はこのラウンドを撤退した');
-  setTimeout(()=>resolveFight(doFight, true), 600);
 }
 
 // CPUのカード選択(推理+期待値ベース+戦略パターン)
@@ -4681,13 +4698,17 @@ function resolveFight(doFight, isCpuDealer){
       executePass(isCpuDealer); return;
     } else {
       // あなたが親で撤退 → CPU(子)が戦略カウンターを払って奇襲してくるか
+      // 先にバナーで「奇襲！」を予告してから、戦略カウンター消費を反映する(唐突に数値だけ変わって
+      // 見えないように、告知→結果の順にする)
       if(cpuWantsForce()){
-        cpuTrust-=FORCE_TRUST_COST;
-        hint(`相手が戦略カウンターを払って奇襲を仕掛けてきた！`);
-        renderScore();
         showActionBanner('kishuu', ()=>{
-          busy=false;
-          resolveFight(true, isCpuDealer);
+          cpuTrust-=FORCE_TRUST_COST;
+          hint(`相手が戦略カウンターを払って奇襲を仕掛けてきた！`);
+          renderScore();
+          setTimeout(()=>{
+            busy=false;
+            resolveFight(true, isCpuDealer);
+          }, 500);
         });
         return;
       }
@@ -4949,8 +4970,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.23.0';
+const GAME_VERSION = 'v1.24.0';
 const CHANGELOG = [
+  { version:'v1.24.0', date:'2026-07-20', items:[
+    '<b>CPUの「入替」「奇襲」の演出を改善</b>：CPUの入替はこれまで演出が一切なく一瞬で札が差し替わっていたため、専用の「入替！」バナーを新設し、バナー表示後に札が差し替わるようにしました。奇襲も、戦略カウンター消費やヒント表示より先に「奇襲！」バナーを表示し、告知→結果の順が分かりやすくなるよう順序と間合いを調整しました。',
+  ]},
   { version:'v1.23.0', date:'2026-07-20', items:[
     '<b>管理画面(admin.html)に「表示基準日時」を追加</b>：設定すると、ダッシュボード全体（対戦ログ・バランス分析・登録プレイヤー・アンケート・来訪履歴・計測イベントなど）で、その時点より前のデータを非表示にできるようにしました。実データは変更・削除されず、いつでも解除できます（プレイヤー側の見た目に変更はありません）。',
   ]},
