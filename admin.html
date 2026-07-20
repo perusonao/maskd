@@ -43,6 +43,9 @@
   .card{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:12px; }
   .cols{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   @media(max-width:640px){ .cols{ grid-template-columns:1fr; } }
+  .evgroup{ border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:12px; background:rgba(255,255,255,.015); }
+  .evgroup .card{ margin-bottom:0; }
+  .evgroup-h{ font-size:12px; font-weight:700; color:var(--goldb); margin-bottom:8px; }
 
   .bar-row{ display:flex; align-items:center; gap:8px; margin:5px 0; font-size:12px; }
   .bar-label{ width:120px; flex-shrink:0; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -822,14 +825,17 @@ function evMillis(e){
   }catch(err){}
   return 0;
 }
-function eventCountsCardHTML(logs, title){
+function eventCountsCardHTML(logs){
   const evCount={}; logs.forEach(g=>{ evCount[g.type]=(evCount[g.type]||0)+1; });
   const gameStart=evCount.game_start||0, abandon=evCount.abandon||0;
   const tutStart=evCount.tutorial_start||0, tutComplete=evCount.tutorial_complete||0;
   const abandonRate=gameStart?(abandon/gameStart*100):null;
   const tutRate=tutStart?(tutComplete/tutStart*100):null;
+  // 「対戦開始」は同意タイミングの関係で実際より少なく計測される既知の制限があり、
+  // 離脱数がそれを上回ると離脱率が100%を超えて出てしまう。数値自体は消さず、注記で説明する。
+  const rateUnreliable = abandonRate!=null && (abandonRate>100 || gameStart<3);
   let out=`<div class="cols">`;
-  out+=`<div class="card"><h3>${esc(title)}</h3>`+bars([
+  out+=`<div class="card"><h3>イベント件数</h3>`+bars([
     {label:'セッション開始',value:evCount.session_start||0,sub:String(evCount.session_start||0)},
     {label:'対戦開始',value:gameStart,sub:String(gameStart)},
     {label:'離脱(対戦中断)',value:abandon,sub:String(abandon)},
@@ -837,11 +843,18 @@ function eventCountsCardHTML(logs, title){
     {label:'チュートリアル完走',value:tutComplete,sub:String(tutComplete)},
   ])+`</div>`;
   out+=`<div class="card"><h3>離脱率・完走率</h3>`+bars([
-    {label:'離脱率',value:abandonRate||0,sub:abandonRate!=null?abandonRate.toFixed(1)+'%':'データ不足'},
+    {label:'離脱率',value:Math.min(abandonRate||0,100),sub:abandonRate!=null?abandonRate.toFixed(1)+'%':'データ不足'},
     {label:'チュート完走率',value:tutRate||0,sub:tutRate!=null?tutRate.toFixed(1)+'%':'データ不足'},
-  ])+`<div class="muted" style="font-size:10px;margin-top:4px;">離脱率＝離脱数/対戦開始数、チュート完走率＝チュートリアル完走数/開始数</div></div>`;
+  ])+`<div class="muted" style="font-size:10px;margin-top:4px;">離脱率＝離脱数/対戦開始数、チュート完走率＝チュートリアル完走数/開始数</div>`+
+  (rateUnreliable?`<div class="muted" style="font-size:10px;margin-top:2px;color:#e0a45c;">⚠ 「対戦開始」の計測が実態より少なく出る既知の制限があるため、離脱率は参考値です。</div>`:``)+
+  `</div>`;
   out+=`</div>`;
   return out;
+}
+function eventGroupHTML(logs, label, emptyNote){
+  return `<div class="evgroup"><div class="evgroup-h">${esc(label)}</div>`+
+    (logs.length?eventCountsCardHTML(logs):`<div class="muted" style="font-size:11px;">${esc(emptyNote)}</div>`)+
+    `</div>`;
 }
 function eventResetCtrlHTML(){
   const resetTs=getEventResetTs();
@@ -856,18 +869,17 @@ function bindEventResetButtons(){
   document.querySelectorAll('.evreset-clear').forEach(el=>{ el.onclick=()=>{ clearEventResetTs(); render(); }; });
 }
 function eventStatsHTML(eventLogs){
+  const intro='<div class="muted" style="font-size:11px;margin:-4px 0 10px;">プレイヤーがどこで離脱しているか・チュートリアルを最後まで終えているかを見る欄です。「セッション開始」「対戦開始」は同意設定のタイミングの関係で実際のアクセス数より少なく計測されるため、離脱率などは目安としてご覧ください。</div>';
   const ctrl=eventResetCtrlHTML();
   if(!eventLogs.length){
-    return '<h2>計測イベント（離脱・チュートリアル完走）</h2>'+ctrl+'<div class="muted" style="font-size:11px;margin:-4px 0 12px;">※離脱率などの計測イベントはまだ0件です(Firestoreルール反映前のデータのため、または反映直後でまだ収集中の可能性があります)。</div>';
+    return '<h2>計測イベント（離脱・チュートリアル完走）</h2>'+intro+ctrl+'<div class="muted" style="font-size:11px;margin:-4px 0 12px;">※離脱率などの計測イベントはまだ0件です(Firestoreルール反映前のデータのため、または反映直後でまだ収集中の可能性があります)。</div>';
   }
-  let out='<h2>計測イベント（離脱・チュートリアル完走）</h2>'+ctrl;
-  out+=eventCountsCardHTML(eventLogs, 'イベント件数（全期間）');
+  let out='<h2>計測イベント（離脱・チュートリアル完走）</h2>'+intro+ctrl;
+  out+=eventGroupHTML(eventLogs, '📊 全期間');
   const resetTs=getEventResetTs();
   if(resetTs){
-    const baseMs=new Date(resetTs).getTime();
-    const filtered=eventLogs.filter(g=>evMillis(g)>=baseMs);
-    out+=`<div class="muted" style="font-size:11px;margin:10px 0 4px;">🔄 リセット後（${esc(jstFromIso(resetTs, true))}〜・日本時間）のみの集計</div>`;
-    out+=filtered.length?eventCountsCardHTML(filtered, 'イベント件数（リセット後）'):'<div class="muted" style="font-size:11px;">リセット後のイベントはまだありません。</div>';
+    const filtered=eventLogs.filter(g=>evMillis(g)>=new Date(resetTs).getTime());
+    out+=eventGroupHTML(filtered, `🔄 リセット後（${jstFromIso(resetTs, true)}〜・日本時間）`, 'リセット後のイベントはまだありません。');
   }
   return out;
 }
@@ -936,6 +948,7 @@ function render(){
   // KPI
   html+=`<div class="grid">
     ${kpi(totalVisits!=null?totalVisits:'-','来訪数(同意不要・全訪問)')}
+    ${kpi(totalPlayers!=null?totalPlayers:allPlayers.length,'登録プレイヤー数')}
     ${kpi(total,'総レコード数')}
     ${kpi(players.size,'参加プレイヤー数')}
     ${kpi(pctOf(pw,decided),'プレイヤー勝率')}
