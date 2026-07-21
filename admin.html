@@ -898,20 +898,26 @@ function eventStatsHTML(eventLogs){
   out+=`</div>`;
   return out;
 }
-// ===== 匿名のチュートリアル開始/完走カウント(同意不要・playerId等の識別子なし) =====
+// ===== 匿名のチュートリアル開始/段階別クリアカウント(同意不要・playerId等の識別子なし) =====
+const TUT_TOTAL_STAGES=7; // index.html側のLEARN_STAGES件数と合わせる(段階チュートリアルの総数)
 function tutorialEventsSectionHTML(){
   if(!allTutEvents.length){
-    return '<div class="muted" style="font-size:11px;margin:-4px 0 12px;">※チュートリアルの開始/完走記録はまだありません(Firestoreルール反映前、または反映直後でまだ収集中の可能性があります)。</div>';
+    return '<div class="muted" style="font-size:11px;margin:-4px 0 12px;">※チュートリアルの開始/進捗記録はまだありません(Firestoreルール反映前、または反映直後でまだ収集中の可能性があります)。</div>';
   }
   const starts=allTutEvents.filter(x=>x.type==='start').length;
-  const completes=allTutEvents.filter(x=>x.type==='complete').length;
+  // 各ステージのクリア人数(ふるい落とし)。最終ステージのみ、旧'complete'記録(v1.25.0時点の形式)も完走扱いで合算する。
+  const stageCleared=(n)=> allTutEvents.filter(x=>x.type==='stage_clear' && x.stage===n).length
+    + (n===TUT_TOTAL_STAGES ? allTutEvents.filter(x=>x.type==='complete').length : 0);
+  const rows=[{label:'開始（ステージ1）',value:starts,sub:String(starts)}];
+  for(let i=1;i<=TUT_TOTAL_STAGES;i++){
+    const c=stageCleared(i);
+    rows.push({label:`STAGE ${i} クリア${i===TUT_TOTAL_STAGES?'（完走）':''}`, value:c, sub:String(c)});
+  }
+  const completes=stageCleared(TUT_TOTAL_STAGES);
   const rate = starts ? (completes/starts*100) : null;
-  let out='<h2>🎓 チュートリアル開始/完走（同意不要）</h2>';
-  out+='<div class="card">'+bars([
-    {label:'開始（ステージ1）',value:starts,sub:String(starts)},
-    {label:'完走（ステージ7まで）',value:completes,sub:String(completes)},
-    {label:'完走率',value:rate||0,sub:rate!=null?rate.toFixed(1)+'%':'データ不足'},
-  ])+`<div class="muted" style="font-size:10px;margin-top:4px;">完走率＝完走数/開始数。同意不要の匿名カウントのため、離脱率などと違い実態に近い数値です。</div></div>`;
+  let out='<h2>🎓 チュートリアル進捗（同意不要）</h2>';
+  out+='<div class="card">'+bars(rows)+
+    `<div class="muted" style="font-size:10px;margin-top:4px;">各行は「そのステージまでクリアした人数」＝どこで離脱しているかのふるい落とし。完走率＝STAGE${TUT_TOTAL_STAGES}クリア数/開始数＝${rate!=null?rate.toFixed(1)+'%':'データ不足'}。同意不要の匿名カウントのため、離脱率などと違い実態に近い数値です。</div></div>`;
   return out;
 }
 
