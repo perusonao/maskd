@@ -156,6 +156,7 @@
   .ls-done{ color:var(--win); font-weight:700; }
   .ls-open{ color:var(--gold-bright); }
   .ls-lock{ color:var(--ink-dim); }
+  .ls-remain{ font-size:10.5px; color:var(--ink-dim); text-align:center; margin-top:10px; }
   .ls-score{ text-align:center; font-size:14px; color:var(--ink-dim); margin-top:10px; }
   .ls-score b{ font-family:'Cormorant Garamond',serif; font-size:26px; color:var(--gold-bright); margin:0 4px; }
   .name-input{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:rgba(0,0,0,0.25);
@@ -2470,20 +2471,32 @@ function closeLearn(){
   if(_preLearnHints!==null){ hintsEnabled=_preLearnHints; _preLearnHints=null; }
 }
 // ステージ選択(ラダー)
+// 初回(cleared===0)は、いきなり7段階ぶんのロック済みステージが並ぶと「壁」に見えて
+// 腰が引けてしまうため、未解放ステージは個別表示せず1行の案内にまとめ、「まずは1戦」を
+// 前面に出す。1段階でもクリア済みなら、以降は従来通り全ステージを一覧表示する。
 function openLearnLadder(){
   const cleared=learnClearedMax();
+  const isFirstVisit=cleared===0;
   const rows=LEARN_STAGES.map(st=>{
     const done=st.id<=cleared, unlocked=st.id<=cleared+1;
+    if(isFirstVisit && !unlocked) return ''; // 初回はロック済みステージを個別表示しない
     const status = done?'<span class="ls-done">✓ クリア</span>':(unlocked?'<span class="ls-open">挑戦できる</span>':'<span class="ls-lock">🔒</span>');
     return `<div class="ls-item${unlocked?' open':''}" ${unlocked?`onclick="showStageIntro(${st.id})"`:''}>
       <div class="ls-ic">${unlocked?st.icon:'🔒'}</div>
       <div class="ls-tx"><div class="ls-t">STAGE ${st.id}：${st.name}</div><div class="ls-d">${stageSummary(st)}</div></div>
       <div class="ls-st">${status}</div></div>`;
   }).join('');
+  const introText = isFirstVisit
+    ? `まずは<b>STAGE 1</b>を1戦だけ。クリアすると次のルールが解放されます。`
+    : `ルールを1つずつ解放しながら、<b>実際の対戦</b>で少しずつ覚えます。全${LEARN_STAGES.length}段階クリアで一人前！`;
+  const remainNote = isFirstVisit
+    ? `<div class="ls-remain">この先 STAGE 2〜${LEARN_STAGES.length} も、進めるごとに解放されます</div>`
+    : '';
   document.getElementById('learnBox').innerHTML=`
     <div class="tutm-head"><span class="tutm-title" style="flex:1;">🎓 チュートリアル</span><span class="tutm-close" onclick="closeLearn()">✕</span></div>
-    <div class="tutm-intro" style="margin-top:8px;">ルールを1つずつ解放しながら、<b>実際の対戦</b>で少しずつ覚えます。全${LEARN_STAGES.length}段階クリアで一人前！</div>
+    <div class="tutm-intro" style="margin-top:8px;">${introText}</div>
     <div class="ls-grid">${rows}</div>
+    ${remainNote}
     ${learnAllCleared()?'<div class="tutm-controls" style="margin-top:12px;"><div class="btn" onclick="closeLearn(); beginMatchSetup();">本編を始める</div></div>':''}`;
   document.getElementById('learnOverlay').classList.add('show');
 }
@@ -4974,8 +4987,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.1.5';
+const GAME_VERSION = 'v1.1.6';
 const CHANGELOG = [
+  { version:'v1.1.6', date:'2026-07-21', items:[
+    '<b>初回のステージ選択画面を見やすく改善</b>：これまでは初回訪問時から未解放の6ステージが🔒付きでずらりと並び、圧迫感がありました。初回だけは「まずはSTAGE 1を1戦だけ」を前面に出し、先のステージはまとめた案内表示に変更しました（1度でもステージをクリアすると、従来通り全ステージが一覧表示されます）。',
+  ]},
   { version:'v1.1.5', date:'2026-07-20', items:[
     '<b>チュートリアルの進捗計測を段階別に拡張</b>：これまでは「開始」「完走」の2点だけでしたが、管理画面で各ステージ(1〜7)ごとにどこまで到達したかを確認できるようにしました（同意不要の匿名カウントで、個人を識別する情報は一切含みません。プレイヤー側の見た目に変更はありません）。',
   ]},
