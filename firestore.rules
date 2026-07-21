@@ -67,9 +67,10 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // 匿名のチュートリアル開始/完走カウント(同意不要)。playerId等の識別子は持たない。
+    // 匿名のチュートリアル開始/段階クリアカウント(同意不要)。playerId等の識別子は持たない。
     // 既存のlogs内tutorial_start/tutorial_completeは同意ゲート+旧UIの計測で実質機能しなくなって
-    // いたため、visitsと同じ「同意不要・匿名」方式で新設(v1.25.0)。
+    // いたため、visitsと同じ「同意不要・匿名」方式で新設(v1.25.0)。v1.27.0で、完走の1点だけでなく
+    // 各ステージ(1〜7)ごとのクリア人数を管理画面で見られるよう、段階別のカウントに拡張。
     match /tutorial_events/{docId} {
       allow read: if true;
       allow create: if isValidTutorialEvent();
@@ -135,10 +136,12 @@ service cloud.firestore {
       return d.size() <= 3 && !('playerId' in d);
     }
 
-    // チュートリアル開始/完走カウントの最低限のバリデーション。playerIdは明示的に禁止する
+    // チュートリアル開始/段階クリアカウントの最低限のバリデーション。playerIdは明示的に禁止する。
+    // 'stage_clear'は、どのステージ(1〜7)をクリアしたかをstageフィールドで持つ。
     function isValidTutorialEvent() {
       let d = request.resource.data;
-      return d.size() <= 3 && 'type' in d && d.type in ['start', 'complete'] && !('playerId' in d);
+      return d.size() <= 4 && 'type' in d && d.type in ['start', 'complete', 'stage_clear'] && !('playerId' in d)
+          && (d.type != 'stage_clear' || ('stage' in d && d.stage is int && d.stage >= 1 && d.stage <= 7));
     }
 
     // 論理削除イベントの最低限のバリデーション
