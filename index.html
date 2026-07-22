@@ -158,6 +158,23 @@
   .ls-lock{ color:var(--ink-dim); }
   .ls-remain{ font-size:10.5px; color:var(--ink-dim); text-align:center; margin-top:10px; }
   .ls-score{ text-align:center; font-size:14px; color:var(--ink-dim); margin-top:10px; }
+  /* STAGE1カード: カード全体タップに加え、視覚的にも明確な開始ボタンを添える(クリックはカード側のハンドラに一本化) */
+  .ls-startbtn{ margin-top:8px; padding:8px 0; border-radius:8px; text-align:center; font-size:12px; font-weight:700;
+    background:linear-gradient(160deg,var(--gold-bright),var(--gold-dim)); color:#1a1608; letter-spacing:.03em; }
+  /* 属性の相性を図式で見せる(STAGE1の開始前説明) */
+  .attr-cycle{ display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; margin:12px 0 4px; }
+  .attr-cycle .ac-item{ display:flex; flex-direction:column; align-items:center; gap:3px; min-width:44px; }
+  .attr-cycle .ac-ic{ font-size:26px; line-height:1; }
+  .attr-cycle .ac-n{ font-size:10px; font-weight:700; letter-spacing:.04em; color:var(--ink); }
+  .attr-cycle .ac-arrow{ font-size:17px; color:var(--gold-dim); flex-shrink:0; }
+  .acb-title{ text-align:center; font-size:14px; font-weight:700; color:var(--gold-bright); margin-bottom:2px; }
+  .acb-caption{ text-align:center; font-size:11px; color:var(--ink-dim); margin-top:6px; }
+  .acb-cta{ text-align:center; font-size:13px; color:var(--ink); margin:10px 0 2px; }
+  .acb-cta b{ color:var(--gold-bright); }
+  /* 結果カードの「詳しく見る」折りたたみ */
+  .rd-toggle{ margin-top:9px; font-size:11.5px; color:var(--gold-dim); text-decoration:underline; text-underline-offset:2px; cursor:pointer; display:inline-block; }
+  .rd-more{ display:none; margin-top:8px; padding-top:8px; border-top:1px solid rgba(201,162,74,.25); text-align:left; }
+  .rd-more.show{ display:block; }
   .ls-score b{ font-family:'Cormorant Garamond',serif; font-size:26px; color:var(--gold-bright); margin:0 4px; }
   .name-input{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:rgba(0,0,0,0.25);
     color:var(--ink); font-size:16px; font-family:'Zen Kaku Gothic New',sans-serif; text-align:center; outline:none; }
@@ -1114,6 +1131,7 @@
   .stage1-clear-anim .s1c-title{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:30px; font-weight:700;
     color:var(--gold-bright); text-shadow:0 0 18px rgba(232,200,119,.7); }
   .stage1-clear-anim .s1c-sub{ font-size:13px; color:var(--ink); margin-top:9px; }
+  .stage1-clear-anim .s1c-unlock{ font-size:11.5px; color:var(--win); font-weight:700; margin-top:10px; }
   @keyframes s1cPop{ 0%{ transform:scale(.7); opacity:0; } 60%{ transform:scale(1.08); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
   @media(prefers-reduced-motion:reduce){ .stage1-clear-anim{ animation:none; } }
   /* 結果の集計: 現在スコアを大きく＋残り山札 */
@@ -2487,6 +2505,21 @@ function learnClearedMax(){ try{ return parseInt(localStorage.getItem(LEARN_KEY)
 function learnAllCleared(){ return learnClearedMax()>=LEARN_STAGES.length; }
 function setLearnCleared(n){ try{ if(n>learnClearedMax()) localStorage.setItem(LEARN_KEY, String(n)); }catch(e){} }
 function stageSummary(st){ return `${st.attrs.map(a=>ALABEL[a]).join('・')} ／ ${st.rounds}R`; }
+// 画面遷移の連打防止(ステージ選択・ステージ開始など、短時間の二重タップでの二重遷移を防ぐ汎用ガード)
+let navGuard=false;
+function guardedNav(fn){
+  if(navGuard) return;
+  navGuard=true;
+  fn();
+  // 短いクールダウンのみ(連打・二重タップの吸収が目的。後続の別画面での正規の操作は妨げない)
+  setTimeout(()=>{ navGuard=false; }, 350);
+}
+// 属性の相性を図式(アイコン＋矢印＋名前)で見せる。色だけに頼らずアイコンと属性名も併記する。
+function attrCycleDiagramHTML(order){
+  const item=a=>`<div class="ac-item"><div class="ac-ic" style="color:var(--${a})">${RPS_GLYPH[a]}</div><div class="ac-n">${ALABEL[a]}</div></div>`;
+  const arrow='<div class="ac-arrow">→</div>';
+  return `<div class="attr-cycle">${item(order[0])}${arrow}${item(order[1])}${arrow}${item(order[2])}${arrow}${item(order[0])}</div>`;
+}
 function closeLearn(){
   document.getElementById('learnOverlay').classList.remove('show');
   stageConfig=null; deckAttrs=ATTRS5; matchRounds=TOTAL_ROUNDS;
@@ -2503,9 +2536,14 @@ function openLearnLadder(){
     const done=st.id<=cleared, unlocked=st.id<=cleared+1;
     if(isFirstVisit && !unlocked) return ''; // 初回はロック済みステージを個別表示しない
     const status = done?'<span class="ls-done">✓ クリア</span>':(unlocked?'<span class="ls-open">挑戦できる</span>':'<span class="ls-lock">🔒</span>');
-    return `<div class="ls-item${unlocked?' open':''}" ${unlocked?`onclick="showStageIntro(${st.id})"`:''}>
+    // STAGE1(誘導必勝ステージ)は「挑戦できる」の表示だけに頼らず、明確な開始ボタンも添える。
+    // クリックはカード全体の既存ハンドラに一本化(ボタン自体は視覚的な案内のみ、二重発火を避けるため個別onclickは付けない)
+    const startCta = (st.guidedWin && unlocked && !done)
+      ? `<div class="ls-startbtn">STAGE 1を始める</div>` : '';
+    const label = unlocked ? `STAGE ${st.id}：${st.name}を開く` : `STAGE ${st.id}：${st.name}（未解放）`;
+    return `<div class="ls-item${unlocked?' open':''}" ${unlocked?`onclick="guardedNav(()=>showStageIntro(${st.id}))"`:''} role="button" tabindex="0" aria-label="${label}">
       <div class="ls-ic">${unlocked?st.icon:'🔒'}</div>
-      <div class="ls-tx"><div class="ls-t">STAGE ${st.id}：${st.name}</div><div class="ls-d">${stageSummary(st)}</div></div>
+      <div class="ls-tx"><div class="ls-t">STAGE ${st.id}：${st.name}</div><div class="ls-d">${stageSummary(st)}</div>${startCta}</div>
       <div class="ls-st">${status}</div></div>`;
   }).join('');
   const introText = isFirstVisit
@@ -2528,23 +2566,31 @@ function showStageIntro(id){
   const diffLabel={weak:'相手は弱め',normal:'相手は普通',strong:'相手は強め'}[st.cpuDiff]||'相手は弱め';
   const actions=[st.force?'奇襲':null, st.swap?'入替':null].filter(Boolean);
   const actionLabel = actions.length ? actions.join('・')+'あり' : '決戦・撤退のみ';
+  // STAGE1(誘導必勝ステージ)は文章ではなく図式(属性の相性の輪)で見せ、情報量を絞る(1画面1メッセージ)
+  const bodyHTML = st.guidedWin
+    ? `<div class="acb-title">属性の相性を覚えよう</div>
+       ${attrCycleDiagramHTML([st.guidedWin.yourAttr, st.guidedWin.cpuAttr, LEARN_STAGES[0].attrs.find(a=>a!==st.guidedWin.yourAttr&&a!==st.guidedWin.cpuAttr)])}
+       <div class="acb-caption">矢印の先の属性に強い</div>
+       <div class="acb-cta">今回は<b>${ALABEL[st.guidedWin.yourAttr]}</b>を選ぼう</div>`
+    : `<div class="mentor-say">
+         <div class="mentor-face" style="background-image:url(${rivalImgUrl('mentor')})"></div>
+         <div class="mentor-bubble">${st.intro}</div>
+       </div>`;
   // STAGE1(誘導必勝ステージ)は情報量を絞るため、対戦条件の詳細行は表示しない(1画面1メッセージに寄せる)
   const detailLine = st.guidedWin ? '' :
     `<div class="tutm-intro" style="margin-top:8px;border-color:rgba(201,162,74,.4);"><b>この対戦</b>：${stageSummary(st)}／${diffLabel}／${actionLabel}／${st.late2x?'終盤2倍あり':'終盤2倍なし'}</div>`;
+  const startLabel = st.guidedWin ? 'STAGE 1を始める' : 'はじめる';
   document.getElementById('learnBox').innerHTML=`
     <div class="tutm-head"><span class="tutm-title" style="flex:1;">${st.icon} STAGE ${st.id}：${st.name}</span><span class="tutm-close" onclick="closeLearn()">✕</span></div>
-    <div class="mentor-say">
-      <div class="mentor-face" style="background-image:url(${rivalImgUrl('mentor')})"></div>
-      <div class="mentor-bubble">${st.intro}</div>
-    </div>
+    ${bodyHTML}
     ${detailLine}
     <div class="tutm-controls" style="margin-top:14px;">
-      <div class="btn" onclick="startLearnStage(${st.id})">はじめる</div>
-      <div class="btn ghost" onclick="openLearnLadder()">戻る</div>
+      <div class="btn" onclick="guardedNav(()=>startLearnStage(${st.id}))" role="button" aria-label="${startLabel}">${startLabel}</div>
+      <div class="btn ghost" onclick="guardedNav(()=>openLearnLadder())">戻る</div>
     </div>`;
   document.getElementById('learnOverlay').classList.add('show');
 }
-const TUTORIAL_VERSION='2'; // STAGE1誘導必勝フロー導入版(計測イベントのtutorial_versionに使う)
+const TUTORIAL_VERSION='3'; // STAGE1のテンポ/分かりやすさ改善版(計測イベントのtutorial_versionに使う)
 let stageStartTime=null, stageAttemptStageId=null, stageAttemptCount=0; // 経過時間/リトライ計測用(セッション内のみ、保存はしない)
 function startLearnStage(id){
   const st=LEARN_STAGES.find(s=>s.id===id); if(!st) return;
@@ -2564,6 +2610,11 @@ function startLearnStage(id){
   // 全5属性30枚デッキが初登場するステージでは、本戦と同じ配札演出を挟んで実感してもらう
   if(st.dealAnim) playDealAnimation(()=>startGame(dealer, st));
   else startGame(dealer, st);
+}
+// クリア画面の「次のステージへ」を押した瞬間を計測してから遷移する
+function advanceFromStageClear(clearedId, nextId){
+  if(window.__maskdSaveTutorialEvent) window.__maskdSaveTutorialEvent('stage_advance', { stage: clearedId, next_stage: nextId, tutorial_version: TUTORIAL_VERSION });
+  showStageIntro(nextId);
 }
 // ステージ終了(専用結果。通算/実績/履歴には残さない)
 function endLearnStage(youFinal, cpuFinal){
@@ -2585,18 +2636,24 @@ function endLearnStage(youFinal, cpuFinal){
   // STAGE1(誘導必勝ステージ)は専用の短いクリア演出のみを見せる(1〜2秒で次へ進める、最初の成功体験)。
   // 必ずyouFinal>cpuFinalになる設計のため、通常の「惜敗」分岐には入らない。
   if(st.guidedWin){
+    const clearedId=st.id, nextId=next?next.id:null;
     stageConfig=null; deckAttrs=ATTRS5; matchRounds=TOTAL_ROUNDS;
     const rov0=document.getElementById('resultOv'); if(rov0) rov0.classList.remove('show');
     document.getElementById('overlay').classList.remove('show');
     sfx('win');
     try{ if(navigator.vibrate) navigator.vibrate([0,35,45,25]); }catch(e){}
+    const unlockNote = next ? `<div class="s1c-unlock">STAGE ${next.id}が解放されました</div>` : '';
     document.getElementById('learnBox').innerHTML=`
       <div class="stage1-clear-anim">
         <div class="s1c-title">STAGE 1 CLEAR</div>
         <div class="s1c-sub">属性相性を覚えました！</div>
+        ${unlockNote}
       </div>
       <div class="tutm-controls" style="flex-direction:column;margin-top:6px;">
-        ${next?`<div class="btn" style="width:100%;" onclick="showStageIntro(${next.id})" aria-label="次のステージへ進む">次へ ›</div>`:`<div class="btn" style="width:100%;" onclick="openLearnLadder()">ステージ選択</div>`}
+        ${next
+          ? `<div class="btn" style="width:100%;" onclick="guardedNav(()=>advanceFromStageClear(${clearedId},${nextId}))" role="button" aria-label="次のステージへ進む">次のステージへ ›</div>
+             <div class="btn ghost" style="width:100%;" onclick="guardedNav(()=>openLearnLadder())">ステージ一覧へ</div>`
+          : `<div class="btn" style="width:100%;" onclick="guardedNav(()=>openLearnLadder())">ステージ選択</div>`}
       </div>`;
     document.getElementById('learnOverlay').classList.add('show');
     return;
@@ -3483,6 +3540,7 @@ let resultOverlayTimer=null; // 結果オーバーレイ表示の遅延タイマ
 function startRound(){
   dealerCard=null; childCard=null;
   tutMoveFeedback=null;
+  resultDetailOpened=false;
   youCardPeeking=false;
   youSwapUsedThisRound=false; cpuSwapUsedThisRound=false; swapSelecting=false;
   if(resultOverlayTimer){ clearTimeout(resultOverlayTimer); resultOverlayTimer=null; }
@@ -3908,16 +3966,17 @@ function renderActions(){
       fa.classList.add('show'); hideRoleMsg(true);
       return;
     }
-    // STAGE1(誘導必勝ステージ)は撤退/入替の選択肢を出さず、決戦ボタン1つだけに絞って誘導する(撤退はSTAGE5で教える)
+    // STAGE1(誘導必勝ステージ)は撤退/入替の選択肢を出さず、決定ボタン1つだけに絞って誘導する(撤退はSTAGE5で教える)。
+    // 説明はコーチ行(coach())側の1メッセージに一本化するため、ここでの案内文(fa-ctx)は出さない(重複回避)。
     const guided = stageConfig && stageConfig.guidedWin;
     const canPass = youTrust>=PASS_TRUST_COST;
     const showSwap = stageAllows('swap') && !guided; // 段階チュートリアルの序盤は入替を隠す
     const canSwap = showSwap && youTrust>=SWAP_COST && youHand.length>0 && !youSwapUsedThisRound;
-    fa.innerHTML = `<div class="fa-ctx">${guided?'決戦を選んで確定しよう':'どうする？'}</div>`;
+    fa.innerHTML = guided ? '' : `<div class="fa-ctx">どうする？</div>`;
     const row=document.createElement('div'); row.className='fa-row';
-    const fight=document.createElement('div'); fight.className='btn act-btn'+(guided?' guided-target':''); fight.innerHTML=actIcon('⚔','決戦');
+    const fight=document.createElement('div'); fight.className='btn act-btn'+(guided?' guided-target':''); fight.innerHTML=guided?actIcon('⚔','決定'):actIcon('⚔','決戦');
     fight.onclick=()=>resolveFight(true);
-    if(guided){ fight.setAttribute('aria-label','決戦を選んで確定する'); }
+    if(guided){ fight.setAttribute('aria-label','このカードで勝負を決定する'); }
     if(!guided){
       const pass=document.createElement('div'); pass.className='btn ghost act-btn'+(canPass?'':' disabled');
       pass.innerHTML=actIcon('🏳', canPass?`撤退 <span class="act-cost">戦略-${PASS_TRUST_COST}</span>`:'撤退 <span class="act-cost">戦略不足</span>');
@@ -4200,6 +4259,12 @@ function refillCpuHand(){
 function playYouCard(idx){
   const card=youHand.splice(idx,1)[0];
   card.owner='you';
+  // STAGE1(誘導必勝ステージ)限定: 最初のカード選択(=誘導された唯一の操作対象)を計測
+  if(stageConfig && stageConfig.guidedWin && youIsDealer && window.__maskdSaveTutorialEvent){
+    const cardConfirmParams={ stage: stageConfig.id, attr: card.attr, tutorial_version: TUTORIAL_VERSION };
+    if(stageStartTime) cardConfirmParams.elapsed_ms = Math.max(0, Math.round(Date.now()-stageStartTime));
+    window.__maskdSaveTutorialEvent('card_confirm', cardConfirmParams);
+  }
   // STAGE1限定: 子として札を選ぶ時、手札に💡おすすめ札があったか・それを選べたかを記録(結果表示時に使う)
   if(inTutorialStage() && stageConfig.id===1 && !youIsDealer && dealerCard){
     const handBeforePick=youHand.concat([card]);
@@ -4269,7 +4334,7 @@ function cpuActAsChild(){
   phase='decide'; renderActions(); renderScore();
   showAttrHint(card.num);
   if(stageConfig && stageConfig.guidedWin){
-    coach('<span class="ci">👉</span>「<b>決戦</b>」ボタンを押して確定しましょう');
+    coach('<span class="ci">👉</span>選んだカードで勝負しましょう');
   } else {
     showDecideCoach(); // 初心者ヒント: 決戦アドバイス(有利/不利)
   }
@@ -4724,6 +4789,21 @@ function tutMoveFeedbackNote(){
   return `<br><span style="color:${ok?'var(--win)':'var(--gold-bright)'};font-size:11px;">${ok?'✅':'💡'} ${msg}</span>`;
 }
 
+// STAGE1(誘導必勝ステージ)の結果カードにある「詳しく見る」の開閉。1ラウンドにつき最初の1回だけ計測する。
+let resultDetailOpened=false;
+function toggleResultDetail(){
+  const more=document.getElementById('rdMore'); const btn=document.getElementById('rdToggleBtn');
+  if(!more || !btn) return;
+  const opening=!more.classList.contains('show');
+  more.classList.toggle('show');
+  btn.setAttribute('aria-expanded', opening?'true':'false');
+  btn.textContent = opening ? '閉じる ▴' : '詳しく見る ▾';
+  if(opening && !resultDetailOpened){
+    resultDetailOpened=true;
+    if(stageConfig && window.__maskdSaveTutorialEvent) window.__maskdSaveTutorialEvent('result_detail_open', { stage: stageConfig.id, tutorial_version: TUTORIAL_VERSION });
+  }
+}
+
 // Kaosの特殊ルール(数字反転・Air撃破・救済)が発動したかを判定(UI演出用)
 function isKaosSpecial(dealer, child){
   if(dealer.attr==='kaos'&&child.attr==='air') return true;
@@ -4801,6 +4881,11 @@ function resolveFight(doFight, isCpuDealer){
   if(busy) return; busy=true;
   document.getElementById('actions').innerHTML='';
   const fa=document.getElementById('fieldActions'); if(fa){ fa.classList.remove('show'); fa.innerHTML=''; } // 決着に入るので行動ボタンを隠す
+
+  // STAGE1(誘導必勝ステージ)限定: 「決定」ボタンを押した瞬間を計測(busyガードの後段のため連打でも1回だけ送信される)
+  if(!isCpuDealer && doFight && stageConfig && stageConfig.guidedWin && window.__maskdSaveTutorialEvent){
+    window.__maskdSaveTutorialEvent('decide_confirm', { stage: stageConfig.id, tutorial_version: TUTORIAL_VERSION });
+  }
 
   // STAGE1限定: あなたが親として決戦/撤退を選んだ直後、⚖️のおすすめ通りだったかを記録(結果表示時に使う)。
   // 誘導必勝ステージ(guidedWin)は選択の余地がなく「アドバイス通りだったか」という問い自体が成立しないため対象外。
@@ -4941,7 +5026,18 @@ function resolveFightJudge(){
 
       rc.className='result-card '+cls;
       rc.querySelector('.rtitle').textContent=title;
-      rc.querySelector('.rdetail').innerHTML=winReasonBannerHTML(dealerCard, childCard, result) + detail + (hintsEnabled? beginnerResultNote(dealerCard, childCard, result):'') + tutMoveFeedbackNote();
+      {
+        const banner=winReasonBannerHTML(dealerCard, childCard, result);
+        const moreHTML=detail + (hintsEnabled? beginnerResultNote(dealerCard, childCard, result):'') + tutMoveFeedbackNote();
+        if(stageConfig && stageConfig.guidedWin){
+          // STAGE1(誘導必勝ステージ)は「なぜ勝ったか」だけを先に見せ、残りは「詳しく見る」に折りたたむ(情報量を絞る)
+          rc.querySelector('.rdetail').innerHTML = banner +
+            `<div class="rd-toggle" id="rdToggleBtn" onclick="toggleResultDetail()" role="button" tabindex="0" aria-label="詳しく見る" aria-expanded="false">詳しく見る ▾</div>`+
+            `<div class="rd-more" id="rdMore">${moreHTML}</div>`;
+        } else {
+          rc.querySelector('.rdetail').innerHTML = banner + moreHTML;
+        }
+      }
       clearCoach();
       // 勝敗は、砕ける/輝く演出を見せてから結果カードを表示する(引き分けは短め)
       const overlayDelay = (result==='draw') ? 250 : 760;
@@ -4985,7 +5081,10 @@ function showNextBtn(){
       `<span class="rs-side cpu"><span class="rs-lbl">相手</span><b>${cpuLP}</b></span></div>`+
       `<div class="rs-sub">あなたの山札 残り <b>${youDrawPile.length}</b>枚</div>`;
   }
-  b.textContent = (round>=matchRounds) ? '最終結果を見る ›' : `第${round+1}ラウンドへ ›`;
+  // STAGE1(誘導必勝ステージ)は1ラウンドで完結し、実際には中間の「最終結果」画面を経由せず
+  // STAGE1 CLEARへ直行するため、ボタン文言も紛らわしくないよう単純に「次へ」にする。
+  if(stageConfig && stageConfig.guidedWin){ b.textContent='次へ ›'; }
+  else { b.textContent = (round>=matchRounds) ? '最終結果を見る ›' : `第${round+1}ラウンドへ ›`; }
   b.classList.add('show');
 }
 function proceedToNextRound(){
@@ -5116,8 +5215,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.30.0';
+const GAME_VERSION = 'v1.31.0';
 const CHANGELOG = [
+  { version:'v1.31.0', date:'2026-07-22', items:[
+    '<b>STAGE1をさらに分かりやすくテンポ良く改善</b>：開始前の説明を図式（SUN→MOON→DARK→SUN）に、ステージ選択には「STAGE 1を始める」ボタンを追加しました。勝利結果は主要情報だけを先に見せ、詳細は「詳しく見る」で確認できるように整理。クリア時にはSTAGE2解放の案内も追加しました。',
+  ]},
   { version:'v1.30.0', date:'2026-07-22', items:[
     '<b>STAGE1を短い成功体験に再構成</b>：最初の説明を1画面に短縮し、最初の1戦は必ず勝てる1ラウンド構成に変更しました。選ぶべきカードや決定ボタンを光らせて誘導し、勝った理由（「SUNがMOONに勝利！属性勝ち！」）を大きく表示、クリア時には専用の演出を追加しました。',
   ]},

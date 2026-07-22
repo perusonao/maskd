@@ -138,16 +138,19 @@ service cloud.firestore {
       return d.size() <= 3 && !('playerId' in d);
     }
 
-    // チュートリアル開始/ステージ開始/段階クリアカウントの最低限のバリデーション。playerIdは明示的に禁止する。
-    // 'stage_start'/'stage_clear'は、どのステージ(1〜7)かをstageフィールドで持つ。
-    // tutorial_version/retry_count/elapsed_msは、STAGE1改善版(v2)の効果測定用に追加した任意フィールド。
+    // チュートリアル開始/ステージ開始/段階クリア/STAGE1誘導フロー内の各操作カウントの最低限のバリデーション。
+    // playerIdは明示的に禁止する。stageを持つ型は、どのステージ(1〜7)かを必須で持つ。
+    // tutorial_version/retry_count/elapsed_ms/attr/next_stageは、STAGE1改善版の効果測定用に追加した任意フィールド。
     function isValidTutorialEvent() {
       let d = request.resource.data;
-      return d.size() <= 7 && 'type' in d
-          && d.type in ['start', 'complete', 'stage_clear', 'stage_start']
+      return d.size() <= 8 && 'type' in d
+          && d.type in ['start', 'complete', 'stage_clear', 'stage_start',
+                         'card_confirm', 'decide_confirm', 'result_detail_open', 'stage_advance']
           && !('playerId' in d)
           && (!('stage' in d) || (d.stage is int && d.stage >= 1 && d.stage <= 7))
-          && ((d.type != 'stage_clear' && d.type != 'stage_start') || 'stage' in d)
+          && (!(d.type in ['stage_clear','stage_start','card_confirm','decide_confirm','result_detail_open','stage_advance']) || 'stage' in d)
+          && (!('next_stage' in d) || (d.next_stage is int && d.next_stage >= 1 && d.next_stage <= 7))
+          && (!('attr' in d) || (d.attr is string && d.attr in ['moon','sun','dark','kaos','air']))
           && (!('tutorial_version' in d) || (d.tutorial_version is string && d.tutorial_version.size() <= 8))
           && (!('retry_count' in d) || (d.retry_count is int && d.retry_count >= 0 && d.retry_count <= 999))
           && (!('elapsed_ms' in d) || (d.elapsed_ms is int && d.elapsed_ms >= 0 && d.elapsed_ms <= 3600000));

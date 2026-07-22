@@ -1,7 +1,7 @@
 # MASKD 開発引き継ぎ資料
 
 > 別セッション／別担当への引き継ぎ用。この1枚を最初に読めば、すぐに開発を再開できるようにまとめています。
-> 最終更新: 2026-07-22 / 到達バージョン: **develop v1.30.0 / main v1.1.6**
+> 最終更新: 2026-07-22 / 到達バージョン: **develop v1.31.0 / main v1.1.6**
 
 ---
 
@@ -378,6 +378,14 @@
   **検証**: Playwrightで、①完全新規ユーザーが名前登録→(8枚スライドを経ずに)ステージ選択→STAGE1紹介(詳細行なし・短い文面)→SUN札のみ選択可能・強調→決戦ボタンのみ表示・強調→勝因バナー「SUNがMOONに勝利！／属性勝ち！」→「STAGE 1 CLEAR」演出、まで一気通貫でJSエラー0で完了することを確認。②`start`/`stage_start`/`stage_clear`(`tutorial_version`/`retry_count`/`elapsed_ms`付き)の発火を確認。③既存ユーザー(STAGE3までクリア済み)を模したlocalStorageで再訪しても、名前モーダル・ステージ選択とも自動表示されず進行状況(3)が維持されることを確認。④STAGE2は`guidedWin`が無いため、詳細行・ラウンド開始モーダル・4ラウンド構成とも従来通り変化がないことを確認。⑤STAGE1を2回連続プレイし`retry_count`が0→1と正しく増えることを確認。⑥SUN札・決戦ボタンを連打しても、既存の`busy`フラグにより二重進行せず「STAGE 1 CLEAR」が1回だけ表示されること、`localStorage`が正しく更新されること、リロード後も名前モーダルが再表示されず進行状況が壊れないことを確認。⑦4パターンのCPU設定による通常対戦の回帰テストが新規JSエラー・崩れなしで通過し、通常対戦のCPU/勝敗判定に影響がないことを確認。スクリーンショットで実際の見た目(カードの強調発光、勝因バナー、クリア演出)も目視確認。
   **要作業**: `firestore.rules`の`isValidTutorialEvent()`を更新した(`stage_start`型・`tutorial_version`/`retry_count`/`elapsed_ms`フィールドを追加)ため、Firebaseコンソールでの再公開が必要(`tutorial_events`/`tutorial_events_dev`向け)。
   **運用**: チュートリアルの導線・演出の大幅改善のため、`1.x.0`として`develop`ブランチにpush(`main`には反映していない)。
+
+- **v1.31.0（develop・現在）**: v1.30.0のSTAGE1改善版をベースに、ユーザーから「さらに分かりやすさとテンポを向上させてほしい」と、6項目の詳細な改善指示(開始前説明の図式化、開始ボタンの明確化、決定ボタンの整理、勝利結果画面の情報量削減、最終結果を見る画面の省略、クリア画面の簡潔化)を受けて実装。
+  **調査**: 「最終結果を見る」画面は、実際には既にv1.30.0の時点で`endGame()`が`stageConfig`ありの場合に`endLearnStage()`へ即分岐する設計になっており、中間のVICTORY/DEFEAT画面は表示されていなかった(ボタンの**文言だけ**が「最終結果を見る」のままで紛らわしい状態)。この調査結果を踏まえ、実際に画面を消す作業ではなく文言修正で済むと判断し、他の5項目に実装の重点を置いた。
+  **実装**: ①`showStageIntro()`をSTAGE1限定で全面書き換えし、新設`attrCycleDiagramHTML()`(既存の`RPS_GLYPH`/`ALABEL`/属性カラー変数`var(--sun)`等を再利用、新規コンポーネントは最小限)でSUN→MOON→DARK→SUNの相性を図式表示。文章は「矢印の先の属性に強い」「今回はSUNを選ぼう」の2行のみ。②`openLearnLadder()`のSTAGE1カードに、視覚的な「STAGE 1を始める」ボタン(`.ls-startbtn`)を追加(クリックはカード全体の既存ハンドラに一本化し、ボタン自体には個別のonclickを付けないことで二重発火を回避)。③連打防止のため汎用`guardedNav(fn)`ヘルパーを新設し、ステージ選択・ステージ開始・クリア画面の遷移ボタンに適用(実装中、最初は500msのクールダウンにしたところ、テストで正規の連続操作(ラダー→紹介画面→開始)まで誤ってブロックする不具合を発見。DOM置き換えによる自然な二重発火防止で大部分はカバーされることを踏まえ、350msに短縮して解決)。④`renderActions()`のSTAGE1限定分岐で、ボタン文言を「決戦」→「決定」に短縮し、重複していた案内文(`.fa-ctx`の「決戦を選んで確定しよう」)を削除、`coach()`側の1メッセージ(「選んだカードで勝負しましょう」)に一本化。⑤`resolveFightJudge()`のSTAGE1限定分岐で、結果カードを「勝因バナー(あなたの勝ち/SUNがMOONに勝利！/属性勝ち！/スコア)」のみ先頭表示にし、既存の`detail`(得点内訳・戦略カウンター増減等)・`beginnerResultNote`・`tutMoveFeedbackNote`は新設`.rd-more`(初期非表示)へ移動、新設`toggleResultDetail()`で開閉できる「詳しく見る ▾／閉じる ▴」トグルを追加(既存の判定ロジック・データ処理は一切変更せず、表示順序と初期表示/非表示のみ変更)。⑥`showNextBtn()`をSTAGE1限定で「次へ」表示に統一(実際の遷移先は変更なし)。⑦`endLearnStage()`のSTAGE1クリア画面に「STAGE 2が解放されました」の案内(次ステージがある場合のみ)と、「次のステージへ」(主ボタン)/「ステージ一覧へ」(副ボタン、新設`advanceFromStageClear()`経由)を追加。
+  **計測**: 新規`card_confirm`(最初のカード選択、`attr`/`elapsed_ms`付き)、`decide_confirm`(決定ボタン押下、`resolveFight()`の`busy`ガード後段に配置し連打時も1回のみ送信)、`result_detail_open`(「詳しく見る」を開いた瞬間、ラウンドごとに1回だけ)、`stage_advance`(クリア画面の「次のステージへ」を押した瞬間、`next_stage`付き)を、既存の`tutorial_events`(匿名・`visits`と同方式)に追加。`tutorial_version`を`'2'`→`'3'`に更新。`firestore.rules`の`isValidTutorialEvent()`を拡張し、新規4型と`attr`(5属性のいずれか)/`next_stage`(1〜7)フィールドのバリデーションを追加(`d.size()`上限を7→8に緩和)。依頼にあった`learn_first_card_selected`/`learn_card_confirm`/`learn_result_detail_open`等の命名例(`learn_`接頭辞つき)は、既存の`tutorial_events`コレクションが既にスコープを持っているため接頭辞なしの命名規則(`start`/`stage_start`/`stage_clear`と同様の裸の`type`値)に合わせて実装した。
+  **検証**: Playwrightで、①小さい端末(360×640)で新規ユーザーの一気通貫フロー(名前登録→ラダーの明確な開始ボタン確認→図式表示確認(長文が出ていないこと)→SUN札選択→決定ボタン→結果画面の情報量確認(詳細が初期非表示)→詳しく見るタップで詳細表示→次へ→STAGE1 CLEAR(STAGE2解放案内含む)→次のステージへでSTAGE2紹介に遷移)を通し、いずれの画面でも横スクロールが発生しないことを含めてJSエラー0で確認。②`start`/`stage_start`/`card_confirm`/`decide_confirm`/`result_detail_open`/`stage_clear`/`stage_advance`の7イベントがそれぞれ正確に1回ずつ発火することを確認。③STAGE1のステージ選択カードを連打しても2重に画面遷移しないことを確認。④既存ユーザー(STAGE3までクリア済み)の非干渉、STAGE2(通常フロー)が図式化・詳細情報の折りたたみとも無関係で完全に無変更であることを確認。⑤4パターンのCPU設定による通常対戦の回帰テストが新規JSエラー・崩れなしで通過。スクリーンショットで実際の見た目(図式・開始ボタン・決定ボタン・結果画面の折りたたみ・クリア画面)を目視確認。
+  **要作業**: `firestore.rules`の`isValidTutorialEvent()`を更新した(`card_confirm`/`decide_confirm`/`result_detail_open`/`stage_advance`型・`attr`/`next_stage`フィールドを追加)ため、Firebaseコンソールでの再公開が必要(`tutorial_events`/`tutorial_events_dev`向け)。
+  **運用**: チュートリアルUIの改善のため、`1.x.0`として`develop`ブランチにpush(`main`には反映していない)。
 
 ## 9. 次にやり得ること（未確定・候補）
 
