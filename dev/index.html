@@ -2321,6 +2321,8 @@ const ACTIVE_HAND_SIZE=5;
 let youLP=START_LP, cpuLP=START_LP;
 let round=1, youIsDealer=true, busy=false;
 let dealerCard=null, childCard=null; // {attr,num,owner:'you'|'cpu'}
+// STAGE1限定の軽量な正誤フィードバック(コーチのおすすめ通りに動けたか)。ラウンド開始時にリセット。
+let tutMoveFeedback=null; // {type:'decide'|'pick', ok:boolean} | null(明確な推奨が無い場面は出さない)
 let phase='wait'; // wait/pick/decide
 let possibleAttrsByNum={}; // {1:[attr,...], ...} 相手が持ちうる属性(Air込み5属性プール)
 let poolOwner={}; // key attr+num -> 'you'|'cpu' (Air込み25枚中、配られた24枚の所有者)
@@ -3427,6 +3429,7 @@ function startGame(initialDealerIsYou, stage){
 let resultOverlayTimer=null; // 結果オーバーレイ表示の遅延タイマー(ラウンド跨ぎの再表示を防ぐ)
 function startRound(){
   dealerCard=null; childCard=null;
+  tutMoveFeedback=null;
   youCardPeeking=false;
   youSwapUsedThisRound=false; cpuSwapUsedThisRound=false; swapSelecting=false;
   if(resultOverlayTimer){ clearTimeout(resultOverlayTimer); resultOverlayTimer=null; }
@@ -4130,6 +4133,12 @@ function refillCpuHand(){
 function playYouCard(idx){
   const card=youHand.splice(idx,1)[0];
   card.owner='you';
+  // STAGE1限定: 子として札を選ぶ時、手札に💡おすすめ札があったか・それを選べたかを記録(結果表示時に使う)
+  if(inTutorialStage() && stageConfig.id===1 && !youIsDealer && dealerCard){
+    const handBeforePick=youHand.concat([card]);
+    const hadRecommended=handBeforePick.some(c=>playerEstimate(c,dealerCard.num,false).win>=0.6);
+    tutMoveFeedback = hadRecommended ? { type:'pick', ok: playerEstimate(card,dealerCard.num,false).win>=0.6 } : null;
+  }
   sfx('place');
   youCardPeeking=false;
   clearCoach();
@@ -4606,6 +4615,17 @@ function beginnerResultNote(dealer, child, result){
   return `<br><span style="color:var(--air);font-size:11px;">💡 ${msg}</span>`;
 }
 
+// STAGE1限定: コーチのおすすめ(⚖️の有利/不利、💡のおすすめ札)通りに動けたかの軽い正誤フィードバック。
+// 結果の勝敗ではなく「判断の過程」を評価する(不利な決戦に運良く勝っても、次への教訓は変えない)。
+function tutMoveFeedbackNote(){
+  if(!tutMoveFeedback) return '';
+  const {type, ok}=tutMoveFeedback;
+  const msg = type==='decide'
+    ? (ok ? 'コーチの⚖️の見立て通り、良い判断でした。' : 'さっきの⚖️の見立ても、次は参考にしてみましょう。')
+    : (ok ? 'おすすめ札(💡)を選べました。' : '手札にあった「おすすめ札」も、次は意識してみましょう。');
+  return `<br><span style="color:${ok?'var(--win)':'var(--gold-bright)'};font-size:11px;">${ok?'✅':'💡'} ${msg}</span>`;
+}
+
 // Kaosの特殊ルール(数字反転・Air撃破・救済)が発動したかを判定(UI演出用)
 function isKaosSpecial(dealer, child){
   if(dealer.attr==='kaos'&&child.attr==='air') return true;
@@ -4667,7 +4687,7 @@ function finishPassReveal(){
       const rc=document.getElementById('resultCard');
       rc.className='result-card pass';
       rc.querySelector('.rtitle').textContent='撤退';
-      rc.querySelector('.rdetail').innerHTML=`${ALABEL[dealerCard.attr]}${dealerCard.num}(親) と ${ALABEL[childCard.attr]}${childCard.num}(子)<br>中身を開示して<b>双方とも破棄</b>される。<br>撤退コストとして親の戦略カウンターが <b style="color:var(--lose)">-${PASS_TRUST_COST}</b>`;
+      rc.querySelector('.rdetail').innerHTML=`${ALABEL[dealerCard.attr]}${dealerCard.num}(親) と ${ALABEL[childCard.attr]}${childCard.num}(子)<br>中身を開示して<b>双方とも破棄</b>される。<br>撤退コストとして親の戦略カウンターが <b style="color:var(--lose)">-${PASS_TRUST_COST}</b>`+tutMoveFeedbackNote();
       hideRoleMsg(true);
       document.getElementById('resultOv').classList.add('show');
       roundLog.push({
@@ -4683,6 +4703,16 @@ function resolveFight(doFight, isCpuDealer){
   if(busy) return; busy=true;
   document.getElementById('actions').innerHTML='';
   const fa=document.getElementById('fieldActions'); if(fa){ fa.classList.remove('show'); fa.innerHTML=''; } // 決着に入るので行動ボタンを隠す
+
+  // STAGE1限定: あなたが親として決戦/撤退を選んだ直後、⚖️のおすすめ通りだったかを記録(結果表示時に使う)
+  if(!isCpuDealer && inTutorialStage() && stageConfig.id===1 && dealerCard && childCard){
+    const est=playerEstimate(dealerCard, childCard.num, true);
+    const v=hintVerdict(est);
+    let advice=null;
+    if(v.t.includes('有利')) advice='fight';
+    else if(v.t.includes('不利')) advice='pass';
+    tutMoveFeedback = advice ? { type:'decide', ok: advice===(doFight?'fight':'pass') } : null;
+  }
 
   if(!doFight){
     // --- 子が戦略カウンターを払って撤退を無効化できる ---
@@ -4812,7 +4842,7 @@ function resolveFightJudge(){
 
       rc.className='result-card '+cls;
       rc.querySelector('.rtitle').textContent=title;
-      rc.querySelector('.rdetail').innerHTML=detail + (hintsEnabled? beginnerResultNote(dealerCard, childCard, result):'');
+      rc.querySelector('.rdetail').innerHTML=detail + (hintsEnabled? beginnerResultNote(dealerCard, childCard, result):'') + tutMoveFeedbackNote();
       clearCoach();
       // 勝敗は、砕ける/輝く演出を見せてから結果カードを表示する(引き分けは短め)
       const overlayDelay = (result==='draw') ? 250 : 760;
@@ -4987,8 +5017,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.28.0';
+const GAME_VERSION = 'v1.29.0';
 const CHANGELOG = [
+  { version:'v1.29.0', date:'2026-07-22', items:[
+    '<b>STAGE1に軽い正誤フィードバックを追加</b>：チュートリアル最初のステージで、コーチのおすすめ（⚖️有利/不利、💡おすすめ札）通りに動けたかを、対戦結果の画面でさりげなく振り返れるようにしました。',
+  ]},
   { version:'v1.28.0', date:'2026-07-21', items:[
     '<b>初回のステージ選択画面を見やすく改善</b>：これまでは初回訪問時から未解放の6ステージが🔒付きでずらりと並び、圧迫感がありました。初回だけは「まずはSTAGE 1を1戦だけ」を前面に出し、先のステージはまとめた案内表示に変更しました（1度でもステージをクリアすると、従来通り全ステージが一覧表示されます）。',
   ]},
