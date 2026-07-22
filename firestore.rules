@@ -141,14 +141,15 @@ service cloud.firestore {
     // チュートリアル開始/ステージ開始/段階クリア/STAGE1誘導フロー内の各操作カウントの最低限のバリデーション。
     // playerIdは明示的に禁止する。stageを持つ型は、どのステージ(1〜7)かを必須で持つ。
     // tutorial_version/retry_count/elapsed_ms/attr/next_stageは、STAGE1改善版の効果測定用に追加した任意フィールド。
+    // complete_advanceは、チュートリアル完了画面から本戦(CPU戦)へ進んだ瞬間の計測用(v1.33.0)。
     function isValidTutorialEvent() {
       let d = request.resource.data;
       return d.size() <= 8 && 'type' in d
           && d.type in ['start', 'complete', 'stage_clear', 'stage_start',
-                         'card_confirm', 'decide_confirm', 'result_detail_open', 'stage_advance']
+                         'card_confirm', 'decide_confirm', 'result_detail_open', 'stage_advance', 'complete_advance']
           && !('playerId' in d)
           && (!('stage' in d) || (d.stage is int && d.stage >= 1 && d.stage <= 7))
-          && (!(d.type in ['stage_clear','stage_start','card_confirm','decide_confirm','result_detail_open','stage_advance']) || 'stage' in d)
+          && (!(d.type in ['stage_clear','stage_start','card_confirm','decide_confirm','result_detail_open','stage_advance','complete_advance']) || 'stage' in d)
           && (!('next_stage' in d) || (d.next_stage is int && d.next_stage >= 1 && d.next_stage <= 7))
           && (!('attr' in d) || (d.attr is string && d.attr in ['moon','sun','dark','kaos','air']))
           && (!('tutorial_version' in d) || (d.tutorial_version is string && d.tutorial_version.size() <= 8))
