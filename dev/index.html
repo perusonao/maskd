@@ -1340,6 +1340,10 @@
   .match-summary.milestone{ border-color:rgba(201,162,74,.55); background:linear-gradient(180deg,rgba(201,162,74,.08),transparent);
     box-shadow:0 0 14px rgba(201,162,74,.12); }
   .match-summary.milestone .ms-row{ font-size:12px; }
+  /* チュートリアル修了後、初めての本戦の結果画面にだけ添える一言(win/loseどちらでも継続を促す) */
+  .first-match-note{ width:100%; max-width:280px; margin-top:10px; text-align:center; font-size:12.5px;
+    font-weight:700; color:var(--gold-bright); border:1px solid rgba(201,162,74,.5); border-radius:10px;
+    padding:8px 12px; background:rgba(201,162,74,.08); }
   /* 結果画面の詳細折りたたみ(初期表示を短く) */
   .ov-details{ width:100%; max-width:340px; margin-top:10px; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
   .ov-details summary{ cursor:pointer; padding:11px 14px; font-size:12px; color:var(--gold-bright); background:rgba(201,162,74,.06); text-align:center; user-select:none; list-style:none; }
@@ -2050,7 +2054,7 @@
     <div class="big" id="ovTitle">VICTORY</div>
     <div class="score-final" id="ovScore"></div>
     <div style="display:flex;gap:8px;width:100%;max-width:300px;">
-      <div class="btn" style="padding:13px 0;" onclick="beginMatchSetup()">もう一度</div>
+      <div class="btn" id="ovAgainBtn" style="padding:13px 0;" onclick="beginMatchSetup()">もう一度</div>
       <div class="btn ghost" style="padding:13px 0;" onclick="showHome()">🏠 ホーム</div>
     </div>
   </div>
@@ -5282,8 +5286,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.33.0';
+const GAME_VERSION = 'v1.34.0';
 const CHANGELOG = [
+  { version:'v1.34.0', date:'2026-07-22', items:[
+    '<b>初めての本戦の体験を改善</b>：チュートリアル修了後、初めての本戦の結果画面に、勝敗どちらでも次につながる一言を添えるようにしました。「もう一度」ボタンも初回だけ「もう1戦挑戦する ▶」に。CPUの強さ・対戦相手の抽選ロジック、得点計算に変更はありません。',
+  ]},
   { version:'v1.33.0', date:'2026-07-22', items:[
     '<b>チュートリアル完了後の導線を改善</b>：全ステージ修了時に専用のお祝い演出(「🎉 チュートリアル完了！」)を追加し、本戦への案内ボタンも「初めての実戦へ ▶」と分かりやすくしました。CPUの強さ・対戦相手の抽選ロジックに変更はありません。',
   ]},
@@ -6452,6 +6459,9 @@ function endGame(){
   else if(cpuFinal>youFinal){ t.textContent='DEFEAT'; t.className='big lose'; }
   else { t.textContent='DRAW'; t.className='big draw'; }
   markOnboardingDone(); // 初回プレイの案内は1試合で終了(以降は通常のヒントに任せる)
+  // チュートリアル修了後、初めての本戦(練習モードisTop:falseは含めない)かどうかを、履歴保存の「前」に判定
+  const matchResult = youFinal>cpuFinal ? 'win' : (cpuFinal>youFinal ? 'lose' : 'draw');
+  const isFirstEverRealMatch = !loadGameHistory().some(g=>g.isTop);
   // 先に履歴へ保存し、この試合を含めた通算成績（勝率・連勝・MVP）を算出する
   saveGameToHistory(youFinal, cpuFinal, s, {level:levelKeyFromAttrs(deckAttrs), isTop:true});
   const gameMVP = computeGameMVP(roundLog);
@@ -6510,8 +6520,14 @@ function endGame(){
   updateProgress(cpuStrategy, youFinal>cpuFinal); // 見破り累計・対戦相手タイプ別の撃破を記録
   const _freshTitles=unlockTitles();
   const starSection=`<div class="match-summary milestone">${cpuTypeReactHTML(cpuStrategy,_typeLine)}${_freshTitles.length?`<div class="star-newnote">🎖 称号アンロック：${_freshTitles.map(t=>t.name).join('・')}</div>`:''}</div>`;
+  // チュートリアル修了後、初めての本戦の結果画面にだけ、勝敗どちらでも継続を後押しする一言を添える
+  // (通常対戦の得点計算・実績判定には触れず、表示を1つ追加するだけ)
+  const firstMatchNote = isFirstEverRealMatch
+    ? `<div class="first-match-note">${matchResult==='win' ? '🎉 初めての本戦、勝利おめでとうございます！' : '初めての本戦、お疲れ様でした！次はきっと勝てます'}</div>`
+    : '';
   // 要点（MVP・通算・実績）は上部に。細かい内訳は折りたたみで初期表示を短く。
   const extra=`<div id="ovExtra">
+    ${firstMatchNote}
     ${milestoneSection}
     ${surveyPromptHTML()}
     ${starSection}
@@ -6535,6 +6551,13 @@ function endGame(){
     </div>
   </div>`;
   document.getElementById('ovScore').innerHTML=tbl+extra;
+  // 「もう一度」ボタンは、初めての本戦の時だけ一歩踏み出しやすい文言にする(2戦目以降は従来通り)
+  const againBtn=document.getElementById('ovAgainBtn');
+  if(againBtn) againBtn.textContent = isFirstEverRealMatch ? 'もう1戦挑戦する ▶' : 'もう一度';
+  // 匿名のチュートリアル完了→初回本戦の導線計測(playerId等の識別子は持たない、visitsと同方式)
+  if(isFirstEverRealMatch && window.__maskdSaveTutorialEvent){
+    window.__maskdSaveTutorialEvent('first_match_result', { result: matchResult, tutorial_version: TUTORIAL_VERSION });
+  }
   maybeSendGameLog(youFinal, cpuFinal, s); // クラウド送信(設定＆同意がある場合のみ)
   ov.classList.add('show');
   animateScoreBreakdown();
