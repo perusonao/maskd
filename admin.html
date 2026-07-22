@@ -914,10 +914,26 @@ function tutorialEventsSectionHTML(){
     rows.push({label:`STAGE ${i} クリア${i===TUT_TOTAL_STAGES?'（完走）':''}`, value:c, sub:String(c)});
   }
   const completes=stageCleared(TUT_TOTAL_STAGES);
+  // v1.35.0: チュートリアル完走から先、本戦(実戦)への導線もファネルとして続ける(complete_advance/first_match_result)。
+  // 既存のステージ別ふるい落としと同じ考え方で、STAGE7クリアの後ろに続けて表示する。
+  const advanced=allTutEvents.filter(x=>x.type==='complete_advance').length;
+  const firstMatches=allTutEvents.filter(x=>x.type==='first_match_result');
+  const firstMatchDone=firstMatches.length;
+  rows.push({label:'本戦に挑戦（初めての実戦へ）', value:advanced, sub:String(advanced)});
+  rows.push({label:'初回本戦を終えた', value:firstMatchDone, sub:String(firstMatchDone)});
+  const firstWins=firstMatches.filter(x=>x.result==='win').length;
+  const firstWinRate = firstMatchDone ? (firstWins/firstMatchDone*100) : null;
   const rate = starts ? (completes/starts*100) : null;
+  const advanceRate = completes ? (advanced/completes*100) : null;
+  const finishRate = advanced ? (firstMatchDone/advanced*100) : null;
   let out='<h2>🎓 チュートリアル進捗（同意不要）</h2>';
   out+='<div class="card">'+bars(rows)+
-    `<div class="muted" style="font-size:10px;margin-top:4px;">各行は「そのステージまでクリアした人数」＝どこで離脱しているかのふるい落とし。完走率＝STAGE${TUT_TOTAL_STAGES}クリア数/開始数＝${rate!=null?rate.toFixed(1)+'%':'データ不足'}。同意不要の匿名カウントのため、離脱率などと違い実態に近い数値です。</div></div>`;
+    `<div class="muted" style="font-size:10px;margin-top:4px;">各行は「そこまで到達した人数」＝どこで離脱しているかのふるい落とし。`+
+    `完走率＝STAGE${TUT_TOTAL_STAGES}クリア数/開始数＝${rate!=null?rate.toFixed(1)+'%':'データ不足'}／`+
+    `本戦挑戦率＝本戦に挑戦/完走＝${advanceRate!=null?advanceRate.toFixed(1)+'%':'データ不足'}／`+
+    `初回本戦完了率＝初回本戦を終えた/本戦に挑戦＝${finishRate!=null?finishRate.toFixed(1)+'%':'データ不足'}`+
+    `${firstWinRate!=null?`／初回本戦の勝率＝${firstWinRate.toFixed(1)}%`:''}。`+
+    `同意不要の匿名カウントのため、離脱率などと違い実態に近い数値です。</div></div>`;
   return out;
 }
 
