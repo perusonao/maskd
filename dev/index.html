@@ -1424,8 +1424,8 @@
   }
   .mode-summary b{ color:var(--gold-bright); }
   /* ===== ホーム(ロビー) ===== */
-  .home-screen{ justify-content:flex-start; align-items:center; gap:10px;
-    padding:calc(16px + env(safe-area-inset-top)) 18px calc(22px + env(safe-area-inset-bottom));
+  .home-screen{ justify-content:flex-start; align-items:center; gap:8px;
+    padding:calc(12px + env(safe-area-inset-top)) 18px calc(16px + env(safe-area-inset-bottom));
     overflow-y:auto;
     background:
       radial-gradient(120% 60% at 50% 0%, rgba(30,22,10,.55), rgba(6,5,10,.9) 70%),
@@ -1471,13 +1471,19 @@
   .mask-lb .mg{ font-size:13px; line-height:1; }
   .mask-lb .mn{ font-size:7.5px; letter-spacing:1px; color:var(--ink-dim); }
   .mask-lb .md{ font-size:7px; letter-spacing:.3px; color:var(--ink-dim); opacity:.75; }
-  /* ===== v1.37.0: ホーム画面リニューアル(リーグカード・教官吹き出し・ミッションバー) =====
+  /* ===== v1.37.0/v1.38.0: ホーム画面リニューアル(リーグカード・教官吹き出し) =====
      既存の --gold/--ink/--win/--lose/--sun/--moon/--dark/--air と、既存ホーム画面で使われている
-     rgba(8,6,14,..)系の暗色をそのまま踏襲し、新規のグローバル配色は増やさない。 */
-  .mentor-say-home{ display:flex; align-items:center; gap:10px; max-width:220px; align-self:flex-end; margin-top:-4px; }
-  .mentor-say-home .msh-face{ width:52px; height:52px; border-radius:50%; flex-shrink:0; background-size:cover; background-position:center top;
-    border:1px solid rgba(201,162,74,.5); box-shadow:0 0 10px rgba(201,162,74,.3); }
-  .mentor-say-home .msh-bubble{ font-size:10.5px; line-height:1.5; color:var(--ink-dim); text-align:right; }
+     rgba(8,6,14,..)系の暗色をそのまま踏襲し、新規のグローバル配色は増やさない。
+     v1.38.0: 教官キャラクターを拡大しフルサイズのバナーに変更。ホーム中段のミッションバーは
+     削除し(下部メニューの「ミッション」タイルのみに統一)、初級リーグカードに実データ
+     (learnClearedMax)による進行度バーを追加。★評価や「あと2勝」等の未実装データは表示しない。 */
+  .mentor-say-home{ display:flex; align-items:center; gap:12px; width:100%; max-width:400px; }
+  .mentor-say-home .msh-face{ width:76px; height:76px; border-radius:50%; flex-shrink:0; background-size:cover; background-position:center top;
+    border:2px solid rgba(201,162,74,.6); box-shadow:0 0 14px rgba(201,162,74,.35); }
+  .mentor-say-home .msh-bubble{ position:relative; flex:1; min-width:0; font-size:12px; line-height:1.5; color:var(--ink); text-align:left;
+    padding:10px 12px; border-radius:12px; border:1px solid rgba(201,162,74,.3); background:rgba(8,6,14,.5); }
+  .mentor-say-home .msh-bubble::before{ content:''; position:absolute; left:-6px; top:50%; transform:translateY(-50%);
+    width:0; height:0; border-top:6px solid transparent; border-bottom:6px solid transparent; border-right:7px solid rgba(201,162,74,.3); }
   .league-list{ display:flex; flex-direction:column; gap:10px; width:100%; max-width:400px; }
   .league-card{ position:relative; display:flex; align-items:stretch; gap:12px; padding:14px; border-radius:16px;
     border:1px solid rgba(201,162,74,.35); background:rgba(8,6,14,.6); overflow:hidden; cursor:pointer;
@@ -1498,15 +1504,11 @@
   .lc-cta{ align-self:center; flex-shrink:0; padding:9px 14px; border-radius:10px; font-size:12px; font-weight:700; text-align:center; white-space:nowrap;
     background:linear-gradient(160deg,var(--gold-bright),var(--gold-dim)); color:#1a1608; }
   .league-card.locked .lc-cta{ background:rgba(255,255,255,.06); color:var(--ink-dim); display:flex; align-items:center; gap:4px; }
-  .mission-bar{ display:flex; align-items:center; gap:10px; width:100%; max-width:400px; padding:10px 14px; border-radius:12px;
-    border:1px solid rgba(201,162,74,.3); background:rgba(8,6,14,.5); cursor:pointer; }
-  .mission-bar:active{ background:rgba(201,162,74,.1); }
-  .mb-ic{ font-size:16px; flex-shrink:0; position:relative; }
-  .mb-badge{ position:absolute; top:-4px; right:-6px; width:8px; height:8px; border-radius:50%; background:var(--lose); }
-  .mb-tx{ flex:1; min-width:0; font-size:11.5px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .mb-tx b{ color:var(--gold-bright); }
-  .mb-cta{ flex-shrink:0; font-size:11px; color:var(--gold-dim); }
-  @media(prefers-reduced-motion:reduce){ .league-card, .mission-bar{ transition:none; } }
+  .lc-progress{ display:flex; align-items:center; gap:6px; margin-top:2px; }
+  .lc-progress-bar{ flex:1; height:4px; border-radius:3px; background:#1c1a24; border:1px solid rgba(201,162,74,.2); overflow:hidden; }
+  .lc-progress-bar > i{ display:block; height:100%; background:linear-gradient(90deg,var(--gold-dim),var(--gold-bright)); }
+  .lc-progress-tx{ flex-shrink:0; font-size:9.5px; color:var(--ink-dim); white-space:nowrap; }
+  @media(prefers-reduced-motion:reduce){ .league-card{ transition:none; } }
   /* 320px前後の狭い画面でも、リーグ名が1行に収まりカードが崩れないようにする */
   @media(max-width:350px){
     .lc-portrait{ width:40px; }
@@ -1938,12 +1940,6 @@
     <div class="mentor-say-home" id="homeMentorSay"></div>
 
     <div class="league-list" id="leagueList"></div>
-
-    <div class="mission-bar" onclick="openMissions()" role="button" tabindex="0" aria-label="今日のミッションを確認する">
-      <div class="mb-ic" aria-hidden="true">🎯<span class="mb-badge" id="missionBadge" style="display:none;"></span></div>
-      <div class="mb-tx"><b>ミッション</b>　ミッションを確認しよう</div>
-      <div class="mb-cta" aria-hidden="true">詳細 ›</div>
-    </div>
 
     <div class="home-menu-group">
       <div class="home-menu">
@@ -3224,22 +3220,32 @@ function showHome(){
 function renderHomeMentorSay(){
   const el=document.getElementById('homeMentorSay'); if(!el) return;
   el.innerHTML=`
-    <div class="msh-bubble">ようこそ、騎士よ。<br>さあ、力を試そう。</div>
-    <div class="msh-face" style="background-image:url(${rivalImgUrl('mentor')})" role="img" aria-label="指導仮面アストラ"></div>`;
+    <div class="msh-face" style="background-image:url(${rivalImgUrl('mentor')})" role="img" aria-label="指導仮面アストラ"></div>
+    <div class="msh-bubble">ようこそ、騎士よ。<br>さあ、力を試そう。</div>`;
 }
 // ホームのリーグカード(初級/中級/上級/フリー対戦)を描画する。
 // 初級リーグ=既存チュートリアル(openLearnLadder)、フリー対戦=既存本戦(onHomePlay→beginMatchSetup系)を
 // そのまま再利用する。中級/上級はまだ実体が無いため、解放状態の表示のみで「準備中」に留める
 // (既存の本戦へ勝手に接続しない)。キャラクター立ち絵はCPU_TYPE_METAの既存rivalImgUrl()を再利用。
+// 初級リーグの進行度は既存のlearnClearedMax()/LEARN_STAGES.lengthから算出する実データのみを使う。
 function renderLeagueCards(){
   const wrap=document.getElementById('leagueList'); if(!wrap) return;
   const current=getCurrentLeague();
   const clearedMax=learnClearedMax();
-  const beginnerCta = learnAllCleared() ? '復習する' : (clearedMax>0 ? '続きから' : 'プレイ');
+  const totalStages=LEARN_STAGES.length;
+  const allCleared=learnAllCleared();
+  const beginnerCta = allCleared ? '復習する' : (clearedMax>0 ? '続きから' : 'プレイ');
+  // 進行度は実データ(learnClearedMax)のみを用いる。星評価や仮の「あと2勝」等の未実装データは表示しない。
+  let beginnerProgress=null;
+  if(allCleared){
+    beginnerProgress={ pct:100, label:`STAGE ${totalStages}/${totalStages} クリア済み` };
+  } else if(clearedMax>0){
+    beginnerProgress={ pct:Math.round(clearedMax/totalStages*100), label:`現在 STAGE ${clearedMax+1}/${totalStages}` };
+  }
   const cards=[
     leagueCardHTML({ name:'初級リーグ', desc:'遊びながら基本ルールを覚えよう', portraitKey:'aggressive',
       unlocked:true, isCurrent: current===GameMode.BEGINNER || !current,
-      ctaLabel:beginnerCta, onClick:'guardedNav(()=>openLearnLadder())' }),
+      ctaLabel:beginnerCta, onClick:'guardedNav(()=>openLearnLadder())', progress:beginnerProgress }),
     leagueCardHTML({ name:'中級リーグ', desc:'特殊カードと戦略を学ぼう', portraitKey:'cautious',
       unlocked:getLeagueFlag('intermediateUnlocked'), isCurrent: current===GameMode.INTERMEDIATE,
       reqLabel:'初級リーグクリアで解放', onClick:"leagueComingSoon('中級リーグ')" }),
@@ -3258,6 +3264,7 @@ function leagueCardHTML(cfg){
     ? `<div class="lc-cta"><span aria-hidden="true">🔒</span> ロック中</div>`
     : `<div class="lc-cta">${cfg.ctaLabel||'プレイ'} ›</div>`;
   const req = cfg.reqLabel ? `<div class="lc-req"><span class="lc-lock-ic" aria-hidden="true">🔒</span>${cfg.reqLabel}</div>` : '';
+  const progress = (cfg.progress && !locked) ? `<div class="lc-progress"><div class="lc-progress-bar"><i style="width:${cfg.progress.pct}%"></i></div><span class="lc-progress-tx">${cfg.progress.label}</span></div>` : '';
   const label = locked ? `${cfg.name}（未解放。${cfg.reqLabel||''}）` : `${cfg.name}を開く`;
   const handler = locked ? `leagueComingSoon('${cfg.name}')` : cfg.onClick;
   return `<div class="league-card${cfg.isCurrent?' current':''}${locked?' locked':''}" onclick="${handler}" role="button" tabindex="0" aria-label="${label}" aria-disabled="${locked}">
@@ -3265,6 +3272,7 @@ function leagueCardHTML(cfg){
     <div class="lc-body">
       <div class="lc-name">${cfg.name}</div>
       <div class="lc-desc">${cfg.desc}</div>
+      ${progress}
       ${req}
     </div>
     ${cta}
@@ -5452,8 +5460,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.37.0';
+const GAME_VERSION = 'v1.38.0';
 const CHANGELOG = [
+  { version:'v1.38.0', date:'2026-07-22', items:[
+    '<b>ホーム画面を微調整</b>：指導仮面アストラの案内をより大きく表示し、初級リーグのカードに現在の進行状況（STAGE ○/7）を表示するようにしました。ホーム中段のミッション案内は削除し、下部メニューの「ミッション」のみに統一。既存機能への遷移・データ構造に変更はありません。',
+  ]},
   { version:'v1.37.0', date:'2026-07-22', items:[
     '<b>ホーム画面をリニューアル</b>：初級/中級/上級リーグ・フリー対戦をカード形式で分かりやすく配置し、指導仮面アストラの案内も追加しました。5属性カードの並び表示は削除。フリー対戦・チュートリアルなど既存機能への遷移は変更していません。',
   ]},
