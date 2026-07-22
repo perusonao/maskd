@@ -622,6 +622,11 @@
   .hcard.recommend{ box-shadow:0 0 0 2px var(--win),0 0 12px rgba(126,201,138,.5); }
   .hcard .rec-badge{ position:absolute; top:-7px; right:-6px; z-index:5; font-size:9px; background:var(--win); color:#0d1a10;
     border-radius:8px; padding:0 4px; font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,.5); }
+  /* STAGE1の必勝誘導フロー: 操作対象(カード/決戦ボタン)を明確に強調する */
+  .hcard.guided-target, .act-btn.guided-target{ box-shadow:0 0 0 2px var(--gold-bright),0 0 16px 4px rgba(232,200,119,.65);
+    animation:guidedPulse 1.4s ease-in-out infinite; }
+  @keyframes guidedPulse{ 0%,100%{ transform:translateY(0) scale(1); } 50%{ transform:translateY(-4px) scale(1.045); } }
+  @media(prefers-reduced-motion:reduce){ .hcard.guided-target, .act-btn.guided-target{ animation:none; } }
   /* 手札カード: 相手からの見え方(候補属性)を下部の帯に表示 */
   .hcard .hc-seen{ position:absolute; left:0; right:0; bottom:0; z-index:4; display:flex; gap:2px; align-items:center; justify-content:center;
     white-space:nowrap; padding:2px 2px; background:linear-gradient(0deg,rgba(6,5,12,0.94),rgba(6,5,12,0.6) 70%,transparent); border-radius:0 0 8px 8px; }
@@ -1100,6 +1105,17 @@
   .result-card.pass .rtitle{ color:var(--ink-dim); }
   .result-card .rdetail{ font-size:12px; color:var(--ink); line-height:1.55; }
   .result-card .rdetail .em{ color:var(--gold-bright); }
+  /* チュートリアル中: 「なぜ勝ったか」を結果カード内で大きく見せる */
+  .win-reason{ margin-bottom:9px; padding-bottom:9px; border-bottom:1px solid rgba(201,162,74,.3); }
+  .win-reason .wr-head{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:19px; font-weight:700; color:var(--gold-bright); line-height:1.3; }
+  .win-reason .wr-sub{ font-size:12px; color:var(--win); font-weight:700; margin-top:3px; letter-spacing:.02em; }
+  /* STAGE1限定のクリア演出(拡大+発光) */
+  .stage1-clear-anim{ text-align:center; padding:22px 10px; animation:s1cPop .6s cubic-bezier(.34,1.56,.64,1); }
+  .stage1-clear-anim .s1c-title{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:30px; font-weight:700;
+    color:var(--gold-bright); text-shadow:0 0 18px rgba(232,200,119,.7); }
+  .stage1-clear-anim .s1c-sub{ font-size:13px; color:var(--ink); margin-top:9px; }
+  @keyframes s1cPop{ 0%{ transform:scale(.7); opacity:0; } 60%{ transform:scale(1.08); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
+  @media(prefers-reduced-motion:reduce){ .stage1-clear-anim{ animation:none; } }
   /* 結果の集計: 現在スコアを大きく＋残り山札 */
   .rstats{ margin-top:11px; padding-top:10px; border-top:1px solid var(--line); }
   .rs-score{ display:flex; align-items:center; justify-content:center; gap:12px; }
@@ -2435,13 +2451,17 @@ function buildScriptedDeal(stage){
 // hints: このステージで初心者ヒント(候補アイコン等)を強制ON/OFFする(未指定時はtrue)。
 //        ステージ1〜3は属性そのものに集中してもらうためOFF、ステージ4で読み合いとして正式に教える。
 const LEARN_STAGES=[
-  { id:1, name:'３つの属性', icon:'🎨', attrs:['moon','sun','dark'], rounds:4,
+  { id:1, name:'３つの属性', icon:'🎨', attrs:['moon','sun','dark'], rounds:1,
     swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak', hints:false,
-    intro:'まずは<b>属性</b>と<b>数字</b>の基本。異属性は<b>じゃんけん</b>（<b>MOON</b>✊＞<b>DARK</b>✌＞<b>SUN</b>✋）、同属性は<b>数字</b>が大きい方が勝ち。あなたが親のときは<b>決戦</b>か<b>撤退</b>を選べます。',
-    // 初期手札を固定し、同属性の数字勝負(DARK同士)と3すくみ全パターン(MOON→DARK→SUN→MOON)の両方を体験しやすくする
+    // 初回の成功体験に絞った1問構成: 必ずプレイヤーが親から始まり、SUNを選べば必ずMOONに勝てる。
+    // 「属性には相性がある→有利な属性を出すと勝てる」の1点だけを、最短で体験してもらうためのステージ。
+    // 決戦/撤退の選択も見せず自動で決戦のみに絞る(撤退はSTAGE5で教える)。
+    forceDealer:'you',
+    guidedWin:{ yourAttr:'sun', cpuAttr:'moon' },
+    intro:'属性には相性があります：<b>SUN</b>は<b>MOON</b>に、<b>MOON</b>は<b>DARK</b>に、<b>DARK</b>は<b>SUN</b>に強い。<br>まずは<b>SUNのカード</b>を選んでみましょう。',
     openingHand:{
-      you:[{attr:'dark',num:3},{attr:'moon',num:4},{attr:'sun',num:2},{attr:'dark',num:0},{attr:'moon',num:1}],
-      cpu:[{attr:'dark',num:1},{attr:'sun',num:3},{attr:'moon',num:0},{attr:'dark',num:5},{attr:'sun',num:5}],
+      you:[{attr:'sun',num:3},{attr:'moon',num:1},{attr:'dark',num:2},{attr:'moon',num:4},{attr:'dark',num:0}],
+      cpu:[{attr:'moon',num:3},{attr:'dark',num:1},{attr:'sun',num:0},{attr:'dark',num:4},{attr:'sun',num:2}],
     } },
   { id:2, name:'風を読む', icon:'🌬️', attrs:['moon','sun','dark','air'], rounds:4,
     swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak', hints:false,
@@ -2508,30 +2528,39 @@ function showStageIntro(id){
   const diffLabel={weak:'相手は弱め',normal:'相手は普通',strong:'相手は強め'}[st.cpuDiff]||'相手は弱め';
   const actions=[st.force?'奇襲':null, st.swap?'入替':null].filter(Boolean);
   const actionLabel = actions.length ? actions.join('・')+'あり' : '決戦・撤退のみ';
+  // STAGE1(誘導必勝ステージ)は情報量を絞るため、対戦条件の詳細行は表示しない(1画面1メッセージに寄せる)
+  const detailLine = st.guidedWin ? '' :
+    `<div class="tutm-intro" style="margin-top:8px;border-color:rgba(201,162,74,.4);"><b>この対戦</b>：${stageSummary(st)}／${diffLabel}／${actionLabel}／${st.late2x?'終盤2倍あり':'終盤2倍なし'}</div>`;
   document.getElementById('learnBox').innerHTML=`
     <div class="tutm-head"><span class="tutm-title" style="flex:1;">${st.icon} STAGE ${st.id}：${st.name}</span><span class="tutm-close" onclick="closeLearn()">✕</span></div>
     <div class="mentor-say">
       <div class="mentor-face" style="background-image:url(${rivalImgUrl('mentor')})"></div>
       <div class="mentor-bubble">${st.intro}</div>
     </div>
-    <div class="tutm-intro" style="margin-top:8px;border-color:rgba(201,162,74,.4);"><b>この対戦</b>：${stageSummary(st)}／${diffLabel}／${actionLabel}／${st.late2x?'終盤2倍あり':'終盤2倍なし'}</div>
+    ${detailLine}
     <div class="tutm-controls" style="margin-top:14px;">
       <div class="btn" onclick="startLearnStage(${st.id})">はじめる</div>
       <div class="btn ghost" onclick="openLearnLadder()">戻る</div>
     </div>`;
   document.getElementById('learnOverlay').classList.add('show');
 }
+const TUTORIAL_VERSION='2'; // STAGE1誘導必勝フロー導入版(計測イベントのtutorial_versionに使う)
+let stageStartTime=null, stageAttemptStageId=null, stageAttemptCount=0; // 経過時間/リトライ計測用(セッション内のみ、保存はしない)
 function startLearnStage(id){
   const st=LEARN_STAGES.find(s=>s.id===id); if(!st) return;
   // チュートリアル開始(ステージ1のみ)を同意不要の匿名カウントとして記録(visitsと同じ方式)
-  if(id===1 && window.__maskdSaveTutorialEvent) window.__maskdSaveTutorialEvent('start');
+  if(id===1 && window.__maskdSaveTutorialEvent) window.__maskdSaveTutorialEvent('start', { tutorial_version: TUTORIAL_VERSION });
+  stageAttemptCount = (stageAttemptStageId===id) ? stageAttemptCount+1 : 0;
+  stageAttemptStageId=id; stageStartTime=Date.now();
+  if(window.__maskdSaveTutorialEvent) window.__maskdSaveTutorialEvent('stage_start', { stage:id, tutorial_version: TUTORIAL_VERSION });
   document.getElementById('learnOverlay').classList.remove('show');
   // チュートリアル中は、プレイヤーの元のヒント設定に関わらず「おすすめ」札・コーチ助言を常にON
   // (推理系ヒントの出し分けはstageConfig.hints側で別途制御。ここではON方向にしか倒さないので、
   //  常時ヒントONの通常プレイヤーには一切影響しない)
   if(_preLearnHints===null) _preLearnHints=hintsEnabled;
   hintsEnabled=true;
-  const dealer=Math.random()<0.5;
+  // STAGE1は必ずプレイヤーが親から始まる誘導フロー(forceDealer)。それ以外は従来通りランダム。
+  const dealer = st.forceDealer==='you' ? true : (st.forceDealer==='cpu' ? false : Math.random()<0.5);
   // 全5属性30枚デッキが初登場するステージでは、本戦と同じ配札演出を挟んで実感してもらう
   if(st.dealAnim) playDealAnimation(()=>startGame(dealer, st));
   else startGame(dealer, st);
@@ -2547,7 +2576,31 @@ function endLearnStage(youFinal, cpuFinal){
   const next=LEARN_STAGES.find(s=>s.id===st.id+1);
   // どのステージまでクリアされたかを同意不要の匿名カウントとして記録(visitsと同じ方式)。
   // 段階別の到達人数(ふるい落とし)を管理画面で見られるようにする(個人を識別する情報は含まない)。
-  if(window.__maskdSaveTutorialEvent) window.__maskdSaveTutorialEvent('stage_clear', { stage: st.id });
+  {
+    const clearParams={ stage: st.id, tutorial_version: TUTORIAL_VERSION, retry_count: stageAttemptCount };
+    if(stageStartTime) clearParams.elapsed_ms = Math.max(0, Math.round(Date.now()-stageStartTime));
+    if(window.__maskdSaveTutorialEvent) window.__maskdSaveTutorialEvent('stage_clear', clearParams);
+  }
+
+  // STAGE1(誘導必勝ステージ)は専用の短いクリア演出のみを見せる(1〜2秒で次へ進める、最初の成功体験)。
+  // 必ずyouFinal>cpuFinalになる設計のため、通常の「惜敗」分岐には入らない。
+  if(st.guidedWin){
+    stageConfig=null; deckAttrs=ATTRS5; matchRounds=TOTAL_ROUNDS;
+    const rov0=document.getElementById('resultOv'); if(rov0) rov0.classList.remove('show');
+    document.getElementById('overlay').classList.remove('show');
+    sfx('win');
+    try{ if(navigator.vibrate) navigator.vibrate([0,35,45,25]); }catch(e){}
+    document.getElementById('learnBox').innerHTML=`
+      <div class="stage1-clear-anim">
+        <div class="s1c-title">STAGE 1 CLEAR</div>
+        <div class="s1c-sub">属性相性を覚えました！</div>
+      </div>
+      <div class="tutm-controls" style="flex-direction:column;margin-top:6px;">
+        ${next?`<div class="btn" style="width:100%;" onclick="showStageIntro(${next.id})" aria-label="次のステージへ進む">次へ ›</div>`:`<div class="btn" style="width:100%;" onclick="openLearnLadder()">ステージ選択</div>`}
+      </div>`;
+    document.getElementById('learnOverlay').classList.add('show');
+    return;
+  }
   let achNote='';
   if(!next){
     const fresh=checkAchievements({learnDone:true, agg:computeAggregateStats(loadGameHistory()), streak:computeStreaksAndRate(loadGameHistory())});
@@ -3454,6 +3507,8 @@ function startRound(){
   hint('');
   phase='roundstart';
   renderHand(); renderActions();
+  // STAGE1(誘導必勝ステージ)は最初の操作までの時間を短くするため、ラウンド開始モーダルを省略し即座に手札を見せる
+  if(stageConfig && stageConfig.guidedWin){ beginRoundPlay(); return; }
   showRoundStartModal();
 }
 // ラウンド開始モーダル: ラウンド数・親/子・案内を表示。「はじめる」で本編へ。
@@ -3792,8 +3847,11 @@ function renderHand(){
   const canSwapPick = swapSelecting && phase==='decide' && youIsDealer; // 入替の札選択中
   // 初心者ヒント: 子のとき、相手の数字に有利な札を「おすすめ」判定
   const canRecommend = hintsEnabled && !youIsDealer && dealerCard && canPick;
+  // STAGE1(誘導必勝ステージ)は、最初の1枚(親の初手)だけ操作対象を1枚に絞って明確に誘導する
+  const guidedAttr = (stageConfig && stageConfig.guidedWin && canPick && youIsDealer) ? stageConfig.guidedWin.yourAttr : null;
   document.getElementById('handWrap').classList.toggle('tappable', canPick || canSwapPick);
   document.getElementById('handWrap').classList.toggle('swap-mode', canSwapPick);
+  if(guidedAttr){ coach(`<span class="ci">👉</span>この<b>${ALABEL[guidedAttr]}</b>カードを選びましょう`); }
 
   // 下部の手札を直接タップして選ぶ(モーダルは廃止)
   indexed.forEach(({c,i})=>{
@@ -3813,7 +3871,11 @@ function renderHand(){
     }
     if(useRichCards()){ el.style.backgroundImage=`url(${attrImgUrl(c.attr)})`; el.innerHTML=numBadge(c.num)+rpsBadge(c.attr)+recBadge+seenRow; }
     else el.innerHTML=beginnerInner(c)+recBadge+seenRow;
-    if(canPick){
+    if(guidedAttr && c.attr!==guidedAttr){
+      // 誘導ステージでは対象外の札を一時的に選択不可にする(操作対象を1つに絞る)
+      el.style.opacity='0.32'; el.style.pointerEvents='none';
+    } else if(canPick){
+      if(guidedAttr){ el.classList.add('guided-target'); el.setAttribute('aria-label', `${ALABEL[c.attr]}のカードを選ぶ`); }
       el.style.cursor='pointer';
       el.onclick=()=>{ if(busy)return; el.classList.add('picking'); setTimeout(()=>playYouCard(i), 150); };
     } else if(canSwapPick){
@@ -3846,17 +3908,22 @@ function renderActions(){
       fa.classList.add('show'); hideRoleMsg(true);
       return;
     }
+    // STAGE1(誘導必勝ステージ)は撤退/入替の選択肢を出さず、決戦ボタン1つだけに絞って誘導する(撤退はSTAGE5で教える)
+    const guided = stageConfig && stageConfig.guidedWin;
     const canPass = youTrust>=PASS_TRUST_COST;
-    const showSwap = stageAllows('swap'); // 段階チュートリアルの序盤は入替を隠す
+    const showSwap = stageAllows('swap') && !guided; // 段階チュートリアルの序盤は入替を隠す
     const canSwap = showSwap && youTrust>=SWAP_COST && youHand.length>0 && !youSwapUsedThisRound;
-    fa.innerHTML = `<div class="fa-ctx">どうする？</div>`;
+    fa.innerHTML = `<div class="fa-ctx">${guided?'決戦を選んで確定しよう':'どうする？'}</div>`;
     const row=document.createElement('div'); row.className='fa-row';
-    const pass=document.createElement('div'); pass.className='btn ghost act-btn'+(canPass?'':' disabled');
-    pass.innerHTML=actIcon('🏳', canPass?`撤退 <span class="act-cost">戦略-${PASS_TRUST_COST}</span>`:'撤退 <span class="act-cost">戦略不足</span>');
-    pass.onclick=()=>{ if(canPass) resolveFight(false); };
-    const fight=document.createElement('div'); fight.className='btn act-btn'; fight.innerHTML=actIcon('⚔','決戦');
+    const fight=document.createElement('div'); fight.className='btn act-btn'+(guided?' guided-target':''); fight.innerHTML=actIcon('⚔','決戦');
     fight.onclick=()=>resolveFight(true);
-    row.appendChild(pass);
+    if(guided){ fight.setAttribute('aria-label','決戦を選んで確定する'); }
+    if(!guided){
+      const pass=document.createElement('div'); pass.className='btn ghost act-btn'+(canPass?'':' disabled');
+      pass.innerHTML=actIcon('🏳', canPass?`撤退 <span class="act-cost">戦略-${PASS_TRUST_COST}</span>`:'撤退 <span class="act-cost">戦略不足</span>');
+      pass.onclick=()=>{ if(canPass) resolveFight(false); };
+      row.appendChild(pass);
+    }
     if(showSwap){
       const swap=document.createElement('div'); swap.className='btn ghost act-btn'+(canSwap?'':' disabled');
       swap.innerHTML=actIcon('🔄', youSwapUsedThisRound?'入替 <span class="act-cost">使用済</span>':(canSwap?`入替 <span class="act-cost">戦略-${SWAP_COST}</span>`:'入替 <span class="act-cost">不可</span>'));
@@ -4186,7 +4253,14 @@ function showChildCoach(oppNum){
 // ===== CPUが子として、親(あなた)の数字を見て出す =====
 function cpuActAsChild(){
   hideCpuThinking();
-  const idx=cpuChooseCard(cpuHand, dealerCard.num);
+  // STAGE1(誘導必勝ステージ)は、必ず指定された属性(MOON)を出させて相性負けの構図を確定させる
+  let idx;
+  if(stageConfig && stageConfig.guidedWin){
+    idx = cpuHand.findIndex(c=>c.attr===stageConfig.guidedWin.cpuAttr);
+    if(idx<0) idx = cpuChooseCard(cpuHand, dealerCard.num); // 安全装置(想定外の手札構成でも進行を止めない)
+  } else {
+    idx = cpuChooseCard(cpuHand, dealerCard.num);
+  }
   const card=cpuHand.splice(idx,1)[0]; card.owner='cpu';
   childCard=card;
   document.getElementById('cpuSlot').innerHTML=cardHTML(card,true,'相手');
@@ -4194,7 +4268,11 @@ function cpuActAsChild(){
   hint('');
   phase='decide'; renderActions(); renderScore();
   showAttrHint(card.num);
-  showDecideCoach(); // 初心者ヒント: 決戦アドバイス(有利/不利)
+  if(stageConfig && stageConfig.guidedWin){
+    coach('<span class="ci">👉</span>「<b>決戦</b>」ボタンを押して確定しましょう');
+  } else {
+    showDecideCoach(); // 初心者ヒント: 決戦アドバイス(有利/不利)
+  }
 }
 
 // 親のとき: 自分の札 vs 子の数字の有利/不利＋特殊ルールを表示
@@ -4590,6 +4668,26 @@ function whyText(dealer, child, result){
   return `${ALABEL[dealer.attr]} と ${ALABEL[child.attr]} の相性で決着`;
 }
 
+// 勝因の分類(attribute/number/draw/other)。judge()の勝敗判定ロジックは複製せず、
+// 既に確定したresultとカードの属性だけを見て「なぜ勝ったか」を分類する。
+function winReasonCode(dealer, child, result){
+  if(result==='draw') return 'draw';
+  if(dealer.attr==='kaos' || child.attr==='kaos' || dealer.attr==='air' || child.attr==='air') return 'other';
+  if(dealer.attr===child.attr) return 'number';
+  return 'attribute';
+}
+// チュートリアル中、「なぜ勝ったか」を結果カードの上部に大きく示すバナー(通常対戦の表示は変更しない)
+function winReasonBannerHTML(dealer, child, result){
+  if(!inTutorialStage() || result==='draw') return '';
+  const winnerCard = result==='dealer'?dealer:child, loserCard=result==='dealer'?child:dealer;
+  const code=winReasonCode(dealer, child, result);
+  let headline, sub;
+  if(code==='attribute'){ headline=`${ALABEL[winnerCard.attr]}が${ALABEL[loserCard.attr]}に勝利！`; sub='属性勝ち！'; }
+  else if(code==='number'){ headline=`${winnerCard.num}が${loserCard.num}に勝利！`; sub='数字勝ち！'; }
+  else { headline=`${ALABEL[winnerCard.attr]}${winnerCard.num}が${ALABEL[loserCard.attr]}${loserCard.num}に勝利！`; sub='特殊効果！'; }
+  return `<div class="win-reason"><div class="wr-head">${headline}</div><div class="wr-sub">${sub}</div></div>`;
+}
+
 // 初心者向け: なぜこの結果になったかを、やさしい言葉で1行
 function beginnerResultNote(dealer, child, result){
   const beatsJP={moon:'闇',dark:'太陽',sun:'月'}; // ◯は△に強い
@@ -4704,8 +4802,9 @@ function resolveFight(doFight, isCpuDealer){
   document.getElementById('actions').innerHTML='';
   const fa=document.getElementById('fieldActions'); if(fa){ fa.classList.remove('show'); fa.innerHTML=''; } // 決着に入るので行動ボタンを隠す
 
-  // STAGE1限定: あなたが親として決戦/撤退を選んだ直後、⚖️のおすすめ通りだったかを記録(結果表示時に使う)
-  if(!isCpuDealer && inTutorialStage() && stageConfig.id===1 && dealerCard && childCard){
+  // STAGE1限定: あなたが親として決戦/撤退を選んだ直後、⚖️のおすすめ通りだったかを記録(結果表示時に使う)。
+  // 誘導必勝ステージ(guidedWin)は選択の余地がなく「アドバイス通りだったか」という問い自体が成立しないため対象外。
+  if(!isCpuDealer && inTutorialStage() && stageConfig.id===1 && !stageConfig.guidedWin && dealerCard && childCard){
     const est=playerEstimate(dealerCard, childCard.num, true);
     const v=hintVerdict(est);
     let advice=null;
@@ -4842,7 +4941,7 @@ function resolveFightJudge(){
 
       rc.className='result-card '+cls;
       rc.querySelector('.rtitle').textContent=title;
-      rc.querySelector('.rdetail').innerHTML=detail + (hintsEnabled? beginnerResultNote(dealerCard, childCard, result):'') + tutMoveFeedbackNote();
+      rc.querySelector('.rdetail').innerHTML=winReasonBannerHTML(dealerCard, childCard, result) + detail + (hintsEnabled? beginnerResultNote(dealerCard, childCard, result):'') + tutMoveFeedbackNote();
       clearCoach();
       // 勝敗は、砕ける/輝く演出を見せてから結果カードを表示する(引き分けは短め)
       const overlayDelay = (result==='draw') ? 250 : 760;
@@ -5017,8 +5116,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.29.0';
+const GAME_VERSION = 'v1.30.0';
 const CHANGELOG = [
+  { version:'v1.30.0', date:'2026-07-22', items:[
+    '<b>STAGE1を短い成功体験に再構成</b>：最初の説明を1画面に短縮し、最初の1戦は必ず勝てる1ラウンド構成に変更しました。選ぶべきカードや決定ボタンを光らせて誘導し、勝った理由（「SUNがMOONに勝利！属性勝ち！」）を大きく表示、クリア時には専用の演出を追加しました。',
+  ]},
   { version:'v1.29.0', date:'2026-07-22', items:[
     '<b>STAGE1に軽い正誤フィードバックを追加</b>：チュートリアル最初のステージで、コーチのおすすめ（⚖️有利/不利、💡おすすめ札）通りに動けたかを、対戦結果の画面でさりげなく振り返れるようにしました。',
   ]},
@@ -5413,14 +5515,19 @@ function tutNext(){
   tutStep++; renderTutStep();
 }
 function tutPrev(){ if(tutStep>0){ tutStep--; renderTutStep(); } }
-// 初回プレイ: まず名前登録(初回ログイン時)を求め、その後に遊び方(概要スライド)を自動表示する
+// 初回プレイ: まず名前登録(初回ログイン時)を求め、その後にステージ選択(STAGE1)へ直接誘導する。
+// 以前は遊び方スライド8枚を自動表示していたが、最初の操作までが長くなるため取りやめた。
+// 8枚の詳しい概要は、ホーム画面の「遊び方」ボタンからいつでも見られる(既存機能をそのまま利用)。
 function maybeShowTutorialFirstTime(){
   if(!playerName){
     setTimeout(()=>{ showNameModal(maybeShowTutorialFirstTime); }, 450);
     return;
   }
   let seen=false; try{ seen=localStorage.getItem(TUT_KEY)==='1'; }catch(e){}
-  if(!seen) setTimeout(()=>{ openTutorial(); }, 450);
+  if(!seen){
+    try{ localStorage.setItem(TUT_KEY,'1'); }catch(e){} // 初回案内は一度きり
+    setTimeout(()=>{ openLearnLadder(); }, 450);
+  }
 }
 function welcomeChoose(what){
   try{ localStorage.setItem(TUT_KEY,'1'); }catch(e){} // 初回案内は一度きり
