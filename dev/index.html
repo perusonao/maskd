@@ -179,6 +179,7 @@
   .name-input{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:rgba(0,0,0,0.25);
     color:var(--ink); font-size:16px; font-family:'Zen Kaku Gothic New',sans-serif; text-align:center; outline:none; }
   .name-input:focus{ border-color:var(--gold-bright); box-shadow:0 0 0 1px var(--gold-bright); }
+  .name-later-note{ font-size:10.5px; color:var(--ink-dim); text-align:center; margin-top:2px; }
   .history-modal h3{ font-family:'Cormorant Garamond',serif; font-style:italic; color:var(--gold); font-size:22px; text-align:center; }
   .hist-scroll{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
   /* 行数が増えても各行が縮んで中身が切れないように(縦フレックスのshrink抑制) */
@@ -644,6 +645,9 @@
     animation:guidedPulse 1.4s ease-in-out infinite; }
   @keyframes guidedPulse{ 0%,100%{ transform:translateY(0) scale(1); } 50%{ transform:translateY(-4px) scale(1.045); } }
   @media(prefers-reduced-motion:reduce){ .hcard.guided-target, .act-btn.guided-target{ animation:none; } }
+  /* STAGE1の決定ボタンは画面占有率を少し抑える(タップ領域は40px以上を維持) */
+  .act-btn.guided-compact{ min-height:40px; padding:5px 0 6px; }
+  .field-actions.compact{ margin:1px auto 3px; }
   /* 手札カード: 相手からの見え方(候補属性)を下部の帯に表示 */
   .hcard .hc-seen{ position:absolute; left:0; right:0; bottom:0; z-index:4; display:flex; gap:2px; align-items:center; justify-content:center;
     white-space:nowrap; padding:2px 2px; background:linear-gradient(0deg,rgba(6,5,12,0.94),rgba(6,5,12,0.6) 70%,transparent); border-radius:0 0 8px 8px; }
@@ -1126,14 +1130,34 @@
   .win-reason{ margin-bottom:9px; padding-bottom:9px; border-bottom:1px solid rgba(201,162,74,.3); }
   .win-reason .wr-head{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:19px; font-weight:700; color:var(--gold-bright); line-height:1.3; }
   .win-reason .wr-sub{ font-size:12px; color:var(--win); font-weight:700; margin-top:3px; letter-spacing:.02em; }
+  /* STAGE1の結果カード: タイトル→勝因→スコア/次への順で軽く段階表示する(テンポは崩さない) */
+  .result-card.rc-staged .rtitle,
+  .result-card.rc-staged .win-reason,
+  .result-card.rc-staged .rstats,
+  .result-card.rc-staged .rd-toggle{ opacity:0; animation:rStepIn .3s ease forwards; }
+  .result-card.rc-staged .rtitle{ animation-delay:0s; }
+  .result-card.rc-staged .win-reason{ animation-delay:.14s; }
+  .result-card.rc-staged .rstats,
+  .result-card.rc-staged .rd-toggle{ animation-delay:.30s; }
+  .result-card.rc-staged .btn-next-round.show{ opacity:0; animation:rStepIn .3s ease .40s forwards; }
+  @keyframes rStepIn{ from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:translateY(0); } }
+  @media(prefers-reduced-motion:reduce){
+    .result-card.rc-staged .rtitle, .result-card.rc-staged .win-reason, .result-card.rc-staged .rstats,
+    .result-card.rc-staged .rd-toggle, .result-card.rc-staged .btn-next-round.show{ animation:none; opacity:1; }
+  }
   /* STAGE1限定のクリア演出(拡大+発光) */
-  .stage1-clear-anim{ text-align:center; padding:22px 10px; animation:s1cPop .6s cubic-bezier(.34,1.56,.64,1); }
-  .stage1-clear-anim .s1c-title{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:30px; font-weight:700;
+  .stage1-clear-anim{ position:relative; text-align:center; padding:22px 10px; animation:s1cPop .6s cubic-bezier(.34,1.56,.64,1); }
+  .stage1-clear-anim .s1c-title{ position:relative; font-family:'Cormorant Garamond',serif; font-style:italic; font-size:30px; font-weight:700;
     color:var(--gold-bright); text-shadow:0 0 18px rgba(232,200,119,.7); }
   .stage1-clear-anim .s1c-sub{ font-size:13px; color:var(--ink); margin-top:9px; }
   .stage1-clear-anim .s1c-unlock{ font-size:11.5px; color:var(--win); font-weight:700; margin-top:10px; }
+  .stage1-clear-anim .s1c-next{ font-size:11.5px; color:var(--ink-dim); margin-top:3px; }
+  .stage1-clear-anim .s1c-flash{ position:absolute; left:50%; top:38%; width:160px; height:160px; margin:-80px 0 0 -80px;
+    border-radius:50%; background:radial-gradient(circle,rgba(232,200,119,.55) 0%,rgba(232,200,119,0) 70%);
+    animation:s1cFlash .55s ease-out; pointer-events:none; }
   @keyframes s1cPop{ 0%{ transform:scale(.7); opacity:0; } 60%{ transform:scale(1.08); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
-  @media(prefers-reduced-motion:reduce){ .stage1-clear-anim{ animation:none; } }
+  @keyframes s1cFlash{ 0%{ opacity:0; transform:scale(.4); } 40%{ opacity:1; } 100%{ opacity:0; transform:scale(1.5); } }
+  @media(prefers-reduced-motion:reduce){ .stage1-clear-anim{ animation:none; } .stage1-clear-anim .s1c-flash{ animation:none; opacity:0; } }
   /* 結果の集計: 現在スコアを大きく＋残り山札 */
   .rstats{ margin-top:11px; padding-top:10px; border-top:1px solid var(--line); }
   .rs-score{ display:flex; align-items:center; justify-content:center; gap:12px; }
@@ -1933,6 +1957,9 @@
       </div>
     </div>
     <div class="cpu-setting-row">
+      <div class="btn ghost" style="width:100%;" onclick="showNameModal(refreshSettingsNameLbl)">✏️ プレイヤー名を変更（現在：<span id="settingsNameLbl"></span>）</div>
+    </div>
+    <div class="cpu-setting-row">
       <div class="btn ghost" style="width:100%;" onclick="openSurvey()">📝 アンケートに回答する</div>
     </div>
     <div style="text-align:center;margin-top:14px;padding-top:10px;border-top:1px solid rgba(201,162,74,.15);">
@@ -2137,6 +2164,7 @@
       <p style="font-size:12px;color:var(--ink-dim);text-align:center;margin-top:-4px;">あなたの名前を入力してください。<br>ゲーム内とランキングに表示されます。</p>
       <input type="text" id="nameInput" maxlength="12" placeholder="名前（12文字まで）" class="name-input" />
       <div class="btn" style="margin-top:4px;" onclick="submitPlayerName()">この名で戦う</div>
+      <p class="name-later-note">あとから設定画面で変更できます</p>
     </div>
   </div>
 
@@ -2469,7 +2497,7 @@ function buildScriptedDeal(stage){
 // hints: このステージで初心者ヒント(候補アイコン等)を強制ON/OFFする(未指定時はtrue)。
 //        ステージ1〜3は属性そのものに集中してもらうためOFF、ステージ4で読み合いとして正式に教える。
 const LEARN_STAGES=[
-  { id:1, name:'３つの属性', icon:'🎨', attrs:['moon','sun','dark'], rounds:1,
+  { id:1, name:'３つの属性', icon:'🎨', tagline:'属性を覚えよう', attrs:['moon','sun','dark'], rounds:1,
     swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak', hints:false,
     // 初回の成功体験に絞った1問構成: 必ずプレイヤーが親から始まり、SUNを選べば必ずMOONに勝てる。
     // 「属性には相性がある→有利な属性を出すと勝てる」の1点だけを、最短で体験してもらうためのステージ。
@@ -2481,22 +2509,22 @@ const LEARN_STAGES=[
       you:[{attr:'sun',num:3},{attr:'moon',num:1},{attr:'dark',num:2},{attr:'moon',num:4},{attr:'dark',num:0}],
       cpu:[{attr:'moon',num:3},{attr:'dark',num:1},{attr:'sun',num:0},{attr:'dark',num:4},{attr:'sun',num:2}],
     } },
-  { id:2, name:'風を読む', icon:'🌬️', attrs:['moon','sun','dark','air'], rounds:4,
+  { id:2, name:'風を読む', icon:'🌬️', tagline:'引き分けを使いこなそう', attrs:['moon','sun','dark','air'], rounds:4,
     swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak', hints:false,
     intro:'<b class="air">AIR</b>が仲間入り。<b>AIRが絡むと必ず引き分け</b>（使うと戦略カウンター+1）。勝てない相手を受け流す一手です。' },
-  { id:3, name:'混沌を制す', icon:'🌀', attrs:['moon','sun','dark','kaos','air'], rounds:4,
+  { id:3, name:'混沌を制す', icon:'🌀', tagline:'数字勝負を制そう', attrs:['moon','sun','dark','kaos','air'], rounds:4,
     swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak', hints:false,
     intro:'<b class="kaos">KAOS</b>解禁で全属性そろい踏み。KAOSは<b>属性問わず数字勝負</b>、さらに<b>0・1は最強の5に勝つ</b>特殊効果を持ちます。' },
-  { id:4, name:'読み合い', icon:'🔍', attrs:['moon','sun','dark','kaos','air'], rounds:6,
+  { id:4, name:'読み合い', icon:'🔍', tagline:'相手の属性を読もう', attrs:['moon','sun','dark','kaos','air'], rounds:6,
     swap:false, force:false, late2x:false, leftover:false, cpuDiff:'weak', hints:true, dealAnim:true,
     intro:'5属性がそろったところで、種明かし。デッキは<b>5属性×数字0〜5、全30枚</b>の固定デッキで、二人で<b>15枚ずつ</b>に分配されています。相手の<b>数字はすぐ見える</b>が<b>属性は伏せられたまま</b>。場に出た札から消去法で候補が絞られ、<b>1つに絞れたら🔓看破</b>（確定）。あなたの札も同じ理屈で相手に絞られ、絞られると<b>⚠読まれている</b>と警告が出ます。' },
-  { id:5, name:'戦略・奇襲', icon:'✦', attrs:['moon','sun','dark','kaos','air'], rounds:6,
+  { id:5, name:'戦略・奇襲', icon:'✦', tagline:'奇襲で仕掛けよう', attrs:['moon','sun','dark','kaos','air'], rounds:6,
     swap:false, force:true, late2x:false, leftover:false, cpuDiff:'normal', hints:true,
     intro:'子の新しい一手、<b>奇襲</b>が解禁。<b>親が撤退を選んだ時だけ</b>、戦略カウンターを2消費して撤退を無効化し、<b>強制的に決戦</b>へ持ち込めます。逃げ切らせない一手です。' },
-  { id:6, name:'戦略・入替', icon:'🔄', attrs:['moon','sun','dark','kaos','air'], rounds:6,
+  { id:6, name:'戦略・入替', icon:'🔄', tagline:'入替で形勢を変えよう', attrs:['moon','sun','dark','kaos','air'], rounds:6,
     swap:true, force:true, late2x:false, leftover:false, cpuDiff:'normal', hints:true,
     intro:'親の特権、<b>入替</b>が解禁。子の数字を見た後、場に出した札を手札の別の1枚と交換できます（1ラウンド1回）。不利な手を、有利な札へ差し替えましょう。' },
-  { id:7, name:'最終決戦', icon:'⚔️', attrs:['moon','sun','dark','kaos','air'], rounds:8,
+  { id:7, name:'最終決戦', icon:'⚔️', tagline:'総仕上げの一戦', attrs:['moon','sun','dark','kaos','air'], rounds:8,
     swap:true, force:true, late2x:true, leftover:true, cpuDiff:'normal', hints:true,
     intro:'いよいよ全ルール。<b>終盤2ラウンドは得点2倍</b>、そして<b>残り手札ボーナス</b>まで。ここを越えれば一人前です。' },
 ];
@@ -2543,7 +2571,7 @@ function openLearnLadder(){
     const label = unlocked ? `STAGE ${st.id}：${st.name}を開く` : `STAGE ${st.id}：${st.name}（未解放）`;
     return `<div class="ls-item${unlocked?' open':''}" ${unlocked?`onclick="guardedNav(()=>showStageIntro(${st.id}))"`:''} role="button" tabindex="0" aria-label="${label}">
       <div class="ls-ic">${unlocked?st.icon:'🔒'}</div>
-      <div class="ls-tx"><div class="ls-t">STAGE ${st.id}：${st.name}</div><div class="ls-d">${stageSummary(st)}</div>${startCta}</div>
+      <div class="ls-tx"><div class="ls-t">STAGE ${st.id}：${st.name}</div><div class="ls-d">${st.tagline||stageSummary(st)}</div>${startCta}</div>
       <div class="ls-st">${status}</div></div>`;
   }).join('');
   const introText = isFirstVisit
@@ -2642,9 +2670,13 @@ function endLearnStage(youFinal, cpuFinal){
     document.getElementById('overlay').classList.remove('show');
     sfx('win');
     try{ if(navigator.vibrate) navigator.vibrate([0,35,45,25]); }catch(e){}
-    const unlockNote = next ? `<div class="s1c-unlock">STAGE ${next.id}が解放されました</div>` : '';
+    // 「解放しました」だけで終わらせず、次のステージで何を学ぶかを一言添えてSTAGE2への導線にする(文言のみ、構成は不変)
+    const unlockNote = next
+      ? `<div class="s1c-unlock">STAGE ${next.id} 解放！</div><div class="s1c-next">次は${next.tagline||next.name}</div>`
+      : '';
     document.getElementById('learnBox').innerHTML=`
       <div class="stage1-clear-anim">
+        <div class="s1c-flash"></div>
         <div class="s1c-title">STAGE 1 CLEAR</div>
         <div class="s1c-sub">属性相性を覚えました！</div>
         ${unlockNote}
@@ -3054,6 +3086,11 @@ function openMatchSetup(){
 function openAppSettings(){
   hideTitleScreens();
   const el=document.getElementById('appSettings'); if(el) el.style.display='flex';
+  refreshSettingsNameLbl();
+}
+// 設定画面の「プレイヤー名を変更」行に現在の名前を反映する(showNameModalの完了後にも呼ぶ)
+function refreshSettingsNameLbl(){
+  const nl=document.getElementById('settingsNameLbl'); if(nl) nl.textContent=playerName||'未設定';
 }
 // ===== アンケート =====
 let surveyFun=null, surveyReplay=null;
@@ -3973,8 +4010,9 @@ function renderActions(){
     const showSwap = stageAllows('swap') && !guided; // 段階チュートリアルの序盤は入替を隠す
     const canSwap = showSwap && youTrust>=SWAP_COST && youHand.length>0 && !youSwapUsedThisRound;
     fa.innerHTML = guided ? '' : `<div class="fa-ctx">どうする？</div>`;
+    fa.classList.toggle('compact', !!guided); // STAGE1は決定ボタン1つだけなので上下の余白も少し詰める
     const row=document.createElement('div'); row.className='fa-row';
-    const fight=document.createElement('div'); fight.className='btn act-btn'+(guided?' guided-target':''); fight.innerHTML=guided?actIcon('⚔','決定'):actIcon('⚔','決戦');
+    const fight=document.createElement('div'); fight.className='btn act-btn'+(guided?' guided-target guided-compact':''); fight.innerHTML=guided?actIcon('⚔','決定'):actIcon('⚔','決戦');
     fight.onclick=()=>resolveFight(true);
     if(guided){ fight.setAttribute('aria-label','このカードで勝負を決定する'); }
     if(!guided){
@@ -5043,7 +5081,10 @@ function resolveFightJudge(){
       const overlayDelay = (result==='draw') ? 250 : 760;
       if(resultOverlayTimer) clearTimeout(resultOverlayTimer);
       hideRoleMsg(true);
-      resultOverlayTimer=setTimeout(()=>{ resultOverlayTimer=null; ov.classList.add('show'); }, overlayDelay);
+      // STAGE1(誘導必勝ステージ)は、カードが見えるこの瞬間に合わせてタイトル→勝因→スコアを
+      // 軽く段階表示する(rc-stagedはCSS側のanimation-delayで順番に見せるだけで、判定結果は変えない)
+      const stageForReveal = stageConfig && stageConfig.guidedWin;
+      resultOverlayTimer=setTimeout(()=>{ resultOverlayTimer=null; ov.classList.add('show'); if(stageForReveal) rc.classList.add('rc-staged'); }, overlayDelay);
 
       // 公開されたカードを推理用に記録(Airも統合済みプールとして扱う)
       [dealerCard, childCard].forEach(c=>{
@@ -5215,8 +5256,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.31.0';
+const GAME_VERSION = 'v1.32.0';
 const CHANGELOG = [
+  { version:'v1.32.0', date:'2026-07-22', items:[
+    '<b>STAGE1のUXをさらにブラッシュアップ</b>：勝利結果はタイトル→勝因→スコアの順で軽く段階表示するようにし、決定ボタンも少しコンパクトに。名前入力に「あとから設定画面で変更できます」を添え、実際に設定画面から変更できるようにしました。ステージ一覧には各ステージの短いサブタイトルを追加し、STAGE1クリア時には金色の光の演出と「次は何を学ぶか」の一言を加えています。',
+  ]},
   { version:'v1.31.0', date:'2026-07-22', items:[
     '<b>STAGE1をさらに分かりやすくテンポ良く改善</b>：開始前の説明を図式（SUN→MOON→DARK→SUN）に、ステージ選択には「STAGE 1を始める」ボタンを追加しました。勝利結果は主要情報だけを先に見せ、詳細は「詳しく見る」で確認できるように整理。クリア時にはSTAGE2解放の案内も追加しました。',
   ]},
