@@ -1491,8 +1491,10 @@
   .hm-btn:active{ background:rgba(201,162,74,.14); }
   .hm-btn .hm-ic{ font-size:18px; line-height:1; flex-shrink:0; }
   .hm-btn .hm-tx{ display:flex; flex-direction:column; line-height:1.1; min-width:0; }
-  .hm-btn .hm-jp{ font-size:12.5px; }
+  .hm-btn .hm-jp{ font-size:12.5px; white-space:nowrap; }
   .hm-btn .hm-en{ font-size:7.5px; letter-spacing:1px; color:var(--ink-dim); white-space:nowrap; }
+  .hm-btn.locked{ opacity:.55; }
+  .hm-btn.locked .hm-jp{ color:var(--ink-dim); }
   .home-settings-btn{ display:flex; align-items:center; gap:10px; width:100%; max-width:400px; cursor:pointer;
     padding:12px 16px; border-radius:10px; font-size:13px; color:var(--ink);
     border:1px solid rgba(201,162,74,.3); background:rgba(10,9,16,.55); }
@@ -1885,11 +1887,15 @@
       <div class="home-sub">仮面の下に、真実はない。</div>
     </div>
 
-    <div class="home-cta-img" onclick="onHomePlay()" role="button" tabindex="0" aria-label="対戦する START DUEL"></div>
+    <div class="home-cta" onclick="onHomePlay()" role="button" tabindex="0" aria-label="フリー対戦 FREE MATCH">
+      <div class="hc-jp"><span class="hc-ic">⚔</span> フリー対戦</div>
+      <div class="hc-en">FREE MATCH</div>
+    </div>
 
     <div class="mask-fan" id="maskFan"></div>
 
     <div class="home-menu-group">
+      <div class="home-menu" id="leagueMenuRow"></div>
       <div class="home-menu">
         <div class="img-btn" style="background-image:url(btn-howto.png)" onclick="openTutorial()" role="button" tabindex="0" aria-label="遊び方"></div>
         <div class="img-btn" style="background-image:url(btn-rules.png)" onclick="openRules()" role="button" tabindex="0" aria-label="ルール"></div>
@@ -2128,11 +2134,11 @@
   <!-- 初回プレイの案内(ミッションへ誘導) -->
   <div class="tutm-overlay" id="welcomeModal">
     <div class="tutm-box" style="max-width:340px;">
-      <div class="tutm-head"><span class="tutm-title" style="text-align:center;flex:1;">MASKD へようこそ</span></div>
-      <div class="tutm-intro" style="text-align:center;margin-top:12px;">仮面をかぶった騎士たちの<b>心理戦・推理カードゲーム</b>。<br>まずは遊びながら覚えていきましょう。</div>
+      <div class="tutm-head"><span class="tutm-title" style="text-align:center;flex:1;">MASKDへようこそ！</span></div>
+      <div class="tutm-intro" style="text-align:center;margin-top:12px;">チュートリアルを始めますか？</div>
       <div class="tutm-controls" style="flex-direction:column;margin-top:16px;">
-        <div class="btn" style="width:100%;" onclick="welcomeChoose('play')">▶ さっそく対戦する</div>
-        <div class="btn ghost" style="width:100%;" onclick="welcomeChoose('learn')">🎓 先にチュートリアルで学ぶ</div>
+        <div class="btn" style="width:100%;" onclick="welcomeChoose('start')">始める</div>
+        <div class="btn ghost" style="width:100%;" onclick="welcomeChoose('later')">あとで</div>
       </div>
     </div>
   </div>
@@ -2537,6 +2543,45 @@ function learnClearedMax(){ try{ return parseInt(localStorage.getItem(LEARN_KEY)
 function learnAllCleared(){ return learnClearedMax()>=LEARN_STAGES.length; }
 function setLearnCleared(n){ try{ if(n>learnClearedMax()) localStorage.setItem(LEARN_KEY, String(n)); }catch(e){} }
 function stageSummary(st){ return `${st.attrs.map(a=>ALABEL[a]).join('・')} ／ ${st.rounds}R`; }
+
+// ===== ゲームモード管理(Phase1: 今後のチュートリアル/初級/中級/上級リーグ追加に備えた土台) =====
+// 現時点ではUIの解放表示にのみ使用し、対戦ロジックは一切変更しない。
+const GameMode = Object.freeze({ TUTORIAL:'tutorial', BEGINNER:'beginner', INTERMEDIATE:'intermediate', ADVANCED:'advanced', FREE:'free' });
+const LEAGUE_KEYS = {
+  tutorialCompleted:'maskd_tutorial_completed',
+  beginnerUnlocked:'maskd_beginner_unlocked',
+  intermediateUnlocked:'maskd_intermediate_unlocked',
+  advancedUnlocked:'maskd_advanced_unlocked',
+  currentLeague:'maskd_current_league',
+  gameMode:'maskd_game_mode',
+  firstLaunchDone:'maskd_first_launch_done',
+};
+function getLeagueFlag(key){ try{ return localStorage.getItem(LEAGUE_KEYS[key])==='1'; }catch(e){ return false; } }
+function setLeagueFlag(key, on){ try{ localStorage.setItem(LEAGUE_KEYS[key], on?'1':'0'); }catch(e){} }
+function getCurrentLeague(){ try{ return localStorage.getItem(LEAGUE_KEYS.currentLeague)||null; }catch(e){ return null; } }
+function setCurrentLeague(mode){ try{ localStorage.setItem(LEAGUE_KEYS.currentLeague, mode); localStorage.setItem(LEAGUE_KEYS.gameMode, mode); }catch(e){} }
+// 既存プレイヤー(旧7ステージ制)を新しいリーグ制の解放状態へ一度だけ移行する。
+// 未着手→そのまま／STAGE1〜6途中→初級リーグ解放／STAGE7クリア(learnAllCleared)→上級まで全解放。
+// セーブデータを複雑にしないため、途中経過の細かい引き継ぎはせずシンプルな3区分のみとする。
+const LEAGUE_MIGRATION_KEY='maskd_league_migration_v1';
+function migrateToLeagueSystem(){
+  try{ if(localStorage.getItem(LEAGUE_MIGRATION_KEY)==='1') return; }catch(e){ return; }
+  const cleared=learnClearedMax();
+  if(cleared>=LEARN_STAGES.length){
+    setLeagueFlag('tutorialCompleted', true);
+    setLeagueFlag('beginnerUnlocked', true);
+    setLeagueFlag('intermediateUnlocked', true);
+    setLeagueFlag('advancedUnlocked', true);
+    setCurrentLeague(GameMode.ADVANCED);
+  } else if(cleared>=1){
+    setLeagueFlag('tutorialCompleted', true);
+    setLeagueFlag('beginnerUnlocked', true);
+    setCurrentLeague(GameMode.BEGINNER);
+  }
+  // cleared===0(未着手)は何もしない(すべて未解放のまま、初回起動フローに任せる)
+  try{ localStorage.setItem(LEAGUE_MIGRATION_KEY,'1'); }catch(e){}
+}
+migrateToLeagueSystem();
 // 画面遷移の連打防止(ステージ選択・ステージ開始など、短時間の二重タップでの二重遷移を防ぐ汎用ガード)
 let navGuard=false;
 function guardedNav(fn){
@@ -2584,13 +2629,26 @@ function openLearnLadder(){
   const remainNote = isFirstVisit
     ? `<div class="ls-remain">この先 STAGE 2〜${LEARN_STAGES.length} も、進めるごとに解放されます</div>`
     : '';
+  // 未クリア(learnAllCleared前)なら、いつでもスキップして初級リーグを解放できるリンクを添える
+  const skipLink = !learnAllCleared()
+    ? `<div style="text-align:center;margin-top:12px;"><span class="home-learn-link" onclick="skipTutorial()">チュートリアルをスキップ</span></div>`
+    : '';
   document.getElementById('learnBox').innerHTML=`
     <div class="tutm-head"><span class="tutm-title" style="flex:1;">🎓 チュートリアル</span><span class="tutm-close" onclick="closeLearn()">✕</span></div>
     <div class="tutm-intro" style="margin-top:8px;">${introText}</div>
     <div class="ls-grid">${rows}</div>
     ${remainNote}
-    ${learnAllCleared()?'<div class="tutm-controls" style="margin-top:12px;"><div class="btn" onclick="closeLearn(); beginMatchSetup();">本編を始める</div></div>':''}`;
+    ${learnAllCleared()?'<div class="tutm-controls" style="margin-top:12px;"><div class="btn" onclick="closeLearn(); beginMatchSetup();">本編を始める</div></div>':''}
+    ${skipLink}`;
   document.getElementById('learnOverlay').classList.add('show');
+}
+// チュートリアルをスキップして初級リーグを解放する(v0.9改修Phase1)。既存の7ステージ進行状況・
+// 判定ロジックには一切触れず、新設のリーグ解放フラグだけを更新する。
+function skipTutorial(){
+  setLeagueFlag('beginnerUnlocked', true);
+  setCurrentLeague(GameMode.BEGINNER);
+  closeLearn();
+  homeToast('初級リーグを解放しました');
 }
 // ステージ開始前の「あたらしいルール」案内
 function showStageIntro(id){
@@ -2619,7 +2677,8 @@ function showStageIntro(id){
     <div class="tutm-controls" style="margin-top:14px;">
       <div class="btn" onclick="guardedNav(()=>startLearnStage(${st.id}))" role="button" aria-label="${startLabel}">${startLabel}</div>
       <div class="btn ghost" onclick="guardedNav(()=>openLearnLadder())">戻る</div>
-    </div>`;
+    </div>
+    <div style="text-align:center;margin-top:10px;"><span class="home-learn-link" onclick="skipTutorial()">チュートリアルをスキップ</span></div>`;
   document.getElementById('learnOverlay').classList.add('show');
 }
 const TUTORIAL_VERSION='3'; // STAGE1のテンポ/分かりやすさ改善版(計測イベントのtutorial_versionに使う)
@@ -3107,6 +3166,29 @@ function showHome(){
   document.getElementById('overlay').classList.remove('show');
   const h=document.getElementById('homeScreen'); if(h) h.style.display='flex';
   renderHomeStats();
+  renderLeagueMenuRow();
+}
+// ホームの初級/中級/上級リーグ行を描画する(Phase1: ロック表示のみ。実際のリーグ対戦はまだ未実装)。
+// 既存の.hm-btn(テキスト版メニュー、画像化以前のCSSを再利用)を使い、新規アセットなしで表示する。
+function renderLeagueMenuRow(){
+  const wrap=document.getElementById('leagueMenuRow'); if(!wrap) return;
+  const leagues=[
+    { key:'beginnerUnlocked', jp:'初級リーグ', en:'BEGINNER' },
+    { key:'intermediateUnlocked', jp:'中級リーグ', en:'INTERMEDIATE' },
+    { key:'advancedUnlocked', jp:'上級リーグ', en:'ADVANCED' },
+  ];
+  wrap.innerHTML=leagues.map(lg=>{
+    const unlocked=getLeagueFlag(lg.key);
+    const label = unlocked ? `${lg.jp}を開く` : `${lg.jp}（未解放）`;
+    return `<div class="hm-btn${unlocked?'':' locked'}" onclick="leagueComingSoon('${lg.jp}', ${unlocked})" role="button" tabindex="0" aria-label="${label}">
+      <div class="hm-ic">${unlocked?'🏆':'🔒'}</div>
+      <div class="hm-tx"><div class="hm-jp">${lg.jp}</div><div class="hm-en">${lg.en}</div></div>
+    </div>`;
+  }).join('');
+}
+// リーグ対戦自体はPhase3以降で実装予定。今は解放状態の表示のみ先行させ、押されたら近日公開である旨を伝える。
+function leagueComingSoon(name, unlocked){
+  homeToast(unlocked ? `🏆 ${name}は近日公開予定です` : `🔒 ${name}はまだ解放されていません`);
 }
 function openMatchSetup(){
   hideTitleScreens();
@@ -4510,9 +4592,9 @@ function isFirstTimer(){
     return true;
   }catch(e){ return false; }
 }
-// ホームの「対戦する」: チュートリアル(全7段階)未修了ならまずチュートリアルへ誘導する
+// ホームの「フリー対戦」: v0.9改修でチュートリアル完了を前提としない常時解放モードに変更(GameMode.FREE)。
+// 対戦設定・CPU選択・難易度選択・本戦の判定ロジックは既存のbeginMatchSetup()/openMatchSetup()をそのまま流用する。
 function onHomePlay(){
-  if(!learnAllCleared()){ openLearnLadder(); return; }
   openMatchSetup();
 }
 // 相手(CPU)の戦略ごとの仮面名
@@ -5286,8 +5368,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.35.0';
+const GAME_VERSION = 'v1.36.0';
 const CHANGELOG = [
+  { version:'v1.36.0', date:'2026-07-22', items:[
+    '<b>「フリー対戦」を常時解放</b>：これまで全7ステージのチュートリアルを修了しないと本戦(CPU戦)に進めませんでしたが、「フリー対戦」としていつでも遊べるようにしました。ホーム画面に初級/中級/上級リーグの解放状況も表示(現時点ではロック表示のみ、今後追加予定)。チュートリアルは初回起動時に「始めますか？」と確認し、いつでもスキップできます。CPUの強さ・判定ロジックに変更はありません。',
+  ]},
   { version:'v1.35.0', date:'2026-07-22', items:[
     '<b>管理画面のチュートリアル進捗を拡張</b>：STAGE1〜7のクリア状況に続けて、「本戦に挑戦」「初回本戦を終えた（勝率含む）」までのファネルを確認できるようにしました（admin.html限定の裏側改修。プレイヤー側の見た目に変更はありません）。',
   ]},
@@ -5694,15 +5779,15 @@ function closeTutorial(){ document.getElementById('tutorialOverlay').classList.r
 function tutNext(){
   if(tutStep>=TUTORIAL_STEPS.length-1){
     closeTutorial();
-    if(!learnAllCleared()) openLearnLadder(); else openMatchSetup();
+    openMatchSetup(); // フリー対戦は常時解放のため、以前のようなチュートリアル完了判定は不要
     return;
   }
   tutStep++; renderTutStep();
 }
 function tutPrev(){ if(tutStep>0){ tutStep--; renderTutStep(); } }
-// 初回プレイ: まず名前登録(初回ログイン時)を求め、その後にステージ選択(STAGE1)へ直接誘導する。
-// 以前は遊び方スライド8枚を自動表示していたが、最初の操作までが長くなるため取りやめた。
-// 8枚の詳しい概要は、ホーム画面の「遊び方」ボタンからいつでも見られる(既存機能をそのまま利用)。
+// 初回プレイ: まず名前登録(初回ログイン時)を求め、その後に「チュートリアルを始めますか？」の
+// 選択(welcomeModal)を1度だけ出す(v0.9改修でPhase1の初回起動判定として復活・改修)。
+// 「あとで」を選んでもフリー対戦は常時解放済みのため、そのまま遊べる。
 function maybeShowTutorialFirstTime(){
   if(!playerName){
     setTimeout(()=>{ showNameModal(maybeShowTutorialFirstTime); }, 450);
@@ -5711,16 +5796,14 @@ function maybeShowTutorialFirstTime(){
   let seen=false; try{ seen=localStorage.getItem(TUT_KEY)==='1'; }catch(e){}
   if(!seen){
     try{ localStorage.setItem(TUT_KEY,'1'); }catch(e){} // 初回案内は一度きり
-    setTimeout(()=>{ openLearnLadder(); }, 450);
+    try{ localStorage.setItem(LEAGUE_KEYS.firstLaunchDone,'1'); }catch(e){}
+    setTimeout(()=>{ const w=document.getElementById('welcomeModal'); if(w) w.classList.add('show'); }, 450);
   }
 }
 function welcomeChoose(what){
-  try{ localStorage.setItem(TUT_KEY,'1'); }catch(e){} // 初回案内は一度きり
   const w=document.getElementById('welcomeModal'); if(w) w.classList.remove('show');
-  if(what==='learn') openLearnLadder();
-  else if(what==='missions') openMissions();
-  else if(what==='slides') openTutorial();
-  else if(what==='play') onHomePlay();
+  if(what==='start') openLearnLadder();
+  // 'later'は閉じるだけ(フリー対戦は常時解放済みのため、追加の遷移は不要)
 }
 
 // ===== ミッション形式チュートリアル(実際に操作しながらルールを覚える) =====
@@ -6596,6 +6679,7 @@ initCpuSettingUI(); // 全ての変数・関数定義が済んだ後に呼び出
 initModeUI();       // ゲームモード選択(ルール×アクション)の初期化
 initSurveyUI();     // アンケート画面のボタン初期化
 renderHomeStats();  // ホームの戦績サマリーを描画
+renderLeagueMenuRow(); // ホームの初級/中級/上級リーグ行(ロック表示)を描画
 if(location.pathname.includes('/dev/')){ const d=document.getElementById('devEnvBadge'); if(d) d.style.display='block'; } // develop確認用であることを明示
 applyCardStyleClass(); // 保存された表示モード(上級者/初心者)を反映
 applyLayout(); // 保存された盤面レイアウト(A/B)を反映
