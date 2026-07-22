@@ -1424,13 +1424,16 @@
   }
   .mode-summary b{ color:var(--gold-bright); }
   /* ===== ホーム(ロビー) ===== */
-  .home-screen{ justify-content:center; align-items:center; gap:10px; padding:16px 18px 22px;
+  .home-screen{ justify-content:flex-start; align-items:center; gap:10px;
+    padding:calc(16px + env(safe-area-inset-top)) 18px calc(22px + env(safe-area-inset-bottom));
+    overflow-y:auto;
     background:
       radial-gradient(120% 60% at 50% 0%, rgba(30,22,10,.55), rgba(6,5,10,.9) 70%),
       linear-gradient(180deg, rgba(6,5,10,.55), rgba(6,5,10,.92)),
       var(--hall-bg) center top/cover no-repeat, #060409; }
   /* 上段: バッジ + お知らせ */
   .home-top{ display:flex; align-items:center; justify-content:space-between; width:100%; max-width:400px; }
+  .home-badge, .home-bell{ font:inherit; color:inherit; text-align:left; cursor:pointer; }
   .home-badge{ display:flex; align-items:center; gap:9px; padding:6px 14px 6px 6px; border-radius:999px;
     border:1px solid rgba(201,162,74,.45); background:rgba(8,6,14,.55); box-shadow:0 0 14px rgba(201,162,74,.12) inset; }
   .hb-crest{ width:38px; height:38px; border-radius:50%; flex-shrink:0; background-size:cover; background-position:center;
@@ -1441,7 +1444,8 @@
   .hb-bar{ height:5px; border-radius:3px; background:#1c1a24; border:1px solid rgba(201,162,74,.2); overflow:hidden; }
   .hb-bar > i{ display:block; height:100%; background:linear-gradient(90deg,var(--gold-dim),var(--gold-bright)); }
   .home-bell{ position:relative; display:flex; align-items:center; gap:6px; padding:9px 15px; border-radius:999px; cursor:pointer;
-    font-size:12.5px; color:var(--gold); border:1px solid rgba(201,162,74,.45); background:rgba(8,6,14,.5); }
+    font-size:12.5px; color:var(--gold); border:1px solid rgba(201,162,74,.45); background:rgba(8,6,14,.5); white-space:nowrap; }
+  @media(max-width:350px){ .home-bell{ padding:9px 10px; font-size:11px; } }
   .home-bell:active{ background:rgba(201,162,74,.14); }
   .bell-badge{ display:none; min-width:16px; height:16px; padding:0 4px; border-radius:999px;
     background:var(--lose); color:#fff; font-size:9.5px; font-weight:700; line-height:16px; text-align:center; }
@@ -1467,6 +1471,50 @@
   .mask-lb .mg{ font-size:13px; line-height:1; }
   .mask-lb .mn{ font-size:7.5px; letter-spacing:1px; color:var(--ink-dim); }
   .mask-lb .md{ font-size:7px; letter-spacing:.3px; color:var(--ink-dim); opacity:.75; }
+  /* ===== v1.37.0: ホーム画面リニューアル(リーグカード・教官吹き出し・ミッションバー) =====
+     既存の --gold/--ink/--win/--lose/--sun/--moon/--dark/--air と、既存ホーム画面で使われている
+     rgba(8,6,14,..)系の暗色をそのまま踏襲し、新規のグローバル配色は増やさない。 */
+  .mentor-say-home{ display:flex; align-items:center; gap:10px; max-width:220px; align-self:flex-end; margin-top:-4px; }
+  .mentor-say-home .msh-face{ width:52px; height:52px; border-radius:50%; flex-shrink:0; background-size:cover; background-position:center top;
+    border:1px solid rgba(201,162,74,.5); box-shadow:0 0 10px rgba(201,162,74,.3); }
+  .mentor-say-home .msh-bubble{ font-size:10.5px; line-height:1.5; color:var(--ink-dim); text-align:right; }
+  .league-list{ display:flex; flex-direction:column; gap:10px; width:100%; max-width:400px; }
+  .league-card{ position:relative; display:flex; align-items:stretch; gap:12px; padding:14px; border-radius:16px;
+    border:1px solid rgba(201,162,74,.35); background:rgba(8,6,14,.6); overflow:hidden; cursor:pointer;
+    transition:transform .12s, border-color .15s; }
+  .league-card:active{ transform:scale(.99); }
+  .league-card.current{ border-color:var(--gold-bright); box-shadow:0 0 0 1px rgba(232,200,119,.25) inset, 0 0 18px rgba(201,162,74,.18); }
+  .league-card.locked{ cursor:default; }
+  .league-card.locked:active{ transform:none; }
+  .lc-portrait{ width:64px; flex-shrink:0; border-radius:12px; background-size:cover; background-position:center top;
+    border:1px solid rgba(201,162,74,.35); position:relative; }
+  .league-card.locked .lc-portrait{ filter:grayscale(.75) brightness(.55); }
+  .lc-body{ flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:4px; }
+  .lc-name{ font-family:'Cormorant Garamond',serif; font-weight:700; font-size:19px; color:var(--gold-bright); line-height:1.15; }
+  .league-card.locked .lc-name{ color:var(--ink-dim); }
+  .lc-desc{ font-size:11px; color:var(--ink-dim); line-height:1.4; }
+  .lc-req{ display:flex; align-items:center; gap:5px; font-size:10.5px; color:var(--ink-dim); margin-top:2px; }
+  .lc-req .lc-lock-ic{ font-size:11px; }
+  .lc-cta{ align-self:center; flex-shrink:0; padding:9px 14px; border-radius:10px; font-size:12px; font-weight:700; text-align:center; white-space:nowrap;
+    background:linear-gradient(160deg,var(--gold-bright),var(--gold-dim)); color:#1a1608; }
+  .league-card.locked .lc-cta{ background:rgba(255,255,255,.06); color:var(--ink-dim); display:flex; align-items:center; gap:4px; }
+  .mission-bar{ display:flex; align-items:center; gap:10px; width:100%; max-width:400px; padding:10px 14px; border-radius:12px;
+    border:1px solid rgba(201,162,74,.3); background:rgba(8,6,14,.5); cursor:pointer; }
+  .mission-bar:active{ background:rgba(201,162,74,.1); }
+  .mb-ic{ font-size:16px; flex-shrink:0; position:relative; }
+  .mb-badge{ position:absolute; top:-4px; right:-6px; width:8px; height:8px; border-radius:50%; background:var(--lose); }
+  .mb-tx{ flex:1; min-width:0; font-size:11.5px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mb-tx b{ color:var(--gold-bright); }
+  .mb-cta{ flex-shrink:0; font-size:11px; color:var(--gold-dim); }
+  @media(prefers-reduced-motion:reduce){ .league-card, .mission-bar{ transition:none; } }
+  /* 320px前後の狭い画面でも、リーグ名が1行に収まりカードが崩れないようにする */
+  @media(max-width:350px){
+    .lc-portrait{ width:40px; }
+    .lc-name{ font-size:14.5px; }
+    .lc-desc{ font-size:10px; }
+    .league-card{ padding:10px; gap:8px; }
+    .lc-cta{ padding:7px 8px; font-size:10.5px; }
+  }
   /* 対戦するボタン(装飾フレーム) */
   .home-cta{ position:relative; width:100%; max-width:360px; padding:16px 0 12px; border-radius:12px; cursor:pointer;
     text-align:center; margin-top:8px;
@@ -1870,15 +1918,15 @@
   <!-- ===== ホーム(ロビー) ===== -->
   <div class="instructions home-screen" id="homeScreen">
     <div class="home-top">
-      <div class="home-badge" onclick="openAchievements()" title="称号・実績">
+      <button type="button" class="home-badge" onclick="openAchievements()" aria-label="称号・実績を開く">
         <div class="hb-crest" id="hbCrest"></div>
         <div class="hb-info">
           <div class="hb-line"><span class="hb-total" id="hbTotal">―</span><span class="hb-title" id="hbTitle"></span></div>
           <div class="hb-line"><span id="hbRate">勝率 –%</span></div>
           <div class="hb-bar"><i id="hbBar" style="width:0%"></i></div>
         </div>
-      </div>
-      <div class="home-bell" onclick="openChangelog()"><span>🔔</span>お知らせ<span class="bell-badge" id="bellBadge" style="display:none;"></span></div>
+      </button>
+      <button type="button" class="home-bell" onclick="openChangelog()" aria-label="お知らせを開く"><span aria-hidden="true">🔔</span>お知らせ<span class="bell-badge" id="bellBadge" style="display:none;" aria-hidden="true"></span></button>
     </div>
     <div id="devEnvBadge" style="display:none;text-align:center;font-size:10px;letter-spacing:.1em;color:#e8c877;border:1px solid #e8c877;background:rgba(232,200,119,.12);border-radius:999px;padding:2px 10px;margin:6px auto 0;width:fit-content;">DEV PREVIEW（開発確認用・本番とは別データ）</div>
 
@@ -1887,23 +1935,25 @@
       <div class="home-sub">仮面の下に、真実はない。</div>
     </div>
 
-    <div class="home-cta" onclick="onHomePlay()" role="button" tabindex="0" aria-label="フリー対戦 FREE MATCH">
-      <div class="hc-jp"><span class="hc-ic">⚔</span> フリー対戦</div>
-      <div class="hc-en">FREE MATCH</div>
+    <div class="mentor-say-home" id="homeMentorSay"></div>
+
+    <div class="league-list" id="leagueList"></div>
+
+    <div class="mission-bar" onclick="openMissions()" role="button" tabindex="0" aria-label="今日のミッションを確認する">
+      <div class="mb-ic" aria-hidden="true">🎯<span class="mb-badge" id="missionBadge" style="display:none;"></span></div>
+      <div class="mb-tx"><b>ミッション</b>　ミッションを確認しよう</div>
+      <div class="mb-cta" aria-hidden="true">詳細 ›</div>
     </div>
 
-    <div class="mask-fan" id="maskFan"></div>
-
     <div class="home-menu-group">
-      <div class="home-menu" id="leagueMenuRow"></div>
       <div class="home-menu">
         <div class="img-btn" style="background-image:url(btn-howto.png)" onclick="openTutorial()" role="button" tabindex="0" aria-label="遊び方"></div>
         <div class="img-btn" style="background-image:url(btn-rules.png)" onclick="openRules()" role="button" tabindex="0" aria-label="ルール"></div>
         <div class="img-btn" style="background-image:url(btn-achieve.png)" onclick="openAchievements()" role="button" tabindex="0" aria-label="実績"></div>
       </div>
       <div class="home-menu">
-        <div class="img-btn" style="background-image:url(btn-mission.png)" onclick="openLearnLadder()" role="button" tabindex="0" aria-label="チュートリアル"></div>
-        <div class="img-btn" style="background-image:url(btn-rank.png)" onclick="homeRankSoon()" role="button" tabindex="0" aria-label="ランク"></div>
+        <div class="img-btn" style="background-image:url(btn-mission.png)" onclick="openMissions()" role="button" tabindex="0" aria-label="ミッション"></div>
+        <div class="img-btn" style="background-image:url(btn-rank.png)" onclick="homeRankSoon()" role="button" tabindex="0" aria-label="ランク（準備中）"></div>
         <div class="img-btn" style="background-image:url(btn-record.png)" onclick="openStats()" role="button" tabindex="0" aria-label="戦績"></div>
       </div>
     </div>
@@ -3166,29 +3216,63 @@ function showHome(){
   document.getElementById('overlay').classList.remove('show');
   const h=document.getElementById('homeScreen'); if(h) h.style.display='flex';
   renderHomeStats();
-  renderLeagueMenuRow();
+  renderLeagueCards();
+  renderHomeMentorSay();
 }
-// ホームの初級/中級/上級リーグ行を描画する(Phase1: ロック表示のみ。実際のリーグ対戦はまだ未実装)。
-// 既存の.hm-btn(テキスト版メニュー、画像化以前のCSSを再利用)を使い、新規アセットなしで表示する。
-function renderLeagueMenuRow(){
-  const wrap=document.getElementById('leagueMenuRow'); if(!wrap) return;
-  const leagues=[
-    { key:'beginnerUnlocked', jp:'初級リーグ', en:'BEGINNER' },
-    { key:'intermediateUnlocked', jp:'中級リーグ', en:'INTERMEDIATE' },
-    { key:'advancedUnlocked', jp:'上級リーグ', en:'ADVANCED' },
+// 指導仮面アストラの案内吹き出し(画面上部)。既存のRIVAL_IMG['mentor']をそのまま再利用する
+// (専用アセットは既にSTAGE1チュートリアルで使われているものと同一)。
+function renderHomeMentorSay(){
+  const el=document.getElementById('homeMentorSay'); if(!el) return;
+  el.innerHTML=`
+    <div class="msh-bubble">ようこそ、騎士よ。<br>さあ、力を試そう。</div>
+    <div class="msh-face" style="background-image:url(${rivalImgUrl('mentor')})" role="img" aria-label="指導仮面アストラ"></div>`;
+}
+// ホームのリーグカード(初級/中級/上級/フリー対戦)を描画する。
+// 初級リーグ=既存チュートリアル(openLearnLadder)、フリー対戦=既存本戦(onHomePlay→beginMatchSetup系)を
+// そのまま再利用する。中級/上級はまだ実体が無いため、解放状態の表示のみで「準備中」に留める
+// (既存の本戦へ勝手に接続しない)。キャラクター立ち絵はCPU_TYPE_METAの既存rivalImgUrl()を再利用。
+function renderLeagueCards(){
+  const wrap=document.getElementById('leagueList'); if(!wrap) return;
+  const current=getCurrentLeague();
+  const clearedMax=learnClearedMax();
+  const beginnerCta = learnAllCleared() ? '復習する' : (clearedMax>0 ? '続きから' : 'プレイ');
+  const cards=[
+    leagueCardHTML({ name:'初級リーグ', desc:'遊びながら基本ルールを覚えよう', portraitKey:'aggressive',
+      unlocked:true, isCurrent: current===GameMode.BEGINNER || !current,
+      ctaLabel:beginnerCta, onClick:'guardedNav(()=>openLearnLadder())' }),
+    leagueCardHTML({ name:'中級リーグ', desc:'特殊カードと戦略を学ぼう', portraitKey:'cautious',
+      unlocked:getLeagueFlag('intermediateUnlocked'), isCurrent: current===GameMode.INTERMEDIATE,
+      reqLabel:'初級リーグクリアで解放', onClick:"leagueComingSoon('中級リーグ')" }),
+    leagueCardHTML({ name:'上級リーグ', desc:'すべてのルールを使いこなせ', portraitKey:'tricky',
+      unlocked:getLeagueFlag('advancedUnlocked'), isCurrent: current===GameMode.ADVANCED,
+      reqLabel:'中級リーグクリアで解放', onClick:"leagueComingSoon('上級リーグ')" }),
+    leagueCardHTML({ name:'フリー対戦', desc:'好きなルールで自由に対戦しよう', portraitKey:'balanced',
+      unlocked:true, isCurrent:false, ctaLabel:'プレイ', onClick:'onHomePlay()' }),
   ];
-  wrap.innerHTML=leagues.map(lg=>{
-    const unlocked=getLeagueFlag(lg.key);
-    const label = unlocked ? `${lg.jp}を開く` : `${lg.jp}（未解放）`;
-    return `<div class="hm-btn${unlocked?'':' locked'}" onclick="leagueComingSoon('${lg.jp}', ${unlocked})" role="button" tabindex="0" aria-label="${label}">
-      <div class="hm-ic">${unlocked?'🏆':'🔒'}</div>
-      <div class="hm-tx"><div class="hm-jp">${lg.jp}</div><div class="hm-en">${lg.en}</div></div>
-    </div>`;
-  }).join('');
+  wrap.innerHTML=cards.join('');
 }
-// リーグ対戦自体はPhase3以降で実装予定。今は解放状態の表示のみ先行させ、押されたら近日公開である旨を伝える。
-function leagueComingSoon(name, unlocked){
-  homeToast(unlocked ? `🏆 ${name}は近日公開予定です` : `🔒 ${name}はまだ解放されていません`);
+function leagueCardHTML(cfg){
+  const locked=!cfg.unlocked;
+  const portrait=rivalImgUrl(cfg.portraitKey);
+  const cta = locked
+    ? `<div class="lc-cta"><span aria-hidden="true">🔒</span> ロック中</div>`
+    : `<div class="lc-cta">${cfg.ctaLabel||'プレイ'} ›</div>`;
+  const req = cfg.reqLabel ? `<div class="lc-req"><span class="lc-lock-ic" aria-hidden="true">🔒</span>${cfg.reqLabel}</div>` : '';
+  const label = locked ? `${cfg.name}（未解放。${cfg.reqLabel||''}）` : `${cfg.name}を開く`;
+  const handler = locked ? `leagueComingSoon('${cfg.name}')` : cfg.onClick;
+  return `<div class="league-card${cfg.isCurrent?' current':''}${locked?' locked':''}" onclick="${handler}" role="button" tabindex="0" aria-label="${label}" aria-disabled="${locked}">
+    <div class="lc-portrait" style="background-image:url(${portrait})" role="img" aria-label="${cfg.name}のキャラクター"></div>
+    <div class="lc-body">
+      <div class="lc-name">${cfg.name}</div>
+      <div class="lc-desc">${cfg.desc}</div>
+      ${req}
+    </div>
+    ${cta}
+  </div>`;
+}
+// 中級/上級リーグはまだ実体が無いため、押されたら「準備中」を伝えるのみ(既存機能への誤接続を避ける)。
+function leagueComingSoon(name){
+  homeToast(`🔒 ${name}は近日公開予定です`);
 }
 function openMatchSetup(){
   hideTitleScreens();
@@ -5368,8 +5452,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.36.0';
+const GAME_VERSION = 'v1.37.0';
 const CHANGELOG = [
+  { version:'v1.37.0', date:'2026-07-22', items:[
+    '<b>ホーム画面をリニューアル</b>：初級/中級/上級リーグ・フリー対戦をカード形式で分かりやすく配置し、指導仮面アストラの案内も追加しました。5属性カードの並び表示は削除。フリー対戦・チュートリアルなど既存機能への遷移は変更していません。',
+  ]},
   { version:'v1.36.0', date:'2026-07-22', items:[
     '<b>「フリー対戦」を常時解放</b>：これまで全7ステージのチュートリアルを修了しないと本戦(CPU戦)に進めませんでしたが、「フリー対戦」としていつでも遊べるようにしました。ホーム画面に初級/中級/上級リーグの解放状況も表示(現時点ではロック表示のみ、今後追加予定)。チュートリアルは初回起動時に「始めますか？」と確認し、いつでもスキップできます。CPUの強さ・判定ロジックに変更はありません。',
   ]},
@@ -6679,7 +6766,8 @@ initCpuSettingUI(); // 全ての変数・関数定義が済んだ後に呼び出
 initModeUI();       // ゲームモード選択(ルール×アクション)の初期化
 initSurveyUI();     // アンケート画面のボタン初期化
 renderHomeStats();  // ホームの戦績サマリーを描画
-renderLeagueMenuRow(); // ホームの初級/中級/上級リーグ行(ロック表示)を描画
+renderLeagueCards(); // ホームのリーグカード(初級/中級/上級/フリー対戦)を描画
+renderHomeMentorSay(); // 指導仮面アストラの案内吹き出しを描画
 if(location.pathname.includes('/dev/')){ const d=document.getElementById('devEnvBadge'); if(d) d.style.display='block'; } // develop確認用であることを明示
 applyCardStyleClass(); // 保存された表示モード(上級者/初心者)を反映
 applyLayout(); // 保存された盤面レイアウト(A/B)を反映
