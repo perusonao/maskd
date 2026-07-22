@@ -71,6 +71,8 @@ service cloud.firestore {
     // 既存のlogs内tutorial_start/tutorial_completeは同意ゲート+旧UIの計測で実質機能しなくなって
     // いたため、visitsと同じ「同意不要・匿名」方式で新設(v1.25.0)。v1.27.0で、完走の1点だけでなく
     // 各ステージ(1〜7)ごとのクリア人数を管理画面で見られるよう、段階別のカウントに拡張。
+    // v1.30.0で、各ステージの開始(stage_start)、および所要時間/リトライ回数/チュートリアル版数
+    // (elapsed_ms/retry_count/tutorial_version)を任意で記録できるよう拡張。
     match /tutorial_events/{docId} {
       allow read: if true;
       allow create: if isValidTutorialEvent();
@@ -136,12 +138,19 @@ service cloud.firestore {
       return d.size() <= 3 && !('playerId' in d);
     }
 
-    // チュートリアル開始/段階クリアカウントの最低限のバリデーション。playerIdは明示的に禁止する。
-    // 'stage_clear'は、どのステージ(1〜7)をクリアしたかをstageフィールドで持つ。
+    // チュートリアル開始/ステージ開始/段階クリアカウントの最低限のバリデーション。playerIdは明示的に禁止する。
+    // 'stage_start'/'stage_clear'は、どのステージ(1〜7)かをstageフィールドで持つ。
+    // tutorial_version/retry_count/elapsed_msは、STAGE1改善版(v2)の効果測定用に追加した任意フィールド。
     function isValidTutorialEvent() {
       let d = request.resource.data;
-      return d.size() <= 4 && 'type' in d && d.type in ['start', 'complete', 'stage_clear'] && !('playerId' in d)
-          && (d.type != 'stage_clear' || ('stage' in d && d.stage is int && d.stage >= 1 && d.stage <= 7));
+      return d.size() <= 7 && 'type' in d
+          && d.type in ['start', 'complete', 'stage_clear', 'stage_start']
+          && !('playerId' in d)
+          && (!('stage' in d) || (d.stage is int && d.stage >= 1 && d.stage <= 7))
+          && ((d.type != 'stage_clear' && d.type != 'stage_start') || 'stage' in d)
+          && (!('tutorial_version' in d) || (d.tutorial_version is string && d.tutorial_version.size() <= 8))
+          && (!('retry_count' in d) || (d.retry_count is int && d.retry_count >= 0 && d.retry_count <= 999))
+          && (!('elapsed_ms' in d) || (d.elapsed_ms is int && d.elapsed_ms >= 0 && d.elapsed_ms <= 3600000));
     }
 
     // 論理削除イベントの最低限のバリデーション
