@@ -1432,20 +1432,32 @@
     padding:calc(6px + env(safe-area-inset-top)) 14px calc(6px + env(safe-area-inset-bottom));
     height:100dvh; min-height:100dvh; overflow-y:auto; box-sizing:border-box;
     background:
-      radial-gradient(120% 60% at 50% 0%, rgba(30,22,10,.55), rgba(6,5,10,.9) 70%),
+      radial-gradient(1px 1px at 12% 10%, rgba(255,255,255,.55) 0, transparent 60%),
+      radial-gradient(1px 1px at 80% 6%, rgba(255,255,255,.4) 0, transparent 60%),
+      radial-gradient(1.5px 1.5px at 34% 22%, rgba(255,255,255,.35) 0, transparent 60%),
+      radial-gradient(1px 1px at 64% 34%, rgba(232,200,119,.5) 0, transparent 60%),
+      radial-gradient(1px 1px at 20% 46%, rgba(255,255,255,.3) 0, transparent 60%),
+      radial-gradient(1.5px 1.5px at 90% 58%, rgba(255,255,255,.3) 0, transparent 60%),
+      radial-gradient(1px 1px at 48% 72%, rgba(232,200,119,.4) 0, transparent 60%),
+      radial-gradient(1px 1px at 12% 86%, rgba(255,255,255,.25) 0, transparent 60%),
+      radial-gradient(1px 1px at 76% 92%, rgba(255,255,255,.3) 0, transparent 60%),
+      radial-gradient(140% 65% at 50% 0%, rgba(32,42,78,.3), transparent 55%),
+      radial-gradient(120% 60% at 50% 0%, rgba(30,22,10,.5), rgba(6,5,10,.9) 70%),
       linear-gradient(180deg, rgba(6,5,10,.55), rgba(6,5,10,.92)),
       var(--hall-bg) center top/cover no-repeat, #060409; }
-  /* 上段: コンパクトなプレイヤーヘッダー + お知らせベル */
-  .home-top{ display:flex; align-items:center; justify-content:space-between; width:100%; max-width:400px;
+  /* 上段: コンパクトなプレイヤーヘッダー + DEVバッジ + お知らせベル */
+  .home-top{ display:flex; align-items:center; justify-content:space-between; gap:6px; width:100%; max-width:400px;
     height:clamp(50px,7vh,58px); flex-shrink:0; }
   .home-badge, .home-bell{ font:inherit; color:inherit; text-align:left; cursor:pointer; }
-  .home-badge{ display:flex; align-items:center; gap:8px; height:100%; padding:0 14px 0 4px; border-radius:999px;
+  .home-badge{ display:flex; align-items:center; gap:8px; height:100%; flex:1 1 auto; min-width:0; padding:0 14px 0 4px; border-radius:999px;
     border:1px solid rgba(201,162,74,.45); background:rgba(8,6,14,.55); box-shadow:0 0 14px rgba(201,162,74,.12) inset; }
   .hb-crest{ width:38px; height:38px; border-radius:50%; flex-shrink:0; background-size:cover; background-position:center;
     border:1px solid rgba(201,162,74,.5); box-shadow:0 0 8px rgba(201,162,74,.3); }
-  .hb-info{ display:flex; flex-direction:column; gap:2px; min-width:96px; align-items:flex-start; }
-  .hb-name{ font-size:13px; color:var(--gold-bright); font-weight:700; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:150px; }
-  .hb-record{ font-size:10.5px; color:var(--ink-dim); line-height:1.2; }
+  .hb-info{ display:flex; flex-direction:column; gap:2px; min-width:0; align-items:flex-start; }
+  .hb-name{ font-size:13px; color:var(--gold-bright); font-weight:700; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+  .hb-record{ font-size:10.5px; color:var(--ink-dim); line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+  #devEnvBadge{ flex-shrink:0; font-size:9px; letter-spacing:.1em; color:#e8c877;
+    border:1px solid #e8c877; background:rgba(232,200,119,.12); border-radius:999px; padding:3px 9px; }
   .home-bell{ position:relative; flex-shrink:0; display:flex; align-items:center; justify-content:center;
     width:clamp(38px,6vh,42px); height:clamp(38px,6vh,42px); border-radius:50%; font-size:17px;
     color:var(--gold); border:1px solid rgba(201,162,74,.45); background:rgba(8,6,14,.5); }
@@ -1477,20 +1489,22 @@
   /* ===== v1.37.0〜v1.39.0: ホーム画面リニューアル(リーグカード・教官案内) =====
      既存の --gold/--ink/--win/--lose/--sun/--moon/--dark/--air と、既存ホーム画面で使われている
      rgba(8,6,14,..)系の暗色をそのまま踏襲し、新規のグローバル配色は増やさない。
-     v1.39.0: 1画面に収めるため、教官案内をコンパクトな横並び表示に戻し(アイコン44〜54px)、
-     初級リーグ(featured)/中級・上級(2列compact)/フリー対戦(free、小型横長)の3種類に
-     カードを再構成。ロック中カードは「プレイ」ボタンを一切表示せず(aria-disabled)、
-     実体の無い中級/上級は解放状態に関わらずcta非表示(タップでcomingSoonトーストのみ)。 */
+     v1.40.0: 教官案内を吹き出し風(枠+ツールチップ状の三角)に、初級リーグの視覚的な主役感を強化、
+     キャラクター立ち絵を拡大、フリー対戦を黒緑+金ボタンへ再配色、下部メニューを線画アイコン(SVG)へ
+     統一、背景に星の粒子を追加。カード全体の高さは1画面表示を保つため他要素を圧縮して吸収。 */
   .mentor-say-home{ display:flex; align-items:center; gap:10px; width:100%; max-width:400px;
-    height:clamp(45px,6.5vh,55px); flex-shrink:0; }
-  .mentor-say-home .msh-face{ width:clamp(44px,7vh,54px); height:clamp(44px,7vh,54px); border-radius:50%; flex-shrink:0;
+    height:clamp(50px,7.5vh,62px); flex-shrink:0; }
+  .mentor-say-home .msh-face{ width:clamp(42px,6.5vh,50px); height:clamp(42px,6.5vh,50px); border-radius:50%; flex-shrink:0;
     background-size:cover; background-position:center top;
     border:1px solid rgba(201,162,74,.55); box-shadow:0 0 10px rgba(201,162,74,.3); }
-  .mentor-say-home .msh-bubble{ flex:1; min-width:0; font-size:11.5px; line-height:1.35; color:var(--ink-dim); text-align:left; }
+  .mentor-say-home .msh-bubble{ position:relative; flex:1; min-width:0; font-size:11.5px; line-height:1.35; color:var(--ink);
+    text-align:left; padding:8px 12px; border-radius:14px; border:1px solid rgba(201,162,74,.35); background:rgba(20,16,10,.55); }
+  .mentor-say-home .msh-bubble::before{ content:''; position:absolute; left:-6px; top:50%; transform:translateY(-50%);
+    width:0; height:0; border-top:6px solid transparent; border-bottom:6px solid transparent; border-right:7px solid rgba(201,162,74,.35); }
   .mentor-say-home .msh-line2{ display:block; }
   @media(max-width:350px){ .mentor-say-home .msh-line2{ display:none; } }
-  .league-list{ display:flex; flex-direction:column; gap:8px; width:100%; max-width:400px; flex-shrink:0; }
-  .league-card{ position:relative; display:flex; align-items:stretch; gap:12px; padding:12px; border-radius:16px;
+  .league-list{ display:flex; flex-direction:column; gap:7px; width:100%; max-width:400px; flex-shrink:0; }
+  .league-card{ position:relative; display:flex; align-items:stretch; gap:10px; padding:10px; border-radius:16px;
     border:1px solid rgba(201,162,74,.35); background:rgba(8,6,14,.6); overflow:hidden; cursor:pointer;
     width:100%; max-width:400px; box-sizing:border-box; transition:transform .12s, border-color .15s; }
   .league-card:active{ transform:scale(.99); }
@@ -1505,8 +1519,8 @@
   .lc-name{ font-family:'Cormorant Garamond',serif; font-weight:700; font-size:19px; color:var(--gold-bright); line-height:1.15; }
   .league-card.locked .lc-name{ color:var(--ink-dim); }
   .lc-desc{ font-size:11px; color:var(--ink-dim); line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .lc-req{ display:flex; align-items:center; gap:5px; font-size:10.5px; color:var(--ink-dim); margin-top:2px; }
-  .lc-req .lc-lock-ic{ font-size:11px; }
+  .lc-req{ display:flex; align-items:center; gap:5px; font-size:11px; color:var(--ink-dim); margin-top:2px; }
+  .lc-req .lc-lock-ic{ font-size:12px; }
   .lc-req.lc-soon{ color:var(--gold-dim); }
   .lc-cta{ align-self:center; flex-shrink:0; min-width:76px; padding:9px 10px; border-radius:10px; font-size:12px; font-weight:700; text-align:center; white-space:nowrap;
     background:linear-gradient(160deg,var(--gold-bright),var(--gold-dim)); color:#1a1608; }
@@ -1516,32 +1530,38 @@
   .lc-progress-tx{ flex-shrink:0; font-size:9.5px; color:var(--ink-dim); white-space:nowrap; }
   .lc-progress-tx.lc-progress-done{ color:var(--gold-dim); font-weight:600; margin-top:2px; }
   @media(prefers-reduced-motion:reduce){ .league-card{ transition:none; } }
-  /* 初級リーグ(featured, 横長) */
-  .league-card--featured{ min-height:clamp(104px,15vh,124px); }
-  .league-card--featured .lc-portrait{ width:clamp(68px,10vh,80px); }
+  /* 初級リーグ(featured, 横長・主役): 常時ゴールドのグラデーションと縁取りで、他カードより目立たせる */
+  .league-card--featured{ min-height:clamp(90px,13vh,108px); border-width:1.5px;
+    background:linear-gradient(160deg, rgba(64,42,10,.55), rgba(10,8,14,.8));
+    box-shadow:0 0 0 1px rgba(232,200,119,.14) inset, 0 4px 16px rgba(0,0,0,.45); }
+  .league-card--featured.current{ border-width:2px;
+    box-shadow:0 0 0 1px rgba(232,200,119,.3) inset, 0 0 22px rgba(201,162,74,.28), 0 4px 16px rgba(0,0,0,.5); }
+  .league-card--featured .lc-portrait{ width:clamp(82px,12.5vh,100px); box-shadow:0 2px 10px rgba(0,0,0,.5); }
   /* 中級/上級(compact, 2列) */
-  .league-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; width:100%; max-width:400px; flex-shrink:0; }
+  .league-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; width:100%; max-width:400px; flex-shrink:0; }
   .league-card--compact{ flex-direction:column; align-items:center; justify-content:center; text-align:center;
-    min-height:clamp(98px,13vh,118px); padding:10px 8px; gap:5px; max-width:none; }
-  .league-card--compact .lc-portrait{ width:clamp(48px,7vh,58px); aspect-ratio:1; }
+    min-height:clamp(84px,11.5vh,102px); padding:9px 8px; gap:5px; max-width:none; }
+  .league-card--compact .lc-portrait{ width:clamp(54px,8vh,66px); aspect-ratio:1; }
   .league-card--compact .lc-body{ align-items:center; gap:2px; }
   .league-card--compact .lc-name{ font-size:clamp(15px,4.4vw,18px); }
   .league-card--compact .lc-desc{ display:none; }
   .league-card--compact .lc-req{ justify-content:center; }
-  /* フリー対戦(free, 横長・小型) */
-  .league-card--free{ min-height:clamp(66px,9vh,82px); padding:10px 12px; border-color:rgba(110,201,170,.4); }
-  .league-card--free .lc-portrait{ width:clamp(46px,6.5vh,56px); border-color:rgba(110,201,170,.4); }
-  .league-card--free .lc-name{ font-size:16px; color:#8fe3c2; }
+  /* フリー対戦(free, 横長・小型): 黒×金の世界観に合わせ、深緑の背景+金ボタンへ(単独の青緑アクセントは廃止) */
+  .league-card--free{ min-height:clamp(58px,8vh,72px); padding:9px 12px; border-color:rgba(58,104,66,.5);
+    background:linear-gradient(160deg, rgba(10,26,15,.65), rgba(7,10,8,.8)); }
+  .league-card--free .lc-portrait{ width:clamp(50px,7.2vh,60px); border-color:rgba(58,104,66,.5); }
+  .league-card--free .lc-name{ font-size:16px; color:var(--gold-bright); }
   .league-card--free .lc-desc{ white-space:nowrap; }
-  .league-card--free .lc-cta{ background:linear-gradient(160deg,#8fe3c2,#4fa583); color:#082018; min-width:60px; padding:8px 10px; font-size:11.5px; }
+  .league-card--free .lc-cta{ min-width:60px; padding:8px 10px; font-size:11.5px; }
   /* 320px前後の狭い画面でも崩れないようにする */
   @media(max-width:350px){
-    .league-card--featured .lc-portrait{ width:56px; }
+    .league-card--featured .lc-portrait{ width:60px; }
     .league-card--featured .lc-name{ font-size:16.5px; }
     .league-card--featured .lc-desc{ font-size:10px; }
-    .league-card{ padding:9px; gap:8px; }
+    .league-card{ padding:8px; gap:8px; }
     .lc-cta{ min-width:64px; padding:7px 8px; font-size:10.5px; }
     .league-card--compact .lc-name{ font-size:14px; }
+    .league-card--compact .lc-portrait{ width:46px; }
   }
   /* 対戦するボタン(装飾フレーム) */
   .home-cta{ position:relative; width:100%; max-width:360px; padding:16px 0 12px; border-radius:12px; cursor:pointer;
@@ -1562,10 +1582,12 @@
   /* 下部メニュー(3列×2行、テキスト+アイコン。設定もここに統合し独立の大型ボタンは廃止) */
   .home-menu-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; width:100%; max-width:400px; flex-shrink:0; }
   .hm-btn{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; cursor:pointer;
-    min-height:clamp(54px,8vh,64px); padding:6px 2px; border-radius:10px; color:var(--ink); text-align:center;
+    min-height:clamp(50px,7.2vh,58px); padding:6px 2px; border-radius:10px; color:var(--ink); text-align:center;
     border:1px solid rgba(201,162,74,.3); background:rgba(10,9,16,.55); transition:background .15s; min-width:0; }
   .hm-btn:active{ background:rgba(201,162,74,.14); }
-  .hm-btn .hm-ic{ position:relative; font-size:clamp(19px,3.4vh,24px); line-height:1; }
+  /* アイコンは絵文字ではなく統一された線画(inline SVG, currentColor)で統一感を出す */
+  .hm-btn .hm-ic{ position:relative; display:flex; align-items:center; justify-content:center; color:var(--gold-bright); line-height:1; }
+  .hm-btn .hm-ic svg{ width:clamp(18px,3.2vh,22px); height:clamp(18px,3.2vh,22px); display:block; }
   .hm-btn .hm-jp{ font-size:clamp(11px,3vw,14px); white-space:nowrap; }
   .hm-btn .hm-en{ font-size:8px; letter-spacing:.5px; color:var(--ink-dim); white-space:nowrap; }
   .hm-btn .hm-dot{ position:absolute; top:-3px; right:-7px; width:8px; height:8px; border-radius:50%; background:var(--lose); }
@@ -1932,9 +1954,9 @@
           <div class="hb-record" id="hbRecord">対戦前</div>
         </div>
       </button>
+      <div id="devEnvBadge" style="display:none;">DEV</div>
       <button type="button" class="home-bell" onclick="openChangelog()" aria-label="お知らせを開く"><span aria-hidden="true">🔔</span><span class="bell-badge" id="bellBadge" style="display:none;" aria-hidden="true"></span></button>
     </div>
-    <div id="devEnvBadge" style="display:none;font-size:9px;letter-spacing:.1em;color:#e8c877;border:1px solid #e8c877;background:rgba(232,200,119,.12);border-radius:999px;padding:1px 9px;">DEV PREVIEW</div>
 
     <div class="home-crest">
       <div class="home-title">MASKD</div>
@@ -1947,22 +1969,22 @@
 
     <div class="home-menu-grid">
       <div class="hm-btn" onclick="openTutorial()" role="button" tabindex="0" aria-label="遊び方">
-        <span class="hm-ic" aria-hidden="true">📖</span><span class="hm-jp">遊び方</span><span class="hm-en">HOW TO</span>
+        <span class="hm-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5v-13Z"/><path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5v-13Z"/></svg></span><span class="hm-jp">遊び方</span><span class="hm-en">HOW TO</span>
       </div>
       <div class="hm-btn" onclick="openRules()" role="button" tabindex="0" aria-label="ルール">
-        <span class="hm-ic" aria-hidden="true">📜</span><span class="hm-jp">ルール</span><span class="hm-en">RULES</span>
+        <span class="hm-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M8 9h8M8 12.5h8M8 16h5"/></svg></span><span class="hm-jp">ルール</span><span class="hm-en">RULES</span>
       </div>
       <div class="hm-btn" onclick="openAchievements()" role="button" tabindex="0" aria-label="実績">
-        <span class="hm-ic" aria-hidden="true">🏆</span><span class="hm-jp">実績</span><span class="hm-en">TITLES</span>
+        <span class="hm-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3"/><path d="M12 13v3M9.5 20h5M10 17h4v3h-4z"/></svg></span><span class="hm-jp">実績</span><span class="hm-en">TITLES</span>
       </div>
       <div class="hm-btn" onclick="openMissions()" role="button" tabindex="0" aria-label="ミッション">
-        <span class="hm-ic" aria-hidden="true">🎯<span class="hm-dot" id="hmMissionDot" style="display:none;" aria-hidden="true"></span></span><span class="hm-jp">ミッション</span><span class="hm-en">MISSION</span>
+        <span class="hm-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.2"/><circle cx="12" cy="12" r=".6" fill="currentColor" stroke="none"/></svg><span class="hm-dot" id="hmMissionDot" style="display:none;" aria-hidden="true"></span></span><span class="hm-jp">ミッション</span><span class="hm-en">MISSION</span>
       </div>
       <div class="hm-btn" onclick="openStats()" role="button" tabindex="0" aria-label="戦績">
-        <span class="hm-ic" aria-hidden="true">📊</span><span class="hm-jp">戦績</span><span class="hm-en">RECORD</span>
+        <span class="hm-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V11M12 20V6M19 20v-7"/><path d="M3 20h18"/></svg></span><span class="hm-jp">戦績</span><span class="hm-en">RECORD</span>
       </div>
       <div class="hm-btn" onclick="openAppSettings()" role="button" tabindex="0" aria-label="設定">
-        <span class="hm-ic" aria-hidden="true">⚙️</span><span class="hm-jp">設定</span><span class="hm-en">SETTING</span>
+        <span class="hm-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.2M12 18.8V21M21 12h-2.2M5.2 12H3M18.4 5.6l-1.55 1.55M7.15 16.85l-1.55 1.55M18.4 18.4l-1.55-1.55M7.15 7.15 5.6 5.6"/></svg></span><span class="hm-jp">設定</span><span class="hm-en">SETTING</span>
       </div>
     </div>
   </div>
@@ -3409,7 +3431,8 @@ function updateBellBadge(){
   if(n>0){ b.textContent = n>9?'9+':String(n); b.style.display='inline-block'; }
   else b.style.display='none';
 }
-// ホームのコンパクトなプレイヤーヘッダー(1行のプレイヤー名+称号、1行の簡易戦績)。
+// ホームのコンパクトなプレイヤーヘッダー(1行目=称号優先で「現在地」を示す、2行目=簡易戦績)。
+// 称号が無い場合のみ名前で代替する(名前より現在地を見せたいという要望に合わせた優先順位)。
 // 勝率・進行度バーなどの詳細は戦績画面(openStats)に委ね、ホームでは表示しない。
 function renderHomeStats(){
   renderMaskFan();
@@ -3420,12 +3443,17 @@ function renderHomeStats(){
   const nameEl=document.getElementById('hbName'), recordEl=document.getElementById('hbRecord');
   if(nameEl){
     const tn=activeTitleName();
-    nameEl.textContent = playerName ? (playerName + (tn?('・'+tn):'')) : (tn||'―');
+    nameEl.textContent = tn || playerName || '仮面の騎士';
   }
   if(!recordEl) return;
-  let s=null; try{ s=computeStreaksAndRate(loadGameHistory()); }catch(e){}
-  const total=(s&&s.total)||0;
-  recordEl.textContent = total ? `${total}戦・${s.wins}勝` : '対戦前';
+  // 初級リーグ進行中なら、実データ(learnClearedMax)から「卒業まであとn戦」を表示(捏造データではない)。
+  if(!learnAllCleared() && learnClearedMax()>0){
+    recordEl.textContent = `初級卒業まであと${LEARN_STAGES.length-learnClearedMax()}戦`;
+  } else {
+    let s=null; try{ s=computeStreaksAndRate(loadGameHistory()); }catch(e){}
+    const total=(s&&s.total)||0;
+    recordEl.textContent = total ? `${total}戦・${s.wins}勝` : '対戦前';
+  }
 }
 // ミッション(上級ミッションTUT_ADVANCED)を未クリアの場合のみ、下部メニューのミッションタイルに
 // 赤い点を表示する(実データ=advancedCleared()のみを使用。報酬数などの捏造データは表示しない)。
@@ -5484,8 +5512,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.39.0';
+const GAME_VERSION = 'v1.40.0';
 const CHANGELOG = [
+  { version:'v1.40.0', date:'2026-07-22', items:[
+    '<b>ホーム画面の質感を強化</b>：初級リーグをより主役らしく強調し、キャラクター立ち絵を拡大しました。教官アストラの案内を吹き出し風に、フリー対戦を黒×金の世界観に合わせて再配色。下部メニューのアイコンを線画で統一し、背景にさりげない星の演出を追加しました。既存の対戦・チュートリアル・データには影響ありません。',
+  ]},
   { version:'v1.39.0', date:'2026-07-22', items:[
     '<b>ホーム画面を1画面に収まるよう再構成</b>：プレイヤー情報を1行のコンパクトな表示に整理し、初級リーグを主役として大きく、中級・上級リーグは横2列でロック状態を分かりやすく表示するようにしました。設定・ミッションは下部メニューへ統合。既存の対戦・チュートリアル・データには影響ありません。',
   ]},
