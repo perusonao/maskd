@@ -1971,6 +1971,176 @@
   .rg-bonus .pt{ margin-top:9px; padding-top:9px; border-top:1px solid var(--line); font-size:11.5px; color:var(--ink); line-height:1.6; }
   .rg-bonus .pt b{ color:var(--gold-bright); }
   .rg-verdict{ text-align:center; margin-top:15px; font-family:'Cormorant Garamond',serif; font-style:italic; font-size:19px; color:var(--gold-bright); letter-spacing:0.04em; }
+
+  /* ===== v1.44.0: ホーム画面カードをフルブリード(キャラクターアートをカード全面に敷く)構成へ =====
+     ユーザーから提供された参考実装(index.htmlパッチ)を土台に採用。JS/イベントハンドラ/実データ
+     ロジックは既存のまま(leagueCardHTML/renderLeagueCards等は無改修)、CSSのみを差し替えている。
+     ただし.app/.home-screenの余白は、v1.43.0で修正したコーナー(角丸)欠け不具合が再発しないよう、
+     参考実装の値をそのまま使わず、実機確認で安全な値に調整し直している。 */
+  body{ padding:clamp(6px,1.4vw,12px); }
+  .app{ max-width:430px; height:min(900px,calc(100dvh - 12px)); border-radius:28px; }
+  .home-screen{
+    grid-template-rows:auto auto auto auto auto auto auto;
+    gap:clamp(5px,.85vh,8px);
+    /* v1.43.0のコーナー欠け修正を維持するため、参考実装より上下左右とも広めの余白を保つ */
+    padding:calc(16px + env(safe-area-inset-top)) 16px calc(14px + env(safe-area-inset-bottom));
+    align-content:start;
+    overflow-x:hidden;
+  }
+  .home-screen::before{
+    content:''; position:absolute; inset:0; pointer-events:none; z-index:-1;
+    background:
+      radial-gradient(circle at 50% 20%, transparent 0 28%, rgba(232,200,119,.035) 29% 29.6%, transparent 30% 100%),
+      repeating-conic-gradient(from 0deg at 50% 23%, rgba(232,200,119,.018) 0 1deg, transparent 1deg 15deg);
+    opacity:.7;
+  }
+  .home-top{ max-width:none; height:clamp(48px,6.8vh,56px); gap:7px; }
+  .home-badge{ padding-right:11px; background:linear-gradient(90deg,rgba(20,15,10,.66),rgba(8,6,14,.52)); }
+  .hb-crest{ width:40px; height:40px; }
+  .hb-name{ font-size:14px; letter-spacing:.03em; }
+  .hb-record{ font-size:10.5px; }
+  #devEnvBadge{ padding:3px 9px; font-size:8px; }
+  .home-bell{ width:40px; height:40px; font-size:16px; }
+
+  .home-crest{ width:100%; padding:1px 0 2px; }
+  .home-title{ font-size:clamp(38px,7.2vh,48px); letter-spacing:5px; line-height:.9; }
+  .home-sub{ font-size:11px; margin-top:5px; letter-spacing:2.2px; }
+
+  .mentor-say-home{ max-width:none; height:clamp(50px,7.2vh,62px); gap:8px; }
+  .mentor-say-home .msh-face{ width:50px; height:50px; box-shadow:0 0 12px rgba(201,162,74,.34); }
+  .mentor-say-home .msh-bubble{
+    min-height:48px; display:flex; flex-direction:column; justify-content:center;
+    padding:7px 13px; border-radius:13px;
+    background:linear-gradient(105deg,rgba(27,21,12,.78),rgba(9,8,12,.78));
+    box-shadow:inset 0 1px rgba(255,255,255,.025);
+  }
+  .mentor-say-home .msh-name{ font-size:9px; }
+
+  .league-list{ max-width:none; gap:7px; }
+  .league-card{ max-width:none; border-radius:14px; }
+  .league-card--featured{
+    min-height:clamp(112px,15.2vh,132px); padding:0; gap:0;
+    border-color:rgba(243,212,146,.86);
+    background:linear-gradient(100deg,rgba(53,31,8,.86),rgba(10,8,13,.94) 61%);
+    box-shadow:0 0 0 1px rgba(232,200,119,.22) inset,0 0 18px rgba(201,162,74,.18),0 5px 18px rgba(0,0,0,.52);
+  }
+  .league-card--featured::before{
+    left:0; top:0; width:48%; height:100%;
+    background:linear-gradient(90deg,rgba(232,200,119,.12),transparent 90%);
+  }
+  .league-card--featured .lc-portrait{
+    width:32%; height:auto; align-self:stretch; border:0; border-radius:12px 0 0 12px;
+    background-position:center 18%; box-shadow:none;
+  }
+  .league-card--featured .lc-portrait::after{
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(90deg,transparent 58%,rgba(10,8,13,.96) 100%),linear-gradient(0deg,rgba(8,6,10,.2),transparent 45%);
+  }
+  .league-card--featured .lc-body{ padding:12px 4px 12px 10px; z-index:1; gap:4px; min-width:0; }
+  /* タイトルはCTAボタンと衝突しないよう、参考実装のoverflow:visibleではなく
+     既存のnowrap+ellipsisの安全策(はみ出したら…で省略)を維持する。 */
+  .league-card--featured .lc-name{ font-size:clamp(16px,4.4vw,19px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .league-card--featured .lc-desc{ font-size:10.5px; color:#dbd2c2; }
+  .league-card--featured .lc-cta{ margin-right:8px; min-width:60px; padding:8px 8px; font-size:11px; z-index:2; flex-shrink:0; }
+  .lc-seg-row{ flex-wrap:wrap; gap:5px 7px; margin-top:2px; }
+  .lc-seg{ gap:3px; }
+  .lc-seg > i{ width:10px; height:10px; border-radius:2px; }
+  .lc-seg-tx{ width:100%; font-size:9.5px; color:var(--gold-dim); }
+
+  .league-grid{ max-width:none; gap:7px; }
+  .league-card--compact{
+    position:relative; min-height:clamp(104px,13.6vh,120px); padding:0; overflow:hidden;
+    justify-content:flex-end; border-radius:14px; background:#08070d;
+  }
+  .league-card--compact .lc-portrait{
+    position:absolute; inset:0; width:100%; height:100%; border:0; border-radius:13px;
+    background-position:center 17%; filter:saturate(.78) brightness(.68);
+  }
+  .league-card--compact .lc-portrait::after{
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(0deg,rgba(5,4,9,.98) 4%,rgba(7,5,12,.78) 35%,rgba(8,6,14,.08) 77%);
+  }
+  .league-card--compact .lc-body{
+    position:relative; z-index:1; width:100%; min-height:58%; justify-content:flex-end;
+    padding:44px 7px 8px; gap:2px;
+  }
+  .league-card--compact .lc-name{ font-size:clamp(16px,4.6vw,19px); text-shadow:0 2px 5px #000; }
+  .league-card--compact .lc-desc{ font-size:9.5px; color:#ddd4c8; }
+  .league-card--compact .lc-req{
+    width:100%; justify-content:center; align-items:center; margin-top:2px; padding:3px 4px;
+    border-radius:7px; border:1px solid rgba(201,162,74,.2); background:rgba(4,3,8,.58);
+    font-size:8.8px; color:#c9b887;
+  }
+  .league-card--compact.locked .lc-portrait{ filter:saturate(.72) brightness(.63); }
+  .league-card--compact.locked .lc-name{ color:var(--gold-bright); }
+
+  .league-card--free{
+    min-height:clamp(58px,7.8vh,70px); padding:0 10px 0 0; gap:0;
+    border-color:rgba(56,113,75,.56);
+    background:linear-gradient(100deg,rgba(8,35,21,.82),rgba(6,10,8,.95));
+  }
+  .league-card--free .lc-portrait{
+    width:27%; align-self:stretch; height:auto; border:0; border-radius:12px 0 0 12px;
+    background-position:center 20%;
+  }
+  .league-card--free .lc-portrait::after{
+    content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent 55%,rgba(6,10,8,.96));
+  }
+  .league-card--free .lc-body{ padding:7px 2px 7px 9px; gap:2px; z-index:1; }
+  .league-card--free .lc-name{ font-size:17px; }
+  .league-card--free .lc-desc{ font-size:10px; }
+  .league-card--free .lc-cta{ margin-left:6px; min-width:70px; padding:9px 9px; }
+  .league-card--free .lc-badge{ margin-top:0; font-size:8px; padding:1px 6px; }
+
+  .home-menu-grid{ max-width:none; gap:6px; }
+  .hm-btn{
+    min-height:clamp(48px,6.6vh,56px); padding:5px 2px; border-radius:9px;
+    background:linear-gradient(180deg,rgba(15,13,19,.72),rgba(7,6,11,.72));
+  }
+  .hm-btn .hm-ic svg{ width:clamp(20px,3vh,24px); height:clamp(20px,3vh,24px); }
+  .hm-btn .hm-jp{ font-size:clamp(11px,3.1vw,13px); }
+  .hm-btn .hm-en{ font-size:7.5px; }
+  .home-motto{
+    width:100%; text-align:center; color:rgba(216,178,94,.72); font-size:8.5px; letter-spacing:.12em;
+    line-height:1; padding-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .home-motto::before,.home-motto::after{ content:'—'; margin:0 7px; color:rgba(216,178,94,.42); }
+
+  @media(max-height:760px){
+    .home-screen{ gap:4px; padding-top:calc(14px + env(safe-area-inset-top)); }
+    .home-top{ height:46px; }
+    .hb-crest{ width:36px; height:36px; }
+    .home-title{ font-size:34px; }
+    .home-sub{ margin-top:3px; }
+    .mentor-say-home{ height:46px; }
+    .mentor-say-home .msh-face{ width:42px; height:42px; }
+    .mentor-say-home .msh-bubble{ min-height:42px; padding:5px 10px; font-size:10.5px; }
+    .league-card--featured{ min-height:102px; }
+    .league-card--compact{ min-height:92px; }
+    .league-card--free{ min-height:54px; }
+    .hm-btn{ min-height:46px; }
+    .hm-btn .hm-en{ display:none; }
+    .home-motto{ display:none; }
+  }
+  @media(max-width:350px){
+    .home-screen{ padding-left:12px; padding-right:12px; }
+    .home-title{ font-size:33px; }
+    .home-sub{ font-size:9.5px; letter-spacing:1.6px; }
+    .league-card--featured .lc-portrait{ width:30%; }
+    .league-card--featured .lc-body{ padding-left:8px; padding-right:2px; }
+    .league-card--featured .lc-name{ font-size:15px; }
+    .league-card--featured .lc-desc{ font-size:9.5px; }
+    .league-card--featured .lc-cta{ min-width:52px; margin-right:6px; padding:7px 6px; font-size:10px; }
+    .lc-seg > i{ width:7px; height:7px; }
+    .league-card--compact .lc-body{ padding-left:4px; padding-right:4px; }
+    .league-card--compact .lc-name{ font-size:13px; }
+    .league-card--compact .lc-req{ font-size:7.4px; }
+    .league-card--free .lc-portrait{ width:22%; }
+    .league-card--free .lc-body{ padding-left:6px; }
+    .league-card--free .lc-name{ font-size:14px; }
+    .league-card--free .lc-desc{ display:none; }
+    .league-card--free .lc-cta{ min-width:50px; margin-left:4px; padding:7px 6px; font-size:10px; }
+  }
 </style>
 </head>
 <body>
@@ -2019,6 +2189,7 @@
         <span class="hm-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.2M12 18.8V21M21 12h-2.2M5.2 12H3M18.4 5.6l-1.55 1.55M7.15 16.85l-1.55 1.55M18.4 18.4l-1.55-1.55M7.15 7.15 5.6 5.6"/></svg></span><span class="hm-jp">設定</span><span class="hm-en">SETTING</span>
       </div>
     </div>
+    <div class="home-motto" aria-hidden="true">仮面を外す者は、真実にたどり着けない。</div>
   </div>
 
   <!-- ===== 対戦設定 ===== -->
@@ -3350,11 +3521,11 @@ function leagueCardHTML(cfg){
   } else if(!cfg.hasContent){
     bodyExtra = locked
       ? `<div class="lc-req"><span class="lc-lock-ic" aria-hidden="true">🔒</span>${cfg.reqLabel}</div>`
-      : `<div class="lc-req lc-soon">準備中</div>`;
+      : `<div class="lc-req lc-soon"><span class="lc-lock-ic" aria-hidden="true">✦</span>次の試練は近日解放</div>`;
   }
   const cta = cfg.hasContent ? `<div class="lc-cta">${cfg.ctaLabel||'プレイ'} ›</div>` : '';
   const badge = cfg.badge ? `<div class="lc-badge">${cfg.badge}</div>` : '';
-  const label = cfg.hasContent ? `${cfg.name}を開く${cfg.badge?'（'+cfg.badge+'）':''}` : `${cfg.name}（${locked?cfg.reqLabel:'準備中'}）`;
+  const label = cfg.hasContent ? `${cfg.name}を開く${cfg.badge?'（'+cfg.badge+'）':''}` : `${cfg.name}（${locked?cfg.reqLabel:'次の試練は近日解放'}）`;
   const handler = cfg.hasContent ? cfg.onClick : (locked ? '' : `leagueComingSoon('${cfg.name}')`);
   const clickAttr = handler ? ` onclick="${handler}"` : '';
   const tabAttr = handler ? ' tabindex="0"' : ' tabindex="-1"';
@@ -5571,8 +5742,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.43.0';
+const GAME_VERSION = 'v1.44.0';
 const CHANGELOG = [
+  { version:'v1.44.0', date:'2026-07-23', items:[
+    '<b>ホーム画面のカードをフルブリード(キャラクターアートをカード全面に敷く)構成へ刷新</b>：初級リーグを大きな横長アートとして強調し、中級・上級は背景アート型のコンパクトカードに変更。フリー対戦・下部メニューも圧縮し、黒×金の世界観のまま画面密度を再調整しました。中級/上級が解放済みでも実体が無い場合の案内文言を「次の試練は近日解放」に変更。既存の対戦処理・チュートリアル進行・保存データには影響ありません。',
+  ]},
   { version:'v1.43.0', date:'2026-07-23', items:[
     '<b>不具合修正：ホーム画面の右上/左上の丸いボタンが角丸フレームに重なって見える表示崩れを修正</b>：実機での確認により、ヘッダーのお知らせベルとプレイヤーバッジが画面の角の丸みに重なって欠けて見える問題を発見し、余白を調整して解消しました。',
   ]},
