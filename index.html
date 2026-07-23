@@ -1429,7 +1429,9 @@
      コンテンツが収まりきらない場合はスクロールできるようにしている(アクセシビリティ優先)。 */
   .home-screen{ display:grid; grid-template-rows:repeat(8,auto); justify-items:center; align-content:start;
     gap:clamp(5px,1.1vh,9px);
-    padding:calc(6px + env(safe-area-inset-top)) 14px calc(6px + env(safe-area-inset-bottom));
+    /* .appの角丸(28px)+overflow:hiddenにより、コーナーに寄りすぎた要素(丸いベル/バッジ等)が
+       視覚的に切れてしまうため、上下左右とも28pxの角丸を避けられるだけの余白を確保する。 */
+    padding:calc(16px + env(safe-area-inset-top)) 18px calc(14px + env(safe-area-inset-bottom));
     height:100dvh; min-height:100dvh; overflow-y:auto; box-sizing:border-box;
     background:
       radial-gradient(1px 1px at 12% 10%, rgba(255,255,255,.55) 0, transparent 60%),
@@ -5569,8 +5571,11 @@ function computeMatchSummary(){
 
 // ===== プレイログの自動収集・統計・エクスポート =====
 // ===== バージョン・変更履歴 =====
-const GAME_VERSION = 'v1.42.0';
+const GAME_VERSION = 'v1.43.0';
 const CHANGELOG = [
+  { version:'v1.43.0', date:'2026-07-23', items:[
+    '<b>不具合修正：ホーム画面の右上/左上の丸いボタンが角丸フレームに重なって見える表示崩れを修正</b>：実機での確認により、ヘッダーのお知らせベルとプレイヤーバッジが画面の角の丸みに重なって欠けて見える問題を発見し、余白を調整して解消しました。',
+  ]},
   { version:'v1.42.0', date:'2026-07-23', items:[
     '<b>ホーム画面の専用アートワークを追加</b>：初級/中級/上級リーグ・フリー対戦・教官アストラの立ち絵を新しい専用イラストに差し替えました。プレイヤーヘッダーはリーグ進行に応じた称号(見習い騎士→仮面士→仮面騎士)を表示するように。教官のセリフは進行状況に応じて複数パターンからランダムに変化します。フリー対戦に「経験者向け」の案内を追加し、背景にごく薄い装飾を加えました。既存の対戦・チュートリアル・データには影響ありません。',
   ]},
